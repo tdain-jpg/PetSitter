@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(NODE_OPTIONS=\"--no-warnings\" node:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version)",
+      "Bash(npm run typecheck:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 20 npm run web:*)",
+      "Bash(npx expo:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(node -e:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(python /tmp/screenshot.py:*)",
+      "Bash(python /tmp/test_admin.py:*)",
+      "Bash(python /tmp/debug_button.py:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(python:*)"
+    ]
+  }
+}
