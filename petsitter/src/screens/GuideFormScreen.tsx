@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,14 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card } from '../components';
+import { Button, Input, Card, ScreenHeader, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
+import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
-import type { Guide, EmergencyContact, HomeInfo, Pet } from '../types';
+import type { Guide, EmergencyContact, HomeInfo, Pet, TravelItinerary, ContactType } from '../types';
 
 type Props = NativeStackScreenProps<MainTabParamList, 'GuideForm'>;
 
@@ -27,6 +29,7 @@ interface FormData {
   end_date: string;
   emergency_contacts: EmergencyContact[];
   home_info: HomeInfo;
+  travel_itinerary?: TravelItinerary;
   additional_notes: string;
 }
 
@@ -37,8 +40,18 @@ const initialFormData: FormData = {
   end_date: '',
   emergency_contacts: [],
   home_info: {},
+  travel_itinerary: undefined,
   additional_notes: '',
 };
+
+const contactTypeOptions = [
+  { label: 'Personal (Friend/Family)', value: 'personal' },
+  { label: 'Neighbor', value: 'neighbor' },
+  { label: 'Veterinarian - Primary', value: 'vet_primary' },
+  { label: 'Veterinarian - Emergency 24hr', value: 'vet_emergency' },
+  { label: 'Veterinarian - Specialist', value: 'vet_specialty' },
+  { label: 'Other', value: 'other' },
+];
 
 export function GuideFormScreen({ navigation, route }: Props) {
   const { mode, guideId } = route.params as { mode: string; guideId?: string };
@@ -54,6 +67,49 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const [showContactForm, setShowContactForm] = useState(false);
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState<Partial<EmergencyContact>>({});
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Build guide data from form data object (accepts data as parameter to avoid stale closures)
+  const buildGuideDataFromForm = useCallback((data: FormData) => {
+    if (!user) return null;
+
+    return {
+      user_id: user.id,
+      title: data.title.trim(),
+      pet_ids: data.pet_ids,
+      start_date: data.start_date || undefined,
+      end_date: data.end_date || undefined,
+      emergency_contacts: data.emergency_contacts,
+      home_info: data.home_info,
+      travel_itinerary: data.travel_itinerary,
+      additional_notes: data.additional_notes.trim() || undefined,
+    };
+  }, [user]);
+
+  // Convenience wrapper that uses current formData state (for manual submit)
+  const buildGuideData = useCallback(() => {
+    return buildGuideDataFromForm(formData);
+  }, [formData, buildGuideDataFromForm]);
+
+  // Auto-save callback for edit mode - accepts data from useAutoSave to avoid stale closures
+  const handleAutoSave = useCallback(async (data: FormData) => {
+    if (!guideId || !data.title.trim()) return;
+    const guideData = buildGuideDataFromForm(data);
+    if (guideData) {
+      await updateGuide(guideId, guideData);
+    }
+  }, [guideId, buildGuideDataFromForm, updateGuide]);
+
+  // Create a stable reference for auto-save data
+  const autoSaveData = useMemo(() => ({ ...formData }), [formData]);
+
+  // Auto-save hook - only enabled when editing and data is loaded
+  const { status: saveStatus, lastSaved, error: saveError } = useAutoSave({
+    data: autoSaveData,
+    onSave: handleAutoSave,
+    debounceMs: 1000,
+    enabled: !!isEditing && dataLoaded && !!formData.title.trim(),
+  });
 
   // Load existing guide data for editing
   useEffect(() => {
@@ -67,8 +123,11 @@ export function GuideFormScreen({ navigation, route }: Props) {
           end_date: guide.end_date || '',
           emergency_contacts: guide.emergency_contacts,
           home_info: guide.home_info,
+          travel_itinerary: guide.travel_itinerary,
           additional_notes: guide.additional_notes || '',
         });
+        // Mark data as loaded to enable auto-save
+        setTimeout(() => setDataLoaded(true), 100);
       }
       setLoading(false);
     }
@@ -115,16 +174,8 @@ export function GuideFormScreen({ navigation, route }: Props) {
     setIsSubmitting(true);
 
     try {
-      const guideData: Omit<Guide, 'id' | 'created_at' | 'updated_at'> = {
-        user_id: user.id,
-        title: formData.title.trim(),
-        pet_ids: formData.pet_ids,
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-        emergency_contacts: formData.emergency_contacts,
-        home_info: formData.home_info,
-        additional_notes: formData.additional_notes.trim() || undefined,
-      };
+      const guideData = buildGuideData();
+      if (!guideData) return;
 
       if (isEditing && guideId) {
         await updateGuide(guideId, guideData);
@@ -207,8 +258,8 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
@@ -218,33 +269,26 @@ export function GuideFormScreen({ navigation, route }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
     >
-      <View className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-cream-200">
         <StatusBar style="dark" />
 
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 pt-12 pb-4 bg-white border-b border-gray-100">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: '#2563eb',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              Cancel
-            </button>
-          ) : (
-            <Button title="Cancel" onPress={() => navigation.goBack()} variant="outline" />
-          )}
-          <Text className="text-lg font-semibold text-gray-900">
-            {isEditing ? 'Edit Guide' : 'New Guide'}
-          </Text>
-          <View style={{ width: 70 }} />
-        </View>
+        <ScreenHeader
+          title={isEditing ? 'Edit Guide' : 'New Guide'}
+          backLabel={isEditing ? '← Done' : 'Cancel'}
+          onBack={() => navigation.goBack()}
+        />
+
+        {/* Auto-save status indicator for edit mode */}
+        {isEditing && (
+          <View className="px-4 py-2 bg-cream-50 border-b border-tan-200">
+            <SaveStatusIndicator
+              status={saveStatus}
+              lastSaved={lastSaved}
+              error={saveError}
+            />
+          </View>
+        )}
 
         <ScrollView
           className="flex-1"
@@ -253,7 +297,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
         >
           {/* Basic Info */}
           <Card className="mb-4">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-4">
               Basic Information
             </Text>
 
@@ -268,7 +312,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
             {Platform.OS === 'web' ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
+                  <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
                     Start Date
                   </label>
                   <input
@@ -285,7 +329,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
+                  <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
                     End Date
                   </label>
                   <input
@@ -322,13 +366,13 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
           {/* Pet Selection */}
           <Card className="mb-4">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-4">
               Select Pets
             </Text>
 
             {activePets.length === 0 ? (
               <View className="items-center py-4">
-                <Text className="text-gray-500 mb-2">No pets available.</Text>
+                <Text className="text-tan-500 mb-2">No pets available.</Text>
                 <Button
                   title="Add a Pet First"
                   onPress={() => (navigation as any).navigate('PetForm', { mode: 'create' })}
@@ -344,22 +388,22 @@ export function GuideFormScreen({ navigation, route }: Props) {
                     className={`flex-row items-center p-3 rounded-lg border ${
                       formData.pet_ids.includes(pet.id)
                         ? 'bg-primary-50 border-primary-200'
-                        : 'bg-gray-50 border-gray-200'
+                        : 'bg-cream-200 border-tan-200'
                     }`}
                   >
                     <View
                       className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
                         formData.pet_ids.includes(pet.id)
                           ? 'bg-primary-500 border-primary-500'
-                          : 'border-gray-300'
+                          : 'border-tan-300'
                       }`}
                     >
                       {formData.pet_ids.includes(pet.id) && (
                         <Text className="text-white text-xs">✓</Text>
                       )}
                     </View>
-                    <Text className="text-gray-900 font-medium">{pet.name}</Text>
-                    <Text className="text-gray-500 ml-2 capitalize">
+                    <Text className="text-brown-800 font-medium">{pet.name}</Text>
+                    <Text className="text-tan-500 ml-2 capitalize">
                       ({pet.species})
                     </Text>
                   </Pressable>
@@ -371,7 +415,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
           {/* Emergency Contacts */}
           <Card className="mb-4">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-semibold text-gray-900">
+              <Text className="text-lg font-semibold text-brown-800">
                 Emergency Contacts
               </Text>
               {Platform.OS === 'web' ? (
@@ -379,8 +423,8 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   onClick={handleAddContact}
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: '#eff6ff',
-                    color: '#2563eb',
+                    backgroundColor: COLORS.secondaryLight,
+                    color: COLORS.secondary,
                     border: 'none',
                     borderRadius: 6,
                     cursor: 'pointer',
@@ -390,31 +434,44 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   + Add Contact
                 </button>
               ) : (
-                <Pressable onPress={handleAddContact} className="bg-primary-50 px-3 py-1 rounded">
-                  <Text className="text-primary-600 text-sm">+ Add Contact</Text>
+                <Pressable onPress={handleAddContact} className="bg-secondary-50 px-3 py-1 rounded">
+                  <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
                 </Pressable>
               )}
             </View>
 
             {formData.emergency_contacts.length === 0 ? (
-              <Text className="text-gray-500">No emergency contacts added.</Text>
+              <Text className="text-tan-500">No emergency contacts added.</Text>
             ) : (
               formData.emergency_contacts.map((contact) => (
                 <View
                   key={contact.id}
-                  className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200"
+                  className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200"
                 >
                   <View className="flex-row justify-between items-start">
                     <View className="flex-1">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="font-semibold text-gray-900">{contact.name}</Text>
+                      <View className="flex-row items-center gap-2 flex-wrap">
+                        <Text className="font-semibold text-brown-800">{contact.name}</Text>
                         {contact.is_primary && (
-                          <View className="bg-green-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-green-600 text-xs">PRIMARY</Text>
+                          <View className="bg-primary-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-primary-600 text-xs">PRIMARY</Text>
+                          </View>
+                        )}
+                        {contact.contact_type?.startsWith('vet') && (
+                          <View className="bg-secondary-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-secondary-600 text-xs">
+                              {contact.contact_type === 'vet_primary' ? 'VET' :
+                               contact.contact_type === 'vet_emergency' ? 'VET 24HR' : 'SPECIALIST'}
+                            </Text>
+                          </View>
+                        )}
+                        {contact.has_key && (
+                          <View className="bg-amber-100 px-2 py-0.5 rounded-full">
+                            <Text className="text-amber-600 text-xs">HAS KEY</Text>
                           </View>
                         )}
                       </View>
-                      <Text className="text-gray-500">{contact.relationship}</Text>
+                      <Text className="text-tan-500">{contact.relationship}</Text>
                       <Text className="text-primary-600">{contact.phone}</Text>
                     </View>
                     <View className="flex-row gap-2">
@@ -425,7 +482,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                             style={{
                               padding: '4px 8px',
                               backgroundColor: 'transparent',
-                              color: '#2563eb',
+                              color: COLORS.secondary,
                               border: 'none',
                               cursor: 'pointer',
                               fontSize: 12,
@@ -438,7 +495,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                             style={{
                               padding: '4px 8px',
                               backgroundColor: 'transparent',
-                              color: '#dc2626',
+                              color: COLORS.accent,
                               border: 'none',
                               cursor: 'pointer',
                               fontSize: 12,
@@ -450,10 +507,10 @@ export function GuideFormScreen({ navigation, route }: Props) {
                       ) : (
                         <>
                           <Pressable onPress={() => handleEditContact(contact)} className="px-2 py-1">
-                            <Text className="text-primary-600 text-sm">Edit</Text>
+                            <Text className="text-secondary-600 text-sm">Edit</Text>
                           </Pressable>
                           <Pressable onPress={() => handleDeleteContact(contact.id)} className="px-2 py-1">
-                            <Text className="text-red-600 text-sm">Delete</Text>
+                            <Text className="text-accent-600 text-sm">Delete</Text>
                           </Pressable>
                         </>
                       )}
@@ -465,8 +522,8 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
             {/* Contact Form */}
             {showContactForm && (
-              <View className="mt-4 p-4 bg-gray-100 rounded-lg">
-                <Text className="font-semibold text-gray-900 mb-3">
+              <View className="mt-4 p-4 bg-tan-100 rounded-lg">
+                <Text className="font-semibold text-brown-800 mb-3">
                   {editingContactId ? 'Edit Contact' : 'Add Contact'}
                 </Text>
                 <Input
@@ -489,6 +546,12 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   onChangeText={(v) => setContactForm((prev) => ({ ...prev, email: v }))}
                   keyboardType="email-address"
                 />
+                <Select
+                  label="Contact Type"
+                  value={contactForm.contact_type || 'personal'}
+                  options={contactTypeOptions}
+                  onValueChange={(v) => setContactForm((prev) => ({ ...prev, contact_type: v as ContactType }))}
+                />
                 <Input
                   label="Relationship"
                   placeholder="e.g., Neighbor, Friend, Vet"
@@ -500,8 +563,17 @@ export function GuideFormScreen({ navigation, route }: Props) {
                     value={contactForm.is_primary || false}
                     onValueChange={(v) => setContactForm((prev) => ({ ...prev, is_primary: v }))}
                   />
-                  <Text className="ml-2 text-gray-700">Primary Contact</Text>
+                  <Text className="ml-2 text-brown-600">Primary Contact</Text>
                 </View>
+                {contactForm.contact_type === 'neighbor' && (
+                  <View className="flex-row items-center mb-4">
+                    <Switch
+                      value={contactForm.has_key || false}
+                      onValueChange={(v) => setContactForm((prev) => ({ ...prev, has_key: v }))}
+                    />
+                    <Text className="ml-2 text-brown-600">Has a key to the house</Text>
+                  </View>
+                )}
                 <View className="flex-row gap-2">
                   <Button title="Save" onPress={handleSaveContact} variant="primary" />
                   <Button
@@ -520,7 +592,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
           {/* Home Info */}
           <Card className="mb-4">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-4">
               Home Information
             </Text>
 
@@ -577,6 +649,50 @@ export function GuideFormScreen({ navigation, route }: Props) {
               onChangeText={(v) => updateHomeInfo('alarm_code', v)}
             />
 
+            {Platform.OS === 'web' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <Input
+                  label="Garage Code"
+                  placeholder="Garage code"
+                  value={formData.home_info.garage_code || ''}
+                  onChangeText={(v) => updateHomeInfo('garage_code', v)}
+                />
+                <Input
+                  label="Gate Code"
+                  placeholder="Gate code"
+                  value={formData.home_info.gate_code || ''}
+                  onChangeText={(v) => updateHomeInfo('gate_code', v)}
+                />
+                <Input
+                  label="Mailbox Code"
+                  placeholder="Mailbox code"
+                  value={formData.home_info.mailbox_code || ''}
+                  onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
+                />
+              </div>
+            ) : (
+              <>
+                <Input
+                  label="Garage Code"
+                  placeholder="Garage code"
+                  value={formData.home_info.garage_code || ''}
+                  onChangeText={(v) => updateHomeInfo('garage_code', v)}
+                />
+                <Input
+                  label="Gate Code"
+                  placeholder="Gate code"
+                  value={formData.home_info.gate_code || ''}
+                  onChangeText={(v) => updateHomeInfo('gate_code', v)}
+                />
+                <Input
+                  label="Mailbox Code"
+                  placeholder="Mailbox code"
+                  value={formData.home_info.mailbox_code || ''}
+                  onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
+                />
+              </>
+            )}
+
             <Input
               label="Spare Key Location"
               placeholder="e.g., Under the mat, With neighbor"
@@ -601,6 +717,17 @@ export function GuideFormScreen({ navigation, route }: Props) {
             />
           </Card>
 
+          {/* Travel Itinerary */}
+          <Card className="mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-4">
+              Travel Itinerary
+            </Text>
+            <TravelItineraryEditor
+              value={formData.travel_itinerary}
+              onChange={(v) => updateField('travel_itinerary', v)}
+            />
+          </Card>
+
           {/* Additional Notes */}
           <Card className="mb-4">
             <Input
@@ -613,15 +740,20 @@ export function GuideFormScreen({ navigation, route }: Props) {
             />
           </Card>
 
-          {/* Submit Button */}
-          <View className="mb-8">
-            <Button
-              title={isEditing ? 'Save Changes' : 'Create Guide'}
-              onPress={handleSubmit}
-              loading={isSubmitting}
-              disabled={isSubmitting}
-            />
-          </View>
+          {/* Submit Button - only show for new guides, edit mode uses auto-save */}
+          {!isEditing && (
+            <View className="mb-8">
+              <Button
+                title="Create Guide"
+                onPress={handleSubmit}
+                loading={isSubmitting}
+                disabled={isSubmitting}
+              />
+            </View>
+          )}
+
+          {/* Spacer for edit mode */}
+          {isEditing && <View className="mb-8" />}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

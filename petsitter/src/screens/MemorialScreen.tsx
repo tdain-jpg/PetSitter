@@ -2,6 +2,7 @@ import { View, Text, ScrollView, Platform, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, PetCard, Card } from '../components';
 import { useData } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 
@@ -53,11 +54,11 @@ export function MemorialScreen({ navigation }: Props) {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
           {Platform.OS === 'web' ? (
             <button
@@ -65,7 +66,7 @@ export function MemorialScreen({ navigation }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -78,8 +79,8 @@ export function MemorialScreen({ navigation }: Props) {
           )}
         </View>
         <View className="mt-4">
-          <Text className="text-2xl font-bold text-gray-900">Pet Memorial</Text>
-          <Text className="text-gray-500">
+          <Text className="text-2xl font-bold text-brown-800">Pet Memorial</Text>
+          <Text className="text-tan-500">
             Remembering our beloved companions
           </Text>
         </View>
@@ -89,10 +90,10 @@ export function MemorialScreen({ navigation }: Props) {
         {deceasedPets.length === 0 ? (
           <Card className="items-center py-8">
             <Text className="text-5xl mb-4">🌈</Text>
-            <Text className="text-xl font-semibold text-gray-900 mb-2">
+            <Text className="text-xl font-semibold text-brown-800 mb-2">
               No pets in memorial
             </Text>
-            <Text className="text-gray-500 text-center">
+            <Text className="text-tan-500 text-center">
               Pets moved to memorial will appear here.
             </Text>
           </Card>
@@ -101,20 +102,20 @@ export function MemorialScreen({ navigation }: Props) {
             <View key={pet.id} className="mb-4">
               <Card>
                 <View className="flex-row items-center mb-4">
-                  <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center mr-4">
+                  <View className="w-16 h-16 rounded-full bg-tan-100 items-center justify-center mr-4">
                     <Text className="text-3xl">
                       {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐱' : '🐾'}
                     </Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-lg font-semibold text-gray-900">
+                    <Text className="text-lg font-semibold text-brown-800">
                       {pet.name}
                     </Text>
-                    <Text className="text-gray-500 capitalize">
+                    <Text className="text-tan-500 capitalize">
                       {pet.breed || pet.species}
                     </Text>
                     {pet.deceased_date && (
-                      <Text className="text-gray-400 text-sm">
+                      <Text className="text-tan-400 text-sm">
                         🕊️ {new Date(pet.deceased_date).toLocaleDateString()}
                       </Text>
                     )}

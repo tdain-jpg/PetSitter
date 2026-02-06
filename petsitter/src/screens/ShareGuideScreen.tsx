@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type { Guide, ShareableLink } from '../types';
@@ -98,32 +99,36 @@ export function ShareGuideScreen({ navigation, route }: Props) {
     }
   };
 
+  const handlePreview = (code: string) => {
+    (navigation as any).navigate('SharedGuideView', { code });
+  };
+
   const activeLinks = links.filter((l) => l.is_active);
   const inactiveLinks = links.filter((l) => !l.is_active);
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
 
   if (!guide) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-xl text-gray-500 mb-4">Guide not found</Text>
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
           {Platform.OS === 'web' ? (
             <button
@@ -131,7 +136,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -144,18 +149,18 @@ export function ShareGuideScreen({ navigation, route }: Props) {
           )}
         </View>
         <View className="mt-4">
-          <Text className="text-2xl font-bold text-gray-900">🔗 Share Guide</Text>
-          <Text className="text-gray-500">{guide.title}</Text>
+          <Text className="text-2xl font-bold text-brown-800">🔗 Share Guide</Text>
+          <Text className="text-tan-500">{guide.title}</Text>
         </View>
       </View>
 
       <ScrollView className="flex-1 p-4">
         {/* Create New Link */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <Text className="text-lg font-semibold text-brown-800 mb-4">
             Create Share Link
           </Text>
-          <Text className="text-gray-500 mb-4">
+          <Text className="text-tan-500 mb-4">
             Generate a link that lets others view your guide in read-only mode.
           </Text>
 
@@ -186,21 +191,21 @@ export function ShareGuideScreen({ navigation, route }: Props) {
         {/* Active Links */}
         {activeLinks.length > 0 && (
           <Card className="mb-4">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-4">
               Active Links ({activeLinks.length})
             </Text>
 
             {activeLinks.map((link) => (
               <View
                 key={link.id}
-                className="bg-gray-50 rounded-lg p-4 mb-3 border border-gray-200"
+                className="bg-cream-200 rounded-lg p-4 mb-3 border border-tan-200"
               >
                 <View className="flex-row justify-between items-start mb-2">
                   <View className="flex-1">
                     <Text className="font-mono text-primary-600 text-lg">
                       {link.code}
                     </Text>
-                    <Text className="text-gray-400 text-sm">
+                    <Text className="text-tan-400 text-sm">
                       Created {new Date(link.created_at).toLocaleDateString()}
                     </Text>
                     {link.expires_at && (
@@ -208,22 +213,36 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                         Expires {new Date(link.expires_at).toLocaleDateString()}
                       </Text>
                     )}
-                    <Text className="text-gray-500 text-sm">
+                    <Text className="text-tan-500 text-sm">
                       Views: {link.view_count}
                     </Text>
                   </View>
                 </View>
 
-                <View className="flex-row gap-2">
+                <View className="flex-row gap-2 flex-wrap">
                   {Platform.OS === 'web' ? (
                     <>
+                      <button
+                        onClick={() => handlePreview(link.code)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: COLORS.secondary,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontSize: 14,
+                        }}
+                      >
+                        👁️ Preview
+                      </button>
                       <button
                         onClick={() => handleCopyLink(link.code)}
                         style={{
                           flex: 1,
                           padding: '8px 16px',
-                          backgroundColor: '#eff6ff',
-                          color: '#2563eb',
+                          backgroundColor: COLORS.primary50,
+                          color: COLORS.secondary,
                           border: 'none',
                           borderRadius: 8,
                           cursor: 'pointer',
@@ -237,7 +256,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                         style={{
                           padding: '8px 16px',
                           backgroundColor: '#fee2e2',
-                          color: '#dc2626',
+                          color: COLORS.accent,
                           border: 'none',
                           borderRadius: 8,
                           cursor: 'pointer',
@@ -249,18 +268,24 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                     </>
                   ) : (
                     <>
+                      <Pressable
+                        onPress={() => handlePreview(link.code)}
+                        className="bg-secondary-500 px-4 py-2 rounded-lg"
+                      >
+                        <Text className="text-white">👁️ Preview</Text>
+                      </Pressable>
                       <View className="flex-1">
                         <Button
-                          title="📋 Copy Link"
+                          title="📋 Copy"
                           onPress={() => handleCopyLink(link.code)}
                           variant="outline"
                         />
                       </View>
                       <Pressable
                         onPress={() => handleDeactivate(link.id)}
-                        className="bg-red-50 px-4 py-2 rounded-lg"
+                        className="bg-accent-50 px-4 py-2 rounded-lg"
                       >
-                        <Text className="text-red-600">Deactivate</Text>
+                        <Text className="text-accent-600">Deactivate</Text>
                       </Pressable>
                     </>
                   )}
@@ -273,17 +298,17 @@ export function ShareGuideScreen({ navigation, route }: Props) {
         {/* Inactive Links */}
         {inactiveLinks.length > 0 && (
           <Card className="mb-8">
-            <Text className="text-lg font-semibold text-gray-500 mb-4">
+            <Text className="text-lg font-semibold text-tan-500 mb-4">
               Inactive Links ({inactiveLinks.length})
             </Text>
 
             {inactiveLinks.map((link) => (
               <View
                 key={link.id}
-                className="bg-gray-100 rounded-lg p-3 mb-2 opacity-60"
+                className="bg-tan-100 rounded-lg p-3 mb-2 opacity-60"
               >
-                <Text className="font-mono text-gray-500">{link.code}</Text>
-                <Text className="text-gray-400 text-sm">
+                <Text className="font-mono text-tan-500">{link.code}</Text>
+                <Text className="text-tan-400 text-sm">
                   Deactivated • Views: {link.view_count}
                 </Text>
               </View>
@@ -294,7 +319,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
         {links.length === 0 && (
           <Card className="items-center py-8">
             <Text className="text-5xl mb-4">🔗</Text>
-            <Text className="text-gray-500 text-center">
+            <Text className="text-tan-500 text-center">
               No share links created yet. Create one above to share your guide!
             </Text>
           </Card>

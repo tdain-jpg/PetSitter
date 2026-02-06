@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, SectionHeader } from '../components';
 import { useData } from '../contexts';
 import { generateId } from '../services';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type {
@@ -222,27 +223,27 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
 
   if (!guide || !homeCare) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-xl text-gray-500 mb-4">Guide not found</Text>
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
           {Platform.OS === 'web' ? (
             <button
@@ -250,7 +251,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -263,8 +264,8 @@ export function HomeCareScreen({ navigation, route }: Props) {
           )}
         </View>
         <View className="mt-4">
-          <Text className="text-2xl font-bold text-gray-900">🏠 Home Care</Text>
-          <Text className="text-gray-500">{guide.title}</Text>
+          <Text className="text-2xl font-bold text-brown-800">🏠 Home Care</Text>
+          <Text className="text-tan-500">{guide.title}</Text>
         </View>
       </View>
 
@@ -275,19 +276,19 @@ export function HomeCareScreen({ navigation, route }: Props) {
           rightAction={{ label: '+ Add', onPress: () => setShowSystemForm(true) }}
         >
           {homeCare.systems.length === 0 ? (
-            <Text className="text-gray-500">No home systems added.</Text>
+            <Text className="text-tan-500">No home systems added.</Text>
           ) : (
             homeCare.systems.map((system) => (
-              <View key={system.id} className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+              <View key={system.id} className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className="font-medium text-gray-900">{system.name}</Text>
-                    <Text className="text-gray-500 text-sm capitalize">{system.type.replace('_', ' ')}</Text>
-                    {system.location && <Text className="text-gray-400 text-sm">📍 {system.location}</Text>}
-                    {system.instructions && <Text className="text-gray-600 text-sm mt-1">{system.instructions}</Text>}
+                    <Text className="font-medium text-brown-800">{system.name}</Text>
+                    <Text className="text-tan-500 text-sm capitalize">{system.type.replace('_', ' ')}</Text>
+                    {system.location && <Text className="text-tan-400 text-sm">📍 {system.location}</Text>}
+                    {system.instructions && <Text className="text-tan-600 text-sm mt-1">{system.instructions}</Text>}
                   </View>
                   <Pressable onPress={() => handleDeleteSystem(system.id)} className="px-2 py-1">
-                    <Text className="text-red-500 text-sm">Delete</Text>
+                    <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -311,18 +312,18 @@ export function HomeCareScreen({ navigation, route }: Props) {
           rightAction={{ label: '+ Add', onPress: () => setShowTaskForm(true) }}
         >
           {homeCare.tasks.length === 0 ? (
-            <Text className="text-gray-500">No home tasks added.</Text>
+            <Text className="text-tan-500">No home tasks added.</Text>
           ) : (
             homeCare.tasks.map((task) => (
-              <View key={task.id} className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+              <View key={task.id} className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className="font-medium text-gray-900">{task.title}</Text>
-                    <Text className="text-gray-500 text-sm capitalize">{task.frequency} • {task.category}</Text>
-                    {task.instructions && <Text className="text-gray-600 text-sm mt-1">{task.instructions}</Text>}
+                    <Text className="font-medium text-brown-800">{task.title}</Text>
+                    <Text className="text-tan-500 text-sm capitalize">{task.frequency} • {task.category}</Text>
+                    {task.instructions && <Text className="text-tan-600 text-sm mt-1">{task.instructions}</Text>}
                   </View>
                   <Pressable onPress={() => handleDeleteTask(task.id)} className="px-2 py-1">
-                    <Text className="text-red-500 text-sm">Delete</Text>
+                    <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -346,18 +347,18 @@ export function HomeCareScreen({ navigation, route }: Props) {
           rightAction={{ label: '+ Add', onPress: () => setShowSupplyForm(true) }}
         >
           {homeCare.supplies.length === 0 ? (
-            <Text className="text-gray-500">No supplies added.</Text>
+            <Text className="text-tan-500">No supplies added.</Text>
           ) : (
             homeCare.supplies.map((supply) => (
-              <View key={supply.id} className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+              <View key={supply.id} className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className="font-medium text-gray-900">{supply.name}</Text>
-                    <Text className="text-gray-500 text-sm">📍 {supply.location}</Text>
-                    {supply.quantity && <Text className="text-gray-400 text-sm">Qty: {supply.quantity}</Text>}
+                    <Text className="font-medium text-brown-800">{supply.name}</Text>
+                    <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
+                    {supply.quantity && <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text>}
                   </View>
                   <Pressable onPress={() => handleDeleteSupply(supply.id)} className="px-2 py-1">
-                    <Text className="text-red-500 text-sm">Delete</Text>
+                    <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -381,18 +382,18 @@ export function HomeCareScreen({ navigation, route }: Props) {
           rightAction={{ label: '+ Add', onPress: () => setShowApplianceForm(true) }}
         >
           {homeCare.appliances.length === 0 ? (
-            <Text className="text-gray-500">No appliances added.</Text>
+            <Text className="text-tan-500">No appliances added.</Text>
           ) : (
             homeCare.appliances.map((appliance) => (
-              <View key={appliance.id} className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+              <View key={appliance.id} className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className="font-medium text-gray-900">{appliance.name}</Text>
-                    {appliance.location && <Text className="text-gray-500 text-sm">📍 {appliance.location}</Text>}
-                    {appliance.instructions && <Text className="text-gray-600 text-sm mt-1">{appliance.instructions}</Text>}
+                    <Text className="font-medium text-brown-800">{appliance.name}</Text>
+                    {appliance.location && <Text className="text-tan-500 text-sm">📍 {appliance.location}</Text>}
+                    {appliance.instructions && <Text className="text-tan-600 text-sm mt-1">{appliance.instructions}</Text>}
                   </View>
                   <Pressable onPress={() => handleDeleteAppliance(appliance.id)} className="px-2 py-1">
-                    <Text className="text-red-500 text-sm">Delete</Text>
+                    <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -416,19 +417,19 @@ export function HomeCareScreen({ navigation, route }: Props) {
           rightAction={{ label: '+ Add', onPress: () => setShowAmenityForm(true) }}
         >
           {homeCare.guest_amenities.length === 0 ? (
-            <Text className="text-gray-500">No guest amenities added.</Text>
+            <Text className="text-tan-500">No guest amenities added.</Text>
           ) : (
             homeCare.guest_amenities.map((amenity) => (
-              <View key={amenity.id} className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+              <View key={amenity.id} className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
-                    <Text className="font-medium text-gray-900">{amenity.name}</Text>
-                    {amenity.location && <Text className="text-gray-500 text-sm">📍 {amenity.location}</Text>}
-                    {amenity.password && <Text className="text-gray-400 text-sm">🔑 {amenity.password}</Text>}
-                    {amenity.instructions && <Text className="text-gray-600 text-sm mt-1">{amenity.instructions}</Text>}
+                    <Text className="font-medium text-brown-800">{amenity.name}</Text>
+                    {amenity.location && <Text className="text-tan-500 text-sm">📍 {amenity.location}</Text>}
+                    {amenity.password && <Text className="text-tan-400 text-sm">🔑 {amenity.password}</Text>}
+                    {amenity.instructions && <Text className="text-tan-600 text-sm mt-1">{amenity.instructions}</Text>}
                   </View>
                   <Pressable onPress={() => handleDeleteAmenity(amenity.id)} className="px-2 py-1">
-                    <Text className="text-red-500 text-sm">Delete</Text>
+                    <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -464,8 +465,8 @@ function SystemForm({
   const [instructions, setInstructions] = useState('');
 
   return (
-    <View className="bg-gray-100 rounded-lg p-4 mt-3">
-      <Text className="font-semibold text-gray-900 mb-3">Add System</Text>
+    <View className="bg-tan-100 rounded-lg p-4 mt-3">
+      <Text className="font-semibold text-brown-800 mb-3">Add System</Text>
       <Input label="Name" value={name} onChangeText={setName} placeholder="e.g., Central AC" />
       <Select label="Type" value={type} options={SYSTEM_TYPES} onValueChange={(v) => setType(v as HomeSystemType)} />
       <Input label="Location" value={location} onChangeText={setLocation} placeholder="e.g., Basement" />
@@ -491,8 +492,8 @@ function TaskForm({
   const [instructions, setInstructions] = useState('');
 
   return (
-    <View className="bg-gray-100 rounded-lg p-4 mt-3">
-      <Text className="font-semibold text-gray-900 mb-3">Add Task</Text>
+    <View className="bg-tan-100 rounded-lg p-4 mt-3">
+      <Text className="font-semibold text-brown-800 mb-3">Add Task</Text>
       <Input label="Title" value={title} onChangeText={setTitle} placeholder="e.g., Water plants" />
       <Select label="Frequency" value={frequency} options={TASK_FREQUENCIES} onValueChange={(v) => setFrequency(v as TaskFrequency)} />
       <Select label="Category" value={category} options={TASK_CATEGORIES} onValueChange={(v) => setCategory(v as HomeTaskCategory)} />
@@ -518,8 +519,8 @@ function SupplyForm({
   const [category, setCategory] = useState<SupplyCategory>('other');
 
   return (
-    <View className="bg-gray-100 rounded-lg p-4 mt-3">
-      <Text className="font-semibold text-gray-900 mb-3">Add Supply</Text>
+    <View className="bg-tan-100 rounded-lg p-4 mt-3">
+      <Text className="font-semibold text-brown-800 mb-3">Add Supply</Text>
       <Input label="Name" value={name} onChangeText={setName} placeholder="e.g., Dog food" />
       <Input label="Location" value={location} onChangeText={setLocation} placeholder="e.g., Pantry" />
       <Input label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="e.g., 2 bags" />
@@ -544,8 +545,8 @@ function ApplianceForm({
   const [instructions, setInstructions] = useState('');
 
   return (
-    <View className="bg-gray-100 rounded-lg p-4 mt-3">
-      <Text className="font-semibold text-gray-900 mb-3">Add Appliance</Text>
+    <View className="bg-tan-100 rounded-lg p-4 mt-3">
+      <Text className="font-semibold text-brown-800 mb-3">Add Appliance</Text>
       <Input label="Name" value={name} onChangeText={setName} placeholder="e.g., Dishwasher" />
       <Input label="Location" value={location} onChangeText={setLocation} placeholder="e.g., Kitchen" />
       <Input label="Instructions" value={instructions} onChangeText={setInstructions} multiline placeholder="How to use" />
@@ -570,8 +571,8 @@ function AmenityForm({
   const [instructions, setInstructions] = useState('');
 
   return (
-    <View className="bg-gray-100 rounded-lg p-4 mt-3">
-      <Text className="font-semibold text-gray-900 mb-3">Add Amenity</Text>
+    <View className="bg-tan-100 rounded-lg p-4 mt-3">
+      <Text className="font-semibold text-brown-800 mb-3">Add Amenity</Text>
       <Input label="Name" value={name} onChangeText={setName} placeholder="e.g., Smart TV" />
       <Input label="Location" value={location} onChangeText={setLocation} placeholder="e.g., Living room" />
       <Input label="Password/Code" value={password} onChangeText={setPassword} placeholder="e.g., Netflix password" />

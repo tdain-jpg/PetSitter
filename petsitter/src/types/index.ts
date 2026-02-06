@@ -23,6 +23,20 @@ export interface AuthState {
 // ============================================
 export type PetSpecies = 'dog' | 'cat' | 'bird' | 'fish' | 'reptile' | 'rabbit' | 'hamster' | 'other';
 export type PetStatus = 'active' | 'deceased';
+export type PetSex = 'male' | 'female' | 'unknown';
+export type EnergyLevel = 'low' | 'medium' | 'high';
+export type SociabilityLevel = 'shy' | 'selective' | 'friendly' | 'very_friendly';
+
+export interface PetPersonality {
+  energy_level?: EnergyLevel;
+  sociability_people?: SociabilityLevel;
+  sociability_pets?: SociabilityLevel;
+  fears?: string;
+  bad_habits?: string;
+  comfort_items?: string;
+  favorite_toys?: string;
+  known_commands?: string;
+}
 
 export interface Pet {
   id: string;
@@ -30,12 +44,21 @@ export interface Pet {
   name: string;
   species: PetSpecies;
   breed?: string;
+  sex?: PetSex;
+  is_neutered?: boolean;
+  nicknames?: string;
   age?: number;
   weight?: number;
   weight_unit?: 'lbs' | 'kg';
+  color_markings?: string;
+  microchip_id?: string;
+  license_tag?: string;
   photo_url?: string;
+  personality?: PetPersonality;
   medical_notes?: string;
   vet_info?: VetInfo;
+  insurance?: Insurance;
+  health_protocol?: HealthProtocol;
   feeding_schedule: FeedingSchedule[];
   medications: Medication[];
   behavioral_notes?: string;
@@ -54,6 +77,44 @@ export interface VetInfo {
   emergency_phone?: string;
 }
 
+export interface Insurance {
+  provider: string;
+  policy_number: string;
+  claims_phone?: string;
+  coverage_notes?: string;
+}
+
+// Symptom Checker / Health Protocols
+export interface HealthSymptom {
+  id: string;
+  name: string;
+  is_enabled: boolean;
+  notes?: string;
+  is_custom?: boolean;
+}
+
+export interface HealthProtocol {
+  symptoms: HealthSymptom[];
+  general_notes?: string;
+  vet_call_threshold?: string; // e.g., "Call vet if any symptom persists >24hrs"
+}
+
+// Default symptoms to pre-populate
+export const DEFAULT_HEALTH_SYMPTOMS: Omit<HealthSymptom, 'id'>[] = [
+  { name: 'Vomiting (>24 hours)', is_enabled: true },
+  { name: 'Diarrhea (>24 hours)', is_enabled: true },
+  { name: 'Refusal to eat (>24 hours)', is_enabled: true },
+  { name: 'Lethargy or weakness', is_enabled: true },
+  { name: 'Difficulty breathing', is_enabled: true },
+  { name: 'Excessive thirst or urination', is_enabled: false },
+  { name: 'Limping or mobility issues', is_enabled: false },
+  { name: 'Seizures or collapse', is_enabled: true },
+  { name: 'Bleeding or wounds', is_enabled: true },
+  { name: 'Swelling (face, limbs, abdomen)', is_enabled: false },
+  { name: 'Eye issues (redness, discharge)', is_enabled: false },
+  { name: 'Ear issues (scratching, odor)', is_enabled: false },
+];
+
 export interface FeedingSchedule {
   id: string;
   time: string; // HH:mm format
@@ -67,7 +128,7 @@ export interface Medication {
   name: string;
   dosage: string;
   frequency: string;
-  time?: string; // HH:mm format
+  times?: string[]; // Array of HH:mm format times
   with_food?: boolean;
   notes?: string;
 }
@@ -92,13 +153,17 @@ export interface Guide {
   updated_at: string;
 }
 
+export type ContactType = 'personal' | 'neighbor' | 'vet_primary' | 'vet_emergency' | 'vet_specialty' | 'other';
+
 export interface EmergencyContact {
   id: string;
   name: string;
   phone: string;
   email?: string;
   relationship: string;
+  contact_type?: ContactType;
   is_primary: boolean;
+  has_key?: boolean; // For neighbors/trusted contacts
   notes?: string;
 }
 
@@ -109,6 +174,7 @@ export interface HomeInfo {
   alarm_code?: string;
   door_code?: string;
   garage_code?: string;
+  gate_code?: string;
   mailbox_code?: string;
   spare_key_location?: string;
   parking_info?: string;
@@ -166,7 +232,9 @@ export interface RoutineTask {
   time?: string; // Specific time (HH:mm), optional
   title: string;
   description?: string;
+  notes?: string; // Additional notes for this task
   is_recurring: boolean;
+  is_custom?: boolean; // True for user-created tasks, false/undefined for auto-generated
   category: TaskCategory;
   order: number;
 }

@@ -55,6 +55,7 @@ export interface DataService {
   deactivateShareLink(linkId: string): Promise<void>;
   incrementViewCount(linkId: string): Promise<void>;
   getSharedGuide(code: string): Promise<Guide | null>;
+  getSharedGuidePets(code: string): Promise<Pet[]>;
 
   // ============================================
   // AI Cheat Sheet Operations

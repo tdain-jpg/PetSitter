@@ -1,5 +1,6 @@
 import { View, Text, Pressable, Platform } from 'react-native';
 import { Input } from './Input';
+import { COLORS } from '../constants';
 import { generateId } from '../services';
 import type { FeedingSchedule } from '../types';
 
@@ -37,8 +38,8 @@ export function ScheduleEditor({
   const buttonStyle = Platform.OS === 'web'
     ? {
         padding: '8px 16px',
-        backgroundColor: '#eff6ff',
-        color: '#2563eb',
+        backgroundColor: COLORS.secondaryLight,
+        color: COLORS.secondary,
         border: 'none',
         borderRadius: 8,
         cursor: 'pointer',
@@ -50,8 +51,8 @@ export function ScheduleEditor({
   const removeButtonStyle = Platform.OS === 'web'
     ? {
         padding: '6px 12px',
-        backgroundColor: '#fee2e2',
-        color: '#dc2626',
+        backgroundColor: COLORS.accentLight,
+        color: COLORS.accent,
         border: 'none',
         borderRadius: 6,
         cursor: 'pointer',
@@ -62,16 +63,16 @@ export function ScheduleEditor({
   return (
     <View className="mb-4">
       {label && (
-        <Text className="text-gray-700 font-medium mb-2">{label}</Text>
+        <Text className="text-brown-600 font-medium mb-2">{label}</Text>
       )}
 
       {schedules.map((schedule, index) => (
         <View
           key={schedule.id}
-          className="bg-gray-50 rounded-lg p-4 mb-3 border border-gray-100"
+          className="bg-cream-200 rounded-lg p-4 mb-3 border border-tan-200"
         >
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-sm font-medium text-gray-600">
+            <Text className="text-sm font-medium text-tan-600">
               Feeding {index + 1}
             </Text>
             {Platform.OS === 'web' ? (
@@ -84,9 +85,9 @@ export function ScheduleEditor({
             ) : (
               <Pressable
                 onPress={() => removeSchedule(schedule.id)}
-                className="px-3 py-1 bg-red-50 rounded"
+                className="px-3 py-1 bg-accent-50 rounded"
               >
-                <Text className="text-red-600 text-xs">Remove</Text>
+                <Text className="text-accent-600 text-xs">Remove</Text>
               </Pressable>
             )}
           </View>
@@ -94,7 +95,7 @@ export function ScheduleEditor({
           {Platform.OS === 'web' ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: COLORS.tan, marginBottom: 4 }}>
                   Time
                 </label>
                 <input
@@ -111,7 +112,7 @@ export function ScheduleEditor({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: COLORS.tan, marginBottom: 4 }}>
                   Food Type
                 </label>
                 <input
@@ -129,7 +130,7 @@ export function ScheduleEditor({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#6b7280', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 12, color: COLORS.tan, marginBottom: 4 }}>
                   Amount
                 </label>
                 <input
@@ -194,9 +195,9 @@ export function ScheduleEditor({
       ) : (
         <Pressable
           onPress={addSchedule}
-          className="px-4 py-2 bg-primary-50 rounded-lg self-start"
+          className="px-4 py-2 bg-secondary-50 rounded-lg self-start"
         >
-          <Text className="text-primary-600 font-medium">
+          <Text className="text-secondary-600 font-medium">
             + Add Feeding Schedule
           </Text>
         </Pressable>

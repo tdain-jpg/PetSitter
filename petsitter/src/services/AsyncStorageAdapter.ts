@@ -315,6 +315,14 @@ export class AsyncStorageAdapter implements DataService {
     return this.getGuide(link.guide_id);
   }
 
+  async getSharedGuidePets(code: string): Promise<Pet[]> {
+    const guide = await this.getSharedGuide(code);
+    if (!guide) return [];
+
+    const allPets = await this.getArray<Pet>(KEYS.PETS);
+    return allPets.filter((p) => guide.pet_ids.includes(p.id));
+  }
+
   // ============================================
   // AI Cheat Sheet Operations
   // ============================================

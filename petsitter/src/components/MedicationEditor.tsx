@@ -1,5 +1,6 @@
 import { View, Text, Pressable, Platform, Switch } from 'react-native';
 import { Input } from './Input';
+import { COLORS } from '../constants';
 import { generateId } from '../services';
 import type { Medication } from '../types';
 
@@ -7,6 +8,35 @@ interface MedicationEditorProps {
   label?: string;
   medications: Medication[];
   onChange: (medications: Medication[]) => void;
+}
+
+// Helper to determine number of time inputs based on frequency
+function getTimeCount(frequency: string): number {
+  switch (frequency) {
+    case 'Twice daily':
+      return 2;
+    case 'Three times daily':
+      return 3;
+    case 'Once daily':
+    case 'Every other day':
+    case 'Weekly':
+    case 'Monthly':
+      return 1;
+    case 'As needed':
+    default:
+      return 0;
+  }
+}
+
+// Labels for each time slot
+function getTimeLabel(frequency: string, index: number): string {
+  if (frequency === 'Twice daily') {
+    return index === 0 ? 'Morning' : 'Evening';
+  }
+  if (frequency === 'Three times daily') {
+    return ['Morning', 'Midday', 'Evening'][index] || `Time ${index + 1}`;
+  }
+  return 'Time';
 }
 
 export function MedicationEditor({
@@ -20,6 +50,7 @@ export function MedicationEditor({
       name: '',
       dosage: '',
       frequency: 'Once daily',
+      times: [''],
     };
     onChange([...medications, newMed]);
   };
@@ -37,8 +68,8 @@ export function MedicationEditor({
   const buttonStyle = Platform.OS === 'web'
     ? {
         padding: '8px 16px',
-        backgroundColor: '#eff6ff',
-        color: '#2563eb',
+        backgroundColor: COLORS.secondaryLight,
+        color: COLORS.secondary,
         border: 'none',
         borderRadius: 8,
         cursor: 'pointer',
@@ -50,8 +81,8 @@ export function MedicationEditor({
   const removeButtonStyle = Platform.OS === 'web'
     ? {
         padding: '6px 12px',
-        backgroundColor: '#fee2e2',
-        color: '#dc2626',
+        backgroundColor: COLORS.accentLight,
+        color: COLORS.accent,
         border: 'none',
         borderRadius: 6,
         cursor: 'pointer',
@@ -62,16 +93,16 @@ export function MedicationEditor({
   return (
     <View className="mb-4">
       {label && (
-        <Text className="text-gray-700 font-medium mb-2">{label}</Text>
+        <Text className="text-brown-600 font-medium mb-2">{label}</Text>
       )}
 
       {medications.map((med, index) => (
         <View
           key={med.id}
-          className="bg-gray-50 rounded-lg p-4 mb-3 border border-gray-100"
+          className="bg-cream-200 rounded-lg p-4 mb-3 border border-tan-200"
         >
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-sm font-medium text-gray-600">
+            <Text className="text-sm font-medium text-tan-600">
               Medication {index + 1}
             </Text>
             {Platform.OS === 'web' ? (
@@ -84,9 +115,9 @@ export function MedicationEditor({
             ) : (
               <Pressable
                 onPress={() => removeMedication(med.id)}
-                className="px-3 py-1 bg-red-50 rounded"
+                className="px-3 py-1 bg-accent-50 rounded"
               >
-                <Text className="text-red-600 text-xs">Remove</Text>
+                <Text className="text-accent-600 text-xs">Remove</Text>
               </Pressable>
             )}
           </View>
@@ -101,7 +132,7 @@ export function MedicationEditor({
           {Platform.OS === 'web' ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
+                <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
                   Dosage
                 </label>
                 <input
@@ -119,12 +150,21 @@ export function MedicationEditor({
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
+                <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
                   Frequency
                 </label>
                 <select
                   value={med.frequency}
-                  onChange={(e) => updateMedication(med.id, { frequency: e.target.value })}
+                  onChange={(e) => {
+                    const newFrequency = e.target.value;
+                    const timeCount = getTimeCount(newFrequency);
+                    const currentTimes = med.times || [];
+                    // Initialize times array based on frequency
+                    const newTimes = timeCount > 0
+                      ? Array.from({ length: timeCount }, (_, i) => currentTimes[i] || '')
+                      : undefined;
+                    updateMedication(med.id, { frequency: newFrequency, times: newTimes });
+                  }}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -156,33 +196,53 @@ export function MedicationEditor({
                 label="Frequency"
                 placeholder="e.g., Once daily"
                 value={med.frequency}
-                onChangeText={(frequency) =>
-                  updateMedication(med.id, { frequency })
-                }
+                onChangeText={(frequency) => {
+                  const timeCount = getTimeCount(frequency);
+                  const currentTimes = med.times || [];
+                  const newTimes = timeCount > 0
+                    ? Array.from({ length: timeCount }, (_, i) => currentTimes[i] || '')
+                    : undefined;
+                  updateMedication(med.id, { frequency, times: newTimes });
+                }}
               />
             </>
           )}
 
           {Platform.OS === 'web' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
-                  Time (optional)
-                </label>
-                <input
-                  type="time"
-                  value={med.time || ''}
-                  onChange={(e) => updateMedication(med.id, { time: e.target.value || undefined })}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: 8,
-                    border: '1px solid #d1d5db',
-                    fontSize: 16,
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', paddingTop: 28 }}>
+            <>
+              {getTimeCount(med.frequency) > 0 && (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: getTimeCount(med.frequency) === 3 ? '1fr 1fr 1fr' : '1fr 1fr',
+                  gap: 12,
+                  marginBottom: 12
+                }}>
+                  {Array.from({ length: getTimeCount(med.frequency) }).map((_, timeIndex) => (
+                    <div key={timeIndex}>
+                      <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
+                        {getTimeLabel(med.frequency, timeIndex)}
+                      </label>
+                      <input
+                        type="time"
+                        value={(med.times && med.times[timeIndex]) || ''}
+                        onChange={(e) => {
+                          const newTimes = [...(med.times || [])];
+                          newTimes[timeIndex] = e.target.value;
+                          updateMedication(med.id, { times: newTimes });
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          borderRadius: 8,
+                          border: '1px solid #d1d5db',
+                          fontSize: 16,
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
@@ -190,20 +250,27 @@ export function MedicationEditor({
                     onChange={(e) => updateMedication(med.id, { with_food: e.target.checked })}
                     style={{ marginRight: 8, width: 18, height: 18 }}
                   />
-                  <span style={{ fontSize: 14, color: '#374151' }}>Give with food</span>
+                  <span style={{ fontSize: 14, color: COLORS.brown }}>Give with food</span>
                 </label>
               </div>
-            </div>
+            </>
           ) : (
             <>
-              <Input
-                label="Time (optional)"
-                placeholder="08:00"
-                value={med.time || ''}
-                onChangeText={(time) =>
-                  updateMedication(med.id, { time: time || undefined })
-                }
-              />
+              {getTimeCount(med.frequency) > 0 &&
+                Array.from({ length: getTimeCount(med.frequency) }).map((_, timeIndex) => (
+                  <Input
+                    key={timeIndex}
+                    label={getTimeLabel(med.frequency, timeIndex)}
+                    placeholder="08:00"
+                    value={(med.times && med.times[timeIndex]) || ''}
+                    onChangeText={(time) => {
+                      const newTimes = [...(med.times || [])];
+                      newTimes[timeIndex] = time;
+                      updateMedication(med.id, { times: newTimes });
+                    }}
+                  />
+                ))
+              }
               <View className="flex-row items-center mb-4">
                 <Switch
                   value={med.with_food || false}
@@ -211,7 +278,7 @@ export function MedicationEditor({
                     updateMedication(med.id, { with_food })
                   }
                 />
-                <Text className="ml-2 text-gray-700">Give with food</Text>
+                <Text className="ml-2 text-brown-600">Give with food</Text>
               </View>
             </>
           )}
@@ -235,9 +302,9 @@ export function MedicationEditor({
       ) : (
         <Pressable
           onPress={addMedication}
-          className="px-4 py-2 bg-primary-50 rounded-lg self-start"
+          className="px-4 py-2 bg-secondary-50 rounded-lg self-start"
         >
-          <Text className="text-primary-600 font-medium">+ Add Medication</Text>
+          <Text className="text-secondary-600 font-medium">+ Add Medication</Text>
         </Pressable>
       )}
     </View>

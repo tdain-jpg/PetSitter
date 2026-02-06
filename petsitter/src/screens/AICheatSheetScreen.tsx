@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { generateCheatSheet } from '../services/AIService';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type { Guide, Pet, CheatSheet } from '../types';
@@ -128,14 +129,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       // Headers
       if (line.startsWith('### ')) {
         return (
-          <Text key={index} className="text-base font-semibold text-gray-900 mt-4 mb-2">
+          <Text key={index} className="text-base font-semibold text-brown-800 mt-4 mb-2">
             {line.replace('### ', '')}
           </Text>
         );
       }
       if (line.startsWith('## ')) {
         return (
-          <Text key={index} className="text-lg font-bold text-gray-900 mt-4 mb-2">
+          <Text key={index} className="text-lg font-bold text-brown-800 mt-4 mb-2">
             {line.replace('## ', '')}
           </Text>
         );
@@ -151,7 +152,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       // Bullet points
       if (line.startsWith('- ') || line.startsWith('* ')) {
         return (
-          <Text key={index} className="text-gray-700 ml-4 mb-1">
+          <Text key={index} className="text-brown-600 ml-4 mb-1">
             • {line.replace(/^[-*] /, '').replace(/\*\*(.*?)\*\*/g, '$1')}
           </Text>
         );
@@ -164,7 +165,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
       // Regular text (remove bold markers for display)
       return (
-        <Text key={index} className="text-gray-700 mb-1">
+        <Text key={index} className="text-brown-600 mb-1">
           {line.replace(/\*\*(.*?)\*\*/g, '$1')}
         </Text>
       );
@@ -173,27 +174,27 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
 
   if (!guide) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-xl text-gray-500 mb-4">Guide not found</Text>
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between">
           {Platform.OS === 'web' ? (
             <button
@@ -201,7 +202,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -218,8 +219,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                 onClick={handleCopyToClipboard}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
+                  backgroundColor: COLORS.creamDark,
+                  color: COLORS.brown,
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
@@ -234,8 +235,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
           )}
         </View>
         <View className="mt-4">
-          <Text className="text-2xl font-bold text-gray-900">🤖 AI Cheat Sheet</Text>
-          <Text className="text-gray-500">{guide.title}</Text>
+          <Text className="text-2xl font-bold text-brown-800">🤖 AI Cheat Sheet</Text>
+          <Text className="text-tan-500">{guide.title}</Text>
         </View>
       </View>
 
@@ -243,15 +244,15 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
         {!cheatSheet ? (
           <Card className="items-center py-8">
             <Text className="text-5xl mb-4">🤖</Text>
-            <Text className="text-xl font-semibold text-gray-900 mb-2 text-center">
+            <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
               Generate AI Cheat Sheet
             </Text>
-            <Text className="text-gray-500 text-center mb-6">
+            <Text className="text-tan-500 text-center mb-6">
               Use AI to create a quick reference summary of this guide for your pet sitter.
             </Text>
 
             {error && (
-              <Text className="text-red-500 mb-4 text-center">{error}</Text>
+              <Text className="text-accent-500 mb-4 text-center">{error}</Text>
             )}
 
             <Button
@@ -261,7 +262,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               disabled={generating}
             />
 
-            <Text className="text-gray-400 text-sm mt-4 text-center">
+            <Text className="text-tan-400 text-sm mt-4 text-center">
               Powered by Google Gemini
             </Text>
           </Card>
@@ -270,16 +271,16 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
             <Card className="mb-4">
               <View className="flex-row justify-between items-center mb-4">
                 <View>
-                  <Text className="text-lg font-semibold text-gray-900">
+                  <Text className="text-lg font-semibold text-brown-800">
                     Generated Cheat Sheet
                   </Text>
-                  <Text className="text-gray-400 text-sm">
+                  <Text className="text-tan-400 text-sm">
                     Generated {new Date(cheatSheet.generated_at).toLocaleString()}
                   </Text>
                 </View>
               </View>
 
-              <View className="border-t border-gray-100 pt-4">
+              <View className="border-t border-tan-200 pt-4">
                 {renderMarkdown(cheatSheet.content)}
               </View>
             </Card>

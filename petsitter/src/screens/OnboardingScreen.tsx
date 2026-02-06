@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input, Select, Card } from '../components';
 import { useData, useAuth } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type { PetSpecies, OnboardingStep } from '../types';
@@ -227,13 +228,13 @@ export function OnboardingScreen({ navigation }: Props) {
       case 'welcome':
         return (
           <View className="flex-1 justify-center items-center px-8">
-            <View className="w-24 h-24 bg-blue-100 rounded-full items-center justify-center mb-6">
+            <View className="w-24 h-24 bg-secondary-100 rounded-full items-center justify-center mb-6">
               <Text className="text-5xl">🐾</Text>
             </View>
-            <Text className="text-3xl font-bold text-gray-900 text-center mb-4">
+            <Text className="text-3xl font-bold text-brown-800 text-center mb-4">
               Welcome to Pet Sitter Guide Pro!
             </Text>
-            <Text className="text-lg text-gray-600 text-center mb-8">
+            <Text className="text-lg text-tan-600 text-center mb-8">
               Create comprehensive pet care guides for your pet sitters. Let's get started by setting up your first pet and guide.
             </Text>
             <View className="w-full gap-3">
@@ -255,13 +256,13 @@ export function OnboardingScreen({ navigation }: Props) {
         return (
           <ScrollView className="flex-1 p-4" keyboardShouldPersistTaps="handled">
             <View className="items-center mb-6">
-              <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center mb-4">
+              <View className="w-20 h-20 bg-primary-100 rounded-full items-center justify-center mb-4">
                 <Text className="text-4xl">🐕</Text>
               </View>
-              <Text className="text-2xl font-bold text-gray-900 text-center">
+              <Text className="text-2xl font-bold text-brown-800 text-center">
                 Add Your First Pet
               </Text>
-              <Text className="text-gray-600 text-center mt-2">
+              <Text className="text-tan-600 text-center mt-2">
                 Tell us about your furry (or scaly) friend
               </Text>
             </View>
@@ -301,7 +302,7 @@ export function OnboardingScreen({ navigation }: Props) {
               />
             </Card>
 
-            <Text className="text-sm text-gray-500 text-center mb-4">
+            <Text className="text-sm text-tan-500 text-center mb-4">
               Don't worry - you can add more details like feeding schedules, medications, and vet info later.
             </Text>
 
@@ -329,10 +330,10 @@ export function OnboardingScreen({ navigation }: Props) {
               <View className="w-20 h-20 bg-purple-100 rounded-full items-center justify-center mb-4">
                 <Text className="text-4xl">📋</Text>
               </View>
-              <Text className="text-2xl font-bold text-gray-900 text-center">
+              <Text className="text-2xl font-bold text-brown-800 text-center">
                 Create Your First Guide
               </Text>
-              <Text className="text-gray-600 text-center mt-2">
+              <Text className="text-tan-600 text-center mt-2">
                 Set up a care guide for {petForm.name || 'your pet'}
               </Text>
             </View>
@@ -358,7 +359,7 @@ export function OnboardingScreen({ navigation }: Props) {
             </Card>
 
             <Card className="mb-4">
-              <Text className="text-lg font-semibold text-gray-900 mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
                 Emergency Contact (Optional)
               </Text>
 
@@ -378,7 +379,7 @@ export function OnboardingScreen({ navigation }: Props) {
               />
             </Card>
 
-            <Text className="text-sm text-gray-500 text-center mb-4">
+            <Text className="text-sm text-tan-500 text-center mb-4">
               You can add WiFi passwords, door codes, and detailed schedules later.
             </Text>
 
@@ -402,36 +403,36 @@ export function OnboardingScreen({ navigation }: Props) {
       case 'completion':
         return (
           <View className="flex-1 justify-center items-center px-8">
-            <View className="w-24 h-24 bg-green-100 rounded-full items-center justify-center mb-6">
+            <View className="w-24 h-24 bg-primary-100 rounded-full items-center justify-center mb-6">
               <Text className="text-5xl">🎉</Text>
             </View>
-            <Text className="text-3xl font-bold text-gray-900 text-center mb-4">
+            <Text className="text-3xl font-bold text-brown-800 text-center mb-4">
               You're All Set!
             </Text>
-            <Text className="text-lg text-gray-600 text-center mb-2">
+            <Text className="text-lg text-tan-600 text-center mb-2">
               Great job! You've created your first pet profile and care guide.
             </Text>
-            <Text className="text-gray-500 text-center mb-8">
+            <Text className="text-tan-500 text-center mb-8">
               You can now add more details, share your guide with pet sitters, or generate an AI cheat sheet.
             </Text>
 
             <Card className="w-full mb-6">
               <View className="flex-row items-center mb-4">
-                <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center mr-3">
+                <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mr-3">
                   <Text className="text-2xl">✓</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">{petForm.name}</Text>
-                  <Text className="text-gray-500 text-sm">Pet profile created</Text>
+                  <Text className="font-semibold text-brown-800">{petForm.name}</Text>
+                  <Text className="text-tan-500 text-sm">Pet profile created</Text>
                 </View>
               </View>
               <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center mr-3">
+                <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mr-3">
                   <Text className="text-2xl">✓</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">{guideForm.title}</Text>
-                  <Text className="text-gray-500 text-sm">Care guide created</Text>
+                  <Text className="font-semibold text-brown-800">{guideForm.title}</Text>
+                  <Text className="text-tan-500 text-sm">Care guide created</Text>
                 </View>
               </View>
             </Card>
@@ -468,12 +469,12 @@ export function OnboardingScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
     >
-      <View className="flex-1 bg-gray-50">
+      <View className="flex-1 bg-cream-200">
         <StatusBar style="dark" />
 
         {/* Header with Progress */}
-        <View className="bg-white border-b border-gray-100 pt-12 pb-4">
-          <Text className="text-center text-lg font-semibold text-gray-900 mb-2">
+        <View className="bg-cream-50 border-b border-tan-200 pt-12 pb-4">
+          <Text className="text-center text-lg font-semibold text-brown-800 mb-2">
             Setup Wizard
           </Text>
           <View className="px-4 pt-4">
@@ -482,18 +483,18 @@ export function OnboardingScreen({ navigation }: Props) {
                 <View
                   key={step}
                   className={`w-3 h-3 rounded-full ${
-                    index <= currentStepIndex ? 'bg-blue-600' : 'bg-gray-300'
+                    index <= currentStepIndex ? 'bg-secondary-600' : 'bg-tan-300'
                   }`}
                 />
               ))}
             </View>
-            <View className="h-1 bg-gray-200 rounded-full overflow-hidden">
+            <View className="h-1 bg-tan-200 rounded-full overflow-hidden">
               <View
-                className="h-full bg-blue-600 rounded-full"
+                className="h-full bg-secondary-600 rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </View>
-            <Text className="text-center text-sm text-gray-500 mt-2">
+            <Text className="text-center text-sm text-tan-500 mt-2">
               Step {currentStepIndex + 1} of {STEPS.length}
             </Text>
           </View>

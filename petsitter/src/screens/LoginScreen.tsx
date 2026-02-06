@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { isValidEmail } from '../utils';
+import { COLORS } from '../constants';
 import type { LoginScreenProps } from '../navigation/types';
+
+// @ts-ignore
+const logo = require('../../assets/logo.png');
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
@@ -56,14 +60,26 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex-1 px-6 pt-20 pb-8 bg-gray-50">
+        <View className="flex-1 px-6 pt-2 pb-8 bg-cream-200">
+          {/* Logo */}
+          <View className="items-center mb-2">
+            <Image
+              source={logo}
+              style={{ width: 270, height: 270 }}
+              resizeMode="contain"
+            />
+          </View>
+
           {/* Header */}
-          <View className="mb-10">
-            <Text className="text-4xl font-bold text-gray-900 mb-2">
-              Welcome back
+          <View className="mb-8 items-center">
+            <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.brown, letterSpacing: 1, textAlign: 'center' }}>
+              Pet Sitter Pro
             </Text>
-            <Text className="text-lg text-gray-600">
-              Sign in to manage your pet sitter guides
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
+              Where Pets Rule the Kingdom!
+            </Text>
+            <Text style={{ fontSize: 14, color: COLORS.tan, marginTop: 16, textAlign: 'center' }}>
+              Sign in to manage your pet care guides
             </Text>
           </View>
 
@@ -99,7 +115,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center mt-6">
-            <Text className="text-gray-600">Don't have an account? </Text>
+            <Text className="text-tan-600">Don't have an account? </Text>
             <Text
               className="text-primary-600 font-semibold"
               onPress={() => navigation.navigate('SignUp')}

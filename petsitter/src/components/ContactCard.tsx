@@ -1,4 +1,5 @@
 import { View, Text, Pressable, Platform, Linking } from 'react-native';
+import { COLORS } from '../constants';
 import type { EmergencyContact } from '../types';
 
 interface ContactCardProps {
@@ -22,17 +23,17 @@ export function ContactCard({
     return (
       <div
         style={{
-          backgroundColor: '#f9fafb',
+          backgroundColor: COLORS.creamDark,
           borderRadius: 8,
           padding: 12,
           marginBottom: 8,
-          border: '1px solid #e5e7eb',
+          border: `1px solid ${COLORS.tanMedium}`,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 16, fontWeight: 600, color: '#111827' }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: COLORS.brown }}>
                 {contact.name}
               </span>
               {contact.is_primary && (
@@ -40,8 +41,8 @@ export function ContactCard({
                   style={{
                     fontSize: 10,
                     padding: '2px 6px',
-                    backgroundColor: '#dcfce7',
-                    color: '#16a34a',
+                    backgroundColor: COLORS.primaryLight,
+                    color: COLORS.primary,
                     borderRadius: 8,
                     fontWeight: 600,
                   }}
@@ -50,14 +51,14 @@ export function ContactCard({
                 </span>
               )}
             </div>
-            <span style={{ fontSize: 14, color: '#6b7280', display: 'block' }}>
+            <span style={{ fontSize: 14, color: COLORS.tan, display: 'block' }}>
               {contact.relationship}
             </span>
             <a
               href={`tel:${contact.phone}`}
               style={{
                 fontSize: 14,
-                color: '#2563eb',
+                color: COLORS.secondary,
                 textDecoration: 'none',
                 display: 'block',
                 marginTop: 4,
@@ -70,7 +71,7 @@ export function ContactCard({
                 href={`mailto:${contact.email}`}
                 style={{
                   fontSize: 14,
-                  color: '#2563eb',
+                  color: COLORS.secondary,
                   textDecoration: 'none',
                   display: 'block',
                   marginTop: 2,
@@ -80,7 +81,7 @@ export function ContactCard({
               </a>
             )}
             {contact.notes && (
-              <span style={{ fontSize: 12, color: '#9ca3af', display: 'block', marginTop: 4 }}>
+              <span style={{ fontSize: 12, color: COLORS.tanLight, display: 'block', marginTop: 4 }}>
                 {contact.notes}
               </span>
             )}
@@ -94,7 +95,7 @@ export function ContactCard({
                   style={{
                     padding: '4px 8px',
                     backgroundColor: 'transparent',
-                    color: '#2563eb',
+                    color: COLORS.secondary,
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: 12,
@@ -109,7 +110,7 @@ export function ContactCard({
                   style={{
                     padding: '4px 8px',
                     backgroundColor: 'transparent',
-                    color: '#dc2626',
+                    color: COLORS.accent,
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: 12,
@@ -126,28 +127,28 @@ export function ContactCard({
   }
 
   return (
-    <View className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-200">
+    <View className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200">
       <View className="flex-row justify-between items-start">
         <View className="flex-1">
           <View className="flex-row items-center gap-2 mb-1">
-            <Text className="text-base font-semibold text-gray-900">
+            <Text className="text-base font-semibold text-brown-800">
               {contact.name}
             </Text>
             {contact.is_primary && (
-              <View className="bg-green-100 px-2 py-0.5 rounded-full">
-                <Text className="text-green-600 text-xs font-semibold">PRIMARY</Text>
+              <View className="bg-primary-100 px-2 py-0.5 rounded-full">
+                <Text className="text-primary-600 text-xs font-semibold">PRIMARY</Text>
               </View>
             )}
           </View>
-          <Text className="text-gray-500">{contact.relationship}</Text>
+          <Text className="text-tan-500">{contact.relationship}</Text>
           <Pressable onPress={handleCall}>
-            <Text className="text-primary-600 mt-1">📞 {contact.phone}</Text>
+            <Text className="text-secondary-600 mt-1">📞 {contact.phone}</Text>
           </Pressable>
           {contact.email && (
-            <Text className="text-primary-600 text-sm">✉️ {contact.email}</Text>
+            <Text className="text-secondary-600 text-sm">✉️ {contact.email}</Text>
           )}
           {contact.notes && (
-            <Text className="text-gray-400 text-sm mt-1">{contact.notes}</Text>
+            <Text className="text-tan-400 text-sm mt-1">{contact.notes}</Text>
           )}
         </View>
 
@@ -155,12 +156,12 @@ export function ContactCard({
           <View className="flex-row gap-1">
             {onEdit && (
               <Pressable onPress={onEdit} className="px-2 py-1">
-                <Text className="text-primary-600 text-sm">Edit</Text>
+                <Text className="text-secondary-600 text-sm">Edit</Text>
               </Pressable>
             )}
             {onDelete && (
               <Pressable onPress={onDelete} className="px-2 py-1">
-                <Text className="text-red-600 text-sm">Delete</Text>
+                <Text className="text-accent-600 text-sm">Delete</Text>
               </Pressable>
             )}
           </View>

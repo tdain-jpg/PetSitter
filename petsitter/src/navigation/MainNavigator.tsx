@@ -11,9 +11,11 @@ import { HomeCareScreen } from '../screens/HomeCareScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { MemorialScreen } from '../screens/MemorialScreen';
 import { ShareGuideScreen } from '../screens/ShareGuideScreen';
+import { SharedGuideViewScreen } from '../screens/SharedGuideViewScreen';
 import { PDFPreviewScreen } from '../screens/PDFPreviewScreen';
 import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
+import { TripWizardScreen } from '../screens/TripWizardScreen';
 import type { MainTabParamList } from './types';
 
 const Stack = createNativeStackNavigator<MainTabParamList>();
@@ -38,9 +40,11 @@ export function MainNavigator() {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Memorial" component={MemorialScreen} />
       <Stack.Screen name="ShareGuide" component={ShareGuideScreen} />
+      <Stack.Screen name="SharedGuideView" component={SharedGuideViewScreen} />
       <Stack.Screen name="PDFPreview" component={PDFPreviewScreen} />
       <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="TripWizard" component={TripWizardScreen} />
     </Stack.Navigator>
   );
 }

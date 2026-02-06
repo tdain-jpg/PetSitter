@@ -10,6 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, PetCard } from '../components';
 import { useData } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -96,16 +97,16 @@ export function GuideDetailScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
 
   if (!guide) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-xl text-gray-500 mb-4">Guide not found</Text>
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
@@ -123,35 +124,54 @@ export function GuideDetailScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="bg-white border-b border-gray-100">
+      <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: '#2563eb',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <View className="flex-row items-center" style={{ gap: 16 }}>
+            {Platform.OS === 'web' ? (
+              <button
+                onClick={() => navigation.goBack()}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'transparent',
+                  color: COLORS.secondary,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                }}
+              >
+                ← Back
+              </button>
+            ) : (
+              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            )}
+            {Platform.OS === 'web' ? (
+              <button
+                onClick={() => navigation.navigate('Home')}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'transparent',
+                  color: COLORS.tan,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                }}
+              >
+                Home
+              </button>
+            ) : (
+              <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
+            )}
+          </View>
           {Platform.OS === 'web' ? (
             <button
               onClick={handleEdit}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#2563eb',
+                backgroundColor: COLORS.secondary,
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
@@ -167,9 +187,9 @@ export function GuideDetailScreen({ navigation, route }: Props) {
         </View>
 
         <View className="px-4 pb-4">
-          <Text className="text-2xl font-bold text-gray-900">{guide.title}</Text>
+          <Text className="text-2xl font-bold text-brown-800">{guide.title}</Text>
           {(guide.start_date || guide.end_date) && (
-            <Text className="text-gray-500 mt-1">
+            <Text className="text-tan-500 mt-1">
               📅 {formatDate(guide.start_date)}
               {guide.end_date && ` → ${formatDate(guide.end_date)}`}
             </Text>
@@ -181,13 +201,14 @@ export function GuideDetailScreen({ navigation, route }: Props) {
         {/* Pets Section */}
         <SectionHeader
           title={`Pets (${guidePets.length})`}
+          icon="🐾"
           rightAction={{
             label: 'Edit Pets',
             onPress: handleEdit,
           }}
         >
           {guidePets.length === 0 ? (
-            <Text className="text-gray-500">No pets assigned to this guide.</Text>
+            <Text className="text-tan-500">No pets assigned to this guide.</Text>
           ) : (
             guidePets.map((pet) => (
               <PetCard
@@ -202,13 +223,14 @@ export function GuideDetailScreen({ navigation, route }: Props) {
         {/* Emergency Contacts */}
         <SectionHeader
           title={`Emergency Contacts (${guide.emergency_contacts.length})`}
+          icon="🚨"
           rightAction={{
             label: 'Edit',
             onPress: handleEdit,
           }}
         >
           {guide.emergency_contacts.length === 0 ? (
-            <Text className="text-gray-500">No emergency contacts added.</Text>
+            <Text className="text-tan-500">No emergency contacts added.</Text>
           ) : (
             guide.emergency_contacts.map((contact) => (
               <ContactCard key={contact.id} contact={contact} readOnly />
@@ -219,6 +241,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
         {/* Home Info */}
         <SectionHeader
           title="Home Information"
+          icon="🏠"
           rightAction={{
             label: 'Edit',
             onPress: handleEdit,
@@ -227,92 +250,92 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           <View className="gap-2">
             {guide.home_info.address && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Address:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.address}</Text>
+                <Text className="text-tan-500 w-28">Address:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.address}</Text>
               </View>
             )}
             {guide.home_info.wifi_name && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">WiFi:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.wifi_name}</Text>
+                <Text className="text-tan-500 w-28">WiFi:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.wifi_name}</Text>
               </View>
             )}
             {guide.home_info.wifi_password && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Password:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.wifi_password}</Text>
+                <Text className="text-tan-500 w-28">Password:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.wifi_password}</Text>
               </View>
             )}
             {guide.home_info.door_code && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Door Code:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.door_code}</Text>
+                <Text className="text-tan-500 w-28">Door Code:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.door_code}</Text>
               </View>
             )}
             {guide.home_info.alarm_code && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Alarm Code:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.alarm_code}</Text>
+                <Text className="text-tan-500 w-28">Alarm Code:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.alarm_code}</Text>
               </View>
             )}
             {guide.home_info.spare_key_location && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Spare Key:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.spare_key_location}</Text>
+                <Text className="text-tan-500 w-28">Spare Key:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.spare_key_location}</Text>
               </View>
             )}
             {guide.home_info.trash_day && (
               <View className="flex-row">
-                <Text className="text-gray-500 w-28">Trash Day:</Text>
-                <Text className="text-gray-900 flex-1">{guide.home_info.trash_day}</Text>
+                <Text className="text-tan-500 w-28">Trash Day:</Text>
+                <Text className="text-brown-800 flex-1">{guide.home_info.trash_day}</Text>
               </View>
             )}
             {guide.home_info.notes && (
               <View className="mt-2">
-                <Text className="text-gray-500">Notes:</Text>
-                <Text className="text-gray-900">{guide.home_info.notes}</Text>
+                <Text className="text-tan-500">Notes:</Text>
+                <Text className="text-brown-800">{guide.home_info.notes}</Text>
               </View>
             )}
             {!guide.home_info.address &&
               !guide.home_info.wifi_name &&
               !guide.home_info.door_code && (
-                <Text className="text-gray-500">No home information added.</Text>
+                <Text className="text-tan-500">No home information added.</Text>
               )}
           </View>
         </SectionHeader>
 
         {/* Travel Itinerary */}
         {guide.travel_itinerary && (
-          <SectionHeader title="Travel Itinerary" defaultExpanded={false}>
+          <SectionHeader title="Travel Itinerary" icon="✈️" defaultExpanded={false}>
             <View className="gap-2">
               {guide.travel_itinerary.destination && (
                 <View className="flex-row">
-                  <Text className="text-gray-500 w-28">Destination:</Text>
-                  <Text className="text-gray-900 flex-1">
+                  <Text className="text-tan-500 w-28">Destination:</Text>
+                  <Text className="text-brown-800 flex-1">
                     {guide.travel_itinerary.destination}
                   </Text>
                 </View>
               )}
               {guide.travel_itinerary.contact_while_away && (
                 <View className="flex-row">
-                  <Text className="text-gray-500 w-28">Contact:</Text>
-                  <Text className="text-gray-900 flex-1">
+                  <Text className="text-tan-500 w-28">Contact:</Text>
+                  <Text className="text-brown-800 flex-1">
                     {guide.travel_itinerary.contact_while_away}
                   </Text>
                 </View>
               )}
               {guide.travel_itinerary.flights.length > 0 && (
                 <View className="mt-2">
-                  <Text className="text-gray-500 mb-2">Flights:</Text>
+                  <Text className="text-tan-500 mb-2">Flights:</Text>
                   {guide.travel_itinerary.flights.map((flight) => (
                     <Card key={flight.id} className="mb-2">
-                      <Text className="font-semibold text-gray-900">
+                      <Text className="font-semibold text-brown-800">
                         {flight.type === 'departure' ? '✈️ Departure' : '🛬 Return'}
                       </Text>
-                      <Text className="text-gray-600">
+                      <Text className="text-tan-600">
                         {flight.airline} {flight.flight_number}
                       </Text>
-                      <Text className="text-gray-500 text-sm">
+                      <Text className="text-tan-500 text-sm">
                         {flight.departure_airport} → {flight.arrival_airport}
                       </Text>
                     </Card>
@@ -325,8 +348,8 @@ export function GuideDetailScreen({ navigation, route }: Props) {
 
         {/* Additional Notes */}
         {guide.additional_notes && (
-          <SectionHeader title="Additional Notes" defaultExpanded={false}>
-            <Text className="text-gray-700">{guide.additional_notes}</Text>
+          <SectionHeader title="Additional Notes" icon="📝" defaultExpanded={false}>
+            <Text className="text-brown-600">{guide.additional_notes}</Text>
           </SectionHeader>
         )}
 

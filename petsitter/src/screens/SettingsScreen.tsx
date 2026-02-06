@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input, Card } from '../components';
 import { useAuth, useData } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 
@@ -127,11 +128,11 @@ export function SettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
           {Platform.OS === 'web' ? (
             <button
@@ -139,7 +140,7 @@ export function SettingsScreen({ navigation }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -150,30 +151,30 @@ export function SettingsScreen({ navigation }: Props) {
           ) : (
             <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           )}
-          <Text className="text-xl font-bold text-gray-900 ml-4">Settings</Text>
+          <Text className="text-xl font-bold text-brown-800 ml-4">Settings</Text>
         </View>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         {/* Account */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">Account</Text>
+          <Text className="text-lg font-semibold text-brown-800 mb-4">Account</Text>
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-gray-500">Email</Text>
-            <Text className="text-gray-900">{user?.email}</Text>
+            <Text className="text-tan-500">Email</Text>
+            <Text className="text-brown-800">{user?.email}</Text>
           </View>
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-gray-500">Role</Text>
-            <Text className="text-gray-900 capitalize">{user?.role}</Text>
+            <Text className="text-tan-500">Role</Text>
+            <Text className="text-brown-800 capitalize">{user?.role}</Text>
           </View>
         </Card>
 
         {/* AI Settings */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <Text className="text-lg font-semibold text-brown-800 mb-4">
             AI Settings (Google Gemini)
           </Text>
-          <Text className="text-gray-500 text-sm mb-4">
+          <Text className="text-tan-500 text-sm mb-4">
             Enter your Google Gemini API key to enable AI-powered features like the Cheat Sheet generator.
           </Text>
 
@@ -200,7 +201,7 @@ export function SettingsScreen({ navigation }: Props) {
                   onClick={() => setShowApiKey(!showApiKey)}
                   style={{
                     padding: '12px 16px',
-                    backgroundColor: '#f3f4f6',
+                    backgroundColor: COLORS.creamDark,
                     border: 'none',
                     borderRadius: 8,
                     cursor: 'pointer',
@@ -240,12 +241,12 @@ export function SettingsScreen({ navigation }: Props) {
 
         {/* Preferences */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">Preferences</Text>
+          <Text className="text-lg font-semibold text-brown-800 mb-4">Preferences</Text>
 
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-1">
-              <Text className="text-gray-900">Auto-Save</Text>
-              <Text className="text-gray-500 text-sm">
+              <Text className="text-brown-800">Auto-Save</Text>
+              <Text className="text-tan-500 text-sm">
                 Automatically save changes as you type
               </Text>
             </View>
@@ -257,8 +258,8 @@ export function SettingsScreen({ navigation }: Props) {
 
           <View className="flex-row justify-between items-center">
             <View className="flex-1">
-              <Text className="text-gray-900">Notifications</Text>
-              <Text className="text-gray-500 text-sm">
+              <Text className="text-brown-800">Notifications</Text>
+              <Text className="text-tan-500 text-sm">
                 Receive reminders and updates
               </Text>
             </View>
@@ -277,19 +278,19 @@ export function SettingsScreen({ navigation }: Props) {
               className="flex-row justify-between items-center"
             >
               <View>
-                <Text className="text-gray-900 font-medium">Pet Memorial</Text>
-                <Text className="text-gray-500 text-sm">
+                <Text className="text-brown-800 font-medium">Pet Memorial</Text>
+                <Text className="text-tan-500 text-sm">
                   {deceasedPets.length} {deceasedPets.length === 1 ? 'pet' : 'pets'} in memorial
                 </Text>
               </View>
-              <Text className="text-gray-400 text-xl">›</Text>
+              <Text className="text-tan-400 text-xl">›</Text>
             </Pressable>
           </Card>
         )}
 
         {/* Data Management */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">Data Management</Text>
+          <Text className="text-lg font-semibold text-brown-800 mb-4">Data Management</Text>
 
           <View className="gap-3">
             <Button title="📤 Export Data" onPress={handleExport} variant="outline" />

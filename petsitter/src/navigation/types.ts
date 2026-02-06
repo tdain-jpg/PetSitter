@@ -52,6 +52,9 @@ export type MainTabParamList = {
 
   // Onboarding
   Onboarding: undefined;
+
+  // Trip Planning
+  TripWizard: undefined;
 };
 
 // Screen Props Types

@@ -6,17 +6,29 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Switch,
+  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
+import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainTabParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 
 type Props = NativeStackScreenProps<MainTabParamList, 'PDFPreview'>;
+
+interface PDFSections {
+  emergencyContacts: boolean;
+  homeInfo: boolean;
+  pets: boolean;
+  travelItinerary: boolean;
+  aiCheatSheet: boolean;
+  additionalNotes: boolean;
+}
 
 export function PDFPreviewScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
@@ -27,6 +39,17 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [cheatSheetContent, setCheatSheetContent] = useState<string | null>(null);
+
+  // Module selection state
+  const [sections, setSections] = useState<PDFSections>({
+    emergencyContacts: true,
+    homeInfo: true,
+    pets: true,
+    travelItinerary: true,
+    aiCheatSheet: true,
+    additionalNotes: true,
+  });
+  const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -39,7 +62,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
       if (foundGuide) {
         setGuide(foundGuide);
         const allPets = [...activePets, ...deceasedPets];
-        setGuidePets(allPets.filter((p) => foundGuide.pet_ids.includes(p.id)));
+        const pets = allPets.filter((p) => foundGuide.pet_ids.includes(p.id));
+        setGuidePets(pets);
+        setSelectedPetIds(pets.map((p) => p.id)); // Select all pets by default
       }
 
       const cheatSheet = await getCheatSheet(guideId);
@@ -49,10 +74,27 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     }
   };
 
+  const toggleSection = (section: keyof PDFSections) => {
+    setSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const togglePet = (petId: string) => {
+    setSelectedPetIds((prev) =>
+      prev.includes(petId)
+        ? prev.filter((id) => id !== petId)
+        : [...prev, petId]
+    );
+  };
+
+  const selectAllPets = () => setSelectedPetIds(guidePets.map((p) => p.id));
+  const deselectAllPets = () => setSelectedPetIds([]);
+
   const generateHTML = (): string => {
     if (!guide) return '';
 
-    const petSections = guidePets.map((pet) => `
+    const selectedPets = guidePets.filter((p) => selectedPetIds.includes(p.id));
+
+    const petSections = selectedPets.map((pet) => `
       <div class="section">
         <h2>${pet.name} (${pet.species}${pet.breed ? ` - ${pet.breed}` : ''})</h2>
         ${pet.age ? `<p><strong>Age:</strong> ${pet.age} years</p>` : ''}
@@ -104,8 +146,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             padding: 20px;
           }
           h1 {
-            color: #2563eb;
-            border-bottom: 2px solid #2563eb;
+            color: ${COLORS.primary};
+            border-bottom: 2px solid ${COLORS.primary};
             padding-bottom: 10px;
           }
           h2 {
@@ -145,7 +187,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             margin: 20px 0;
           }
           .home-info h2 {
-            color: #0284c7;
+            color: ${COLORS.secondary};
             margin-top: 0;
           }
           ul {
@@ -188,13 +230,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           ` : ''}
         </div>
 
-        ${guide.emergency_contacts.length > 0 ? `
+        ${sections.emergencyContacts && guide.emergency_contacts.length > 0 ? `
           <div class="emergency">
             <h2>🚨 Emergency Contacts</h2>
             <ul>
               ${guide.emergency_contacts.map((c) => `
                 <li>
-                  <strong>${c.name}</strong> (${c.relationship})${c.is_primary ? ' - PRIMARY' : ''}<br>
+                  <strong>${c.name}</strong> (${c.relationship})${c.is_primary ? ' - PRIMARY' : ''}${c.has_key ? ' 🔑' : ''}<br>
                   Phone: ${c.phone}${c.email ? `<br>Email: ${c.email}` : ''}
                 </li>
               `).join('')}
@@ -202,28 +244,35 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           </div>
         ` : ''}
 
+        ${sections.homeInfo ? `
         <div class="home-info">
           <h2>🏠 Home Information</h2>
           ${guide.home_info.address ? `<p><strong>Address:</strong> ${guide.home_info.address}</p>` : ''}
           ${guide.home_info.wifi_name ? `<p><strong>WiFi:</strong> ${guide.home_info.wifi_name}${guide.home_info.wifi_password ? ` / Password: ${guide.home_info.wifi_password}` : ''}</p>` : ''}
           ${guide.home_info.door_code ? `<p><strong>Door Code:</strong> ${guide.home_info.door_code}</p>` : ''}
           ${guide.home_info.alarm_code ? `<p><strong>Alarm Code:</strong> ${guide.home_info.alarm_code}</p>` : ''}
+          ${guide.home_info.garage_code ? `<p><strong>Garage Code:</strong> ${guide.home_info.garage_code}</p>` : ''}
+          ${guide.home_info.gate_code ? `<p><strong>Gate Code:</strong> ${guide.home_info.gate_code}</p>` : ''}
+          ${guide.home_info.mailbox_code ? `<p><strong>Mailbox Code:</strong> ${guide.home_info.mailbox_code}</p>` : ''}
           ${guide.home_info.spare_key_location ? `<p><strong>Spare Key:</strong> ${guide.home_info.spare_key_location}</p>` : ''}
           ${guide.home_info.trash_day ? `<p><strong>Trash Day:</strong> ${guide.home_info.trash_day}</p>` : ''}
           ${guide.home_info.notes ? `<p><strong>Notes:</strong> ${guide.home_info.notes}</p>` : ''}
         </div>
+        ` : ''}
 
+        ${sections.pets && selectedPetIds.length > 0 ? `
         <h2>🐾 Pets</h2>
-        ${petSections || '<p>No pets assigned to this guide.</p>'}
+        ${petSections || '<p>No pets selected.</p>'}
+        ` : ''}
 
-        ${cheatSheetContent ? `
+        ${sections.aiCheatSheet && cheatSheetContent ? `
           <div class="cheat-sheet">
             <h2>🤖 AI Cheat Sheet</h2>
             <div>${cheatSheetContent.replace(/\n/g, '<br>')}</div>
           </div>
         ` : ''}
 
-        ${guide.additional_notes ? `
+        ${sections.additionalNotes && guide.additional_notes ? `
           <div class="section">
             <h2>📝 Additional Notes</h2>
             <p>${guide.additional_notes}</p>
@@ -280,27 +329,27 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <ActivityIndicator size="large" color={COLORS.secondary} />
       </View>
     );
   }
 
   if (!guide) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-xl text-gray-500 mb-4">Guide not found</Text>
+      <View className="flex-1 items-center justify-center bg-cream-200">
+        <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-white border-b border-gray-100">
+      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between">
           {Platform.OS === 'web' ? (
             <button
@@ -308,7 +357,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'transparent',
-                color: '#2563eb',
+                color: COLORS.secondary,
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: 16,
@@ -325,7 +374,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               disabled={exporting}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#2563eb',
+                backgroundColor: COLORS.secondary,
                 color: 'white',
                 border: 'none',
                 borderRadius: 8,
@@ -346,41 +395,166 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           )}
         </View>
         <View className="mt-4">
-          <Text className="text-2xl font-bold text-gray-900">📄 PDF Preview</Text>
-          <Text className="text-gray-500">{guide.title}</Text>
+          <Text className="text-2xl font-bold text-brown-800">📄 PDF Preview</Text>
+          <Text className="text-tan-500">{guide.title}</Text>
         </View>
       </View>
 
       <ScrollView className="flex-1 p-4">
-        {/* Preview Card */}
+        {/* Section Selection */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-2">
-            What's Included
+          <Text className="text-lg font-semibold text-brown-800 mb-3">
+            Select Sections to Include
           </Text>
-          <View className="gap-2">
-            <Text className="text-gray-600">✓ Emergency contacts</Text>
-            <Text className="text-gray-600">✓ Home information</Text>
-            <Text className="text-gray-600">
-              ✓ {guidePets.length} {guidePets.length === 1 ? 'pet' : 'pets'} with details
-            </Text>
-            {guidePets.map((pet) => (
-              <Text key={pet.id} className="text-gray-500 ml-4">
-                • {pet.name} - {pet.feeding_schedule.length} feeding times, {pet.medications.length} medications
-              </Text>
-            ))}
-            {cheatSheetContent && (
-              <Text className="text-gray-600">✓ AI-generated cheat sheet</Text>
+
+          {/* Section Toggles */}
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
+              <Text className="text-brown-600">🚨 Emergency Contacts</Text>
+              <Switch
+                value={sections.emergencyContacts}
+                onValueChange={() => toggleSection('emergencyContacts')}
+              />
+            </View>
+
+            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
+              <Text className="text-brown-600">🏠 Home Information</Text>
+              <Switch
+                value={sections.homeInfo}
+                onValueChange={() => toggleSection('homeInfo')}
+              />
+            </View>
+
+            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
+              <Text className="text-brown-600">🐾 Pet Details</Text>
+              <Switch
+                value={sections.pets}
+                onValueChange={() => toggleSection('pets')}
+              />
+            </View>
+
+            {guide.travel_itinerary && (
+              <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
+                <Text className="text-brown-600">✈️ Travel Itinerary</Text>
+                <Switch
+                  value={sections.travelItinerary}
+                  onValueChange={() => toggleSection('travelItinerary')}
+                />
+              </View>
             )}
+
+            {cheatSheetContent && (
+              <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
+                <Text className="text-brown-600">🤖 AI Cheat Sheet</Text>
+                <Switch
+                  value={sections.aiCheatSheet}
+                  onValueChange={() => toggleSection('aiCheatSheet')}
+                />
+              </View>
+            )}
+
             {guide.additional_notes && (
-              <Text className="text-gray-600">✓ Additional notes</Text>
+              <View className="flex-row items-center justify-between py-2">
+                <Text className="text-brown-600">📝 Additional Notes</Text>
+                <Switch
+                  value={sections.additionalNotes}
+                  onValueChange={() => toggleSection('additionalNotes')}
+                />
+              </View>
             )}
           </View>
         </Card>
 
+        {/* Pet Selection */}
+        {sections.pets && guidePets.length > 0 && (
+          <Card className="mb-4">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-semibold text-brown-800">
+                Select Pets
+              </Text>
+              <View className="flex-row gap-2">
+                {Platform.OS === 'web' ? (
+                  <>
+                    <button
+                      onClick={selectAllPets}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: 'transparent',
+                        color: COLORS.secondary,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                      }}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={deselectAllPets}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: 'transparent',
+                        color: COLORS.tan,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                      }}
+                    >
+                      None
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Pressable onPress={selectAllPets}>
+                      <Text className="text-primary-600 text-sm">All</Text>
+                    </Pressable>
+                    <Text className="text-tan-300">|</Text>
+                    <Pressable onPress={deselectAllPets}>
+                      <Text className="text-tan-500 text-sm">None</Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            </View>
+
+            <View className="gap-2">
+              {guidePets.map((pet) => (
+                <Pressable
+                  key={pet.id}
+                  onPress={() => togglePet(pet.id)}
+                  className={`flex-row items-center p-3 rounded-lg border ${
+                    selectedPetIds.includes(pet.id)
+                      ? 'bg-primary-50 border-primary-200'
+                      : 'bg-cream-200 border-tan-200'
+                  }`}
+                >
+                  <View
+                    className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${
+                      selectedPetIds.includes(pet.id)
+                        ? 'bg-primary-500 border-primary-500'
+                        : 'border-tan-300'
+                    }`}
+                  >
+                    {selectedPetIds.includes(pet.id) && (
+                      <Text className="text-white text-xs">✓</Text>
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-medium text-brown-800">{pet.name}</Text>
+                    <Text className="text-tan-500 text-sm">
+                      {pet.feeding_schedule.length} feedings, {pet.medications.length} medications
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </Card>
+        )}
+
+        {/* Tip for cheat sheet */}
         {!cheatSheetContent && (
           <Card className="mb-4">
             <Text className="text-orange-600 font-medium mb-2">💡 Tip</Text>
-            <Text className="text-gray-600">
+            <Text className="text-tan-600">
               Generate an AI Cheat Sheet first to include a quick-reference summary in your PDF.
             </Text>
             <View className="mt-3">
@@ -393,12 +567,26 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           </Card>
         )}
 
+        {/* Export Summary */}
+        <Card className="mb-4">
+          <Text className="text-sm font-medium text-tan-500 mb-2">EXPORT SUMMARY</Text>
+          <Text className="text-tan-600">
+            {[
+              sections.emergencyContacts && guide.emergency_contacts.length > 0 && `${guide.emergency_contacts.length} contacts`,
+              sections.homeInfo && 'Home info',
+              sections.pets && selectedPetIds.length > 0 && `${selectedPetIds.length} pets`,
+              sections.aiCheatSheet && cheatSheetContent && 'AI cheat sheet',
+              sections.additionalNotes && guide.additional_notes && 'Notes',
+            ].filter(Boolean).join(' • ') || 'No sections selected'}
+          </Text>
+        </Card>
+
         <View className="mb-8">
           <Button
             title={exporting ? 'Exporting...' : '📄 Export as PDF'}
             onPress={handleExport}
             loading={exporting}
-            disabled={exporting}
+            disabled={exporting || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.aiCheatSheet && !sections.additionalNotes)}
           />
         </View>
       </ScrollView>

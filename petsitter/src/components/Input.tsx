@@ -46,9 +46,9 @@ export function Input({
   const displayValue = value;
 
   const inputStyles = `
-    border rounded-lg px-4 py-3 text-base bg-white
-    ${isFocused ? 'border-primary-500' : 'border-gray-300'}
-    ${error ? 'border-red-500' : ''}
+    border rounded-lg px-4 py-3 text-base bg-cream-50
+    ${isFocused ? 'border-primary-500' : 'border-tan-300'}
+    ${error ? 'border-accent-500' : ''}
     ${multiline ? 'min-h-[100px] text-start' : ''}
     ${secureTextEntry ? 'pr-12' : ''}
   `;
@@ -60,13 +60,13 @@ export function Input({
   return (
     <View className="mb-4">
       {label && (
-        <Text className="text-gray-700 font-medium mb-2">{label}</Text>
+        <Text className="text-brown-600 font-medium mb-2">{label}</Text>
       )}
       <View className="relative">
         <TextInput
           className={inputStyles}
           placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor="#A08060"
           value={displayValue}
           onChangeText={handleTextChange}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
@@ -111,7 +111,7 @@ export function Input({
         )}
       </View>
       {error && (
-        <Text className="text-red-500 text-sm mt-1">{error}</Text>
+        <Text className="text-accent-500 text-sm mt-1">{error}</Text>
       )}
     </View>
   );

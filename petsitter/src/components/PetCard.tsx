@@ -1,4 +1,5 @@
 import { View, Text, Image, Pressable, Platform } from 'react-native';
+import { COLORS } from '../constants';
 import type { Pet } from '../types';
 
 interface PetCardProps {
@@ -26,12 +27,12 @@ export function PetCard({ pet, onPress }: PetCardProps) {
       <div
         onClick={onPress}
         style={{
-          backgroundColor: 'white',
+          backgroundColor: COLORS.cream,
           borderRadius: 12,
           padding: 16,
           marginBottom: 12,
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: '1px solid #f3f4f6',
+          border: `1px solid ${COLORS.creamDark}`,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -62,7 +63,7 @@ export function PetCard({ pet, onPress }: PetCardProps) {
               width: 64,
               height: 64,
               borderRadius: 32,
-              backgroundColor: '#f3f4f6',
+              backgroundColor: COLORS.creamDark,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -79,7 +80,7 @@ export function PetCard({ pet, onPress }: PetCardProps) {
               style={{
                 fontSize: 18,
                 fontWeight: 600,
-                color: '#111827',
+                color: COLORS.brown,
               }}
             >
               {pet.name}
@@ -89,8 +90,8 @@ export function PetCard({ pet, onPress }: PetCardProps) {
                 style={{
                   fontSize: 12,
                   padding: '2px 8px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#6b7280',
+                  backgroundColor: COLORS.creamDark,
+                  color: COLORS.tan,
                   borderRadius: 12,
                 }}
               >
@@ -101,20 +102,20 @@ export function PetCard({ pet, onPress }: PetCardProps) {
           <span
             style={{
               fontSize: 14,
-              color: '#6b7280',
+              color: COLORS.tan,
               textTransform: 'capitalize',
             }}
           >
             {pet.breed || pet.species}
           </span>
           {pet.age && (
-            <span style={{ fontSize: 14, color: '#9ca3af', marginLeft: 8 }}>
+            <span style={{ fontSize: 14, color: COLORS.tanLight, marginLeft: 8 }}>
               • {pet.age} {pet.age === 1 ? 'year' : 'years'} old
             </span>
           )}
         </div>
 
-        <span style={{ fontSize: 20, color: '#9ca3af' }}>›</span>
+        <span style={{ fontSize: 20, color: COLORS.tanLight }}>›</span>
       </div>
     );
   }
@@ -123,7 +124,7 @@ export function PetCard({ pet, onPress }: PetCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      className="bg-white rounded-xl p-4 mb-3 shadow-sm border border-gray-100 flex-row items-center"
+      className="bg-cream-50 rounded-xl p-4 mb-3 shadow-sm border border-tan-200 flex-row items-center"
       style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
     >
       {pet.photo_url ? (
@@ -133,27 +134,27 @@ export function PetCard({ pet, onPress }: PetCardProps) {
           resizeMode="cover"
         />
       ) : (
-        <View className="w-16 h-16 rounded-full bg-gray-100 items-center justify-center">
+        <View className="w-16 h-16 rounded-full bg-tan-100 items-center justify-center">
           <Text className="text-3xl">{emoji}</Text>
         </View>
       )}
 
       <View className="flex-1 ml-4">
         <View className="flex-row items-center gap-2">
-          <Text className="text-lg font-semibold text-gray-900">{pet.name}</Text>
+          <Text className="text-lg font-semibold text-brown-800">{pet.name}</Text>
           {pet.status === 'deceased' && (
-            <View className="bg-gray-100 px-2 py-0.5 rounded-full">
-              <Text className="text-xs text-gray-500">Memorial</Text>
+            <View className="bg-tan-100 px-2 py-0.5 rounded-full">
+              <Text className="text-xs text-tan-500">Memorial</Text>
             </View>
           )}
         </View>
-        <Text className="text-gray-500 capitalize">
+        <Text className="text-tan-500 capitalize">
           {pet.breed || pet.species}
           {pet.age && ` • ${pet.age} ${pet.age === 1 ? 'year' : 'years'} old`}
         </Text>
       </View>
 
-      <Text className="text-2xl text-gray-300">›</Text>
+      <Text className="text-2xl text-tan-300">›</Text>
     </Pressable>
   );
 }

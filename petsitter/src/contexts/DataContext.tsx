@@ -45,6 +45,7 @@ interface DataContextType {
   getShareLinks: () => Promise<ShareableLink[]>;
   deactivateShareLink: (linkId: string) => Promise<void>;
   getSharedGuide: (code: string) => Promise<Guide | null>;
+  getSharedGuidePets: (code: string) => Promise<Pet[]>;
 
   // AI Cheat Sheets
   getCheatSheet: (guideId: string) => Promise<CheatSheet | null>;
@@ -247,6 +248,10 @@ export function DataProvider({ children }: DataProviderProps) {
     return dataService.getSharedGuide(code);
   }, []);
 
+  const getSharedGuidePets = useCallback(async (code: string) => {
+    return dataService.getSharedGuidePets(code);
+  }, []);
+
   // ============================================
   // AI Cheat Sheet Operations
   // ============================================
@@ -370,6 +375,7 @@ export function DataProvider({ children }: DataProviderProps) {
     getShareLinks,
     deactivateShareLink,
     getSharedGuide,
+    getSharedGuidePets,
 
     // AI Cheat Sheets
     getCheatSheet,

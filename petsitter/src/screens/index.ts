@@ -23,6 +23,7 @@ export { MemorialScreen } from './MemorialScreen';
 
 // Share & Export screens
 export { ShareGuideScreen } from './ShareGuideScreen';
+export { SharedGuideViewScreen } from './SharedGuideViewScreen';
 export { PDFPreviewScreen } from './PDFPreviewScreen';
 
 // AI screens
@@ -30,3 +31,6 @@ export { AICheatSheetScreen } from './AICheatSheetScreen';
 
 // Onboarding
 export { OnboardingScreen } from './OnboardingScreen';
+
+// Trip Planning
+export { TripWizardScreen } from './TripWizardScreen';

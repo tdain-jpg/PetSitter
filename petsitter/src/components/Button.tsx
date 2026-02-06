@@ -3,10 +3,21 @@ import { View, Text, ActivityIndicator, Platform, Pressable } from 'react-native
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
   disabled?: boolean;
   loading?: boolean;
 }
+
+// Color palette from logo
+const COLORS = {
+  gold: '#C4913D',
+  goldDark: '#A67432',
+  brown: '#5D4037',
+  brownDark: '#4A3328',
+  cream: '#FAF3E3',
+  red: '#B84233',
+  redDark: '#9A3529',
+};
 
 export function Button({
   title,
@@ -18,13 +29,15 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const bgColor = {
-    primary: '#2563eb',
-    secondary: '#4b5563',
+    primary: COLORS.gold,
+    secondary: COLORS.brown,
     outline: 'transparent',
+    danger: COLORS.red,
   }[variant];
 
-  const textColor = variant === 'outline' ? '#2563eb' : '#ffffff';
-  const borderStyle = variant === 'outline' ? '2px solid #2563eb' : 'none';
+  const textColor = variant === 'outline' ? COLORS.gold : '#ffffff';
+  const borderColor = variant === 'outline' ? COLORS.gold : variant === 'danger' ? COLORS.red : COLORS.gold;
+  const borderStyle = variant === 'outline' ? `2px solid ${COLORS.gold}` : 'none';
 
   // For web, render a native button for reliable click handling
   if (Platform.OS === 'web') {
@@ -67,7 +80,7 @@ export function Button({
         justifyContent: 'center',
         opacity: isDisabled ? 0.5 : 1,
         borderWidth: variant === 'outline' ? 2 : 0,
-        borderColor: '#2563eb',
+        borderColor: borderColor,
       }}
     >
       {loading ? (
