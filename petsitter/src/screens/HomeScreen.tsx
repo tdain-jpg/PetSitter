@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, ScrollView, Alert, Platform, Image } from 'react-native';
+import { View, Text, ScrollView, Image } from 'react-native';
+import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, PetCard } from '../components';
 import { COLORS } from '../constants';
@@ -8,9 +9,9 @@ import { COLORS } from '../constants';
 const logo = require('../../assets/logo.png');
 import { useAuth, useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'Home'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
@@ -27,7 +28,7 @@ export function HomeScreen({ navigation }: Props) {
     try {
       await signOut();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign out');
+      showAlert('Error', error.message || 'Failed to sign out');
     }
   };
 
@@ -66,28 +67,11 @@ export function HomeScreen({ navigation }: Props) {
             </View>
           </View>
           <View className="items-end">
-            {Platform.OS === 'web' ? (
-              <button
-                onClick={navigateToSettings}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: COLORS.creamDark,
-                  color: COLORS.brown,
-                  border: 'none',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  cursor: 'pointer',
-                }}
-              >
-                Settings
-              </button>
-            ) : (
-              <Button
-                title="Settings"
-                onPress={navigateToSettings}
-                variant="secondary"
-              />
-            )}
+            <Button
+              title="Settings"
+              onPress={navigateToSettings}
+              variant="secondary"
+            />
             <Text style={{ fontSize: 12, color: COLORS.tan, marginTop: 4 }}>
               Welcome{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
             </Text>
@@ -145,27 +129,11 @@ export function HomeScreen({ navigation }: Props) {
               <Text className="text-lg font-semibold text-brown-800">
                 Your Pets
               </Text>
-              {Platform.OS === 'web' ? (
-                <button
-                  onClick={navigateToPets}
-                  style={{
-                    padding: '4px 12px',
-                    backgroundColor: 'transparent',
-                    color: COLORS.primary,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
-                  See All →
-                </button>
-              ) : (
-                <Button
-                  title="See All →"
-                  onPress={navigateToPets}
-                  variant="outline"
-                />
-              )}
+              <Button
+                title="See All →"
+                onPress={navigateToPets}
+                variant="outline"
+              />
             </View>
             {activePets.slice(0, 3).map((pet) => (
               <PetCard

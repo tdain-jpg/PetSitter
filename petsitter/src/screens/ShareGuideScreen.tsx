@@ -5,18 +5,18 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  Alert,
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, ShareableLink } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'ShareGuide'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
 export function ShareGuideScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
@@ -51,11 +51,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
       setLinks((prev) => [...prev, newLink]);
     } catch (error: any) {
       const message = error.message || 'Failed to create link';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', message);
     } finally {
       setCreating(false);
     }
@@ -69,33 +65,23 @@ export function ShareGuideScreen({ navigation, route }: Props) {
       );
     } catch (error: any) {
       const message = error.message || 'Failed to deactivate link';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', message);
     }
   };
 
   const handleCopyLink = async (code: string) => {
-    const url = `${Platform.OS === 'web' ? window.location.origin : 'petsitter://'}share/${code}`;
+    const url = `${Platform.OS === 'web' ? window.location.origin : 'petsitter://'}/share/${code}`;
 
     try {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
       } else {
         const Clipboard = require('expo-clipboard');
         await Clipboard.setStringAsync(url);
-        Alert.alert('Copied', 'Link copied to clipboard!');
       }
+      showAlert('Copied', 'Link copied to clipboard!');
     } catch (err) {
-      const message = 'Failed to copy link';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', 'Failed to copy link');
     }
   };
 
@@ -130,23 +116,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
         </View>
         <View className="mt-4">
           <Text className="text-2xl font-bold text-brown-800">🔗 Share Guide</Text>
@@ -220,75 +190,29 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                 </View>
 
                 <View className="flex-row gap-2 flex-wrap">
-                  {Platform.OS === 'web' ? (
-                    <>
-                      <button
-                        onClick={() => handlePreview(link.code)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: COLORS.secondary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontSize: 14,
-                        }}
-                      >
-                        👁️ Preview
-                      </button>
-                      <button
-                        onClick={() => handleCopyLink(link.code)}
-                        style={{
-                          flex: 1,
-                          padding: '8px 16px',
-                          backgroundColor: COLORS.primary50,
-                          color: COLORS.secondary,
-                          border: 'none',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontSize: 14,
-                        }}
-                      >
-                        📋 Copy Link
-                      </button>
-                      <button
-                        onClick={() => handleDeactivate(link.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#fee2e2',
-                          color: COLORS.accent,
-                          border: 'none',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontSize: 14,
-                        }}
-                      >
-                        Deactivate
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Pressable
-                        onPress={() => handlePreview(link.code)}
-                        className="bg-secondary-500 px-4 py-2 rounded-lg"
-                      >
-                        <Text className="text-white">👁️ Preview</Text>
-                      </Pressable>
-                      <View className="flex-1">
-                        <Button
-                          title="📋 Copy"
-                          onPress={() => handleCopyLink(link.code)}
-                          variant="outline"
-                        />
-                      </View>
-                      <Pressable
-                        onPress={() => handleDeactivate(link.id)}
-                        className="bg-accent-50 px-4 py-2 rounded-lg"
-                      >
-                        <Text className="text-accent-600">Deactivate</Text>
-                      </Pressable>
-                    </>
-                  )}
+                  <Pressable
+                    onPress={() => handlePreview(link.code)}
+                    className="bg-secondary-500 px-4 py-2 rounded-lg"
+                    accessibilityRole="button"
+                    accessibilityLabel="Preview shared guide"
+                  >
+                    <Text className="text-white">👁️ Preview</Text>
+                  </Pressable>
+                  <View className="flex-1">
+                    <Button
+                      title="📋 Copy"
+                      onPress={() => handleCopyLink(link.code)}
+                      variant="outline"
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => handleDeactivate(link.id)}
+                    className="bg-accent-50 px-4 py-2 rounded-lg"
+                    accessibilityRole="button"
+                    accessibilityLabel="Deactivate share link"
+                  >
+                    <Text className="text-accent-600">Deactivate</Text>
+                  </Pressable>
                 </View>
               </View>
             ))}

@@ -1,6 +1,5 @@
-import { View, Text, Pressable, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView } from 'react-native';
 import { useState } from 'react';
-import { COLORS } from '../constants';
 
 interface SelectOption {
   label: string;
@@ -32,46 +31,6 @@ export function Select({
     setIsOpen(false);
   };
 
-  // For web, use native select for better UX
-  if (Platform.OS === 'web') {
-    return (
-      <View className="mb-4">
-        {label && (
-          <Text className="text-brown-600 font-medium mb-2">{label}</Text>
-        )}
-        <select
-          value={value}
-          onChange={(e) => onValueChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            borderRadius: 8,
-            border: error ? `1px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
-            fontSize: 16,
-            backgroundColor: COLORS.cardBackground,
-            cursor: 'pointer',
-            appearance: 'none',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23A08060'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 12px center',
-            backgroundSize: '20px',
-            color: COLORS.text,
-          }}
-        >
-          <option value="" disabled>
-            {placeholder}
-          </option>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        {error && <Text className="text-accent-500 text-sm mt-1">{error}</Text>}
-      </View>
-    );
-  }
-
   return (
     <View className="mb-4">
       {label && (
@@ -79,6 +38,9 @@ export function Select({
       )}
       <Pressable
         onPress={() => setIsOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={label || placeholder}
+        accessibilityValue={{ text: selectedOption?.label || '' }}
         className={`
           border rounded-lg px-4 py-3 bg-cream-50 flex-row justify-between items-center
           ${error ? 'border-accent-500' : 'border-tan-300'}
@@ -112,6 +74,9 @@ export function Select({
                 <Pressable
                   key={opt.value}
                   onPress={() => handleSelect(opt.value)}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt.label}
+                  accessibilityState={{ selected: opt.value === value }}
                   className={`
                     p-4 border-b border-tan-100
                     ${opt.value === value ? 'bg-primary-50' : ''}

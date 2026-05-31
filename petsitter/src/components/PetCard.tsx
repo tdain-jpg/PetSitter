@@ -1,5 +1,4 @@
-import { View, Text, Image, Pressable, Platform } from 'react-native';
-import { COLORS } from '../constants';
+import { View, Text, Image, Pressable } from 'react-native';
 import type { Pet } from '../types';
 
 interface PetCardProps {
@@ -21,109 +20,11 @@ const speciesEmoji: Record<string, string> = {
 export function PetCard({ pet, onPress }: PetCardProps) {
   const emoji = speciesEmoji[pet.species] || '🐾';
 
-  // Web-specific rendering for better click handling
-  if (Platform.OS === 'web') {
-    return (
-      <div
-        onClick={onPress}
-        style={{
-          backgroundColor: COLORS.cream,
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 12,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: `1px solid ${COLORS.creamDark}`,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-          transition: 'transform 0.1s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.01)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        {pet.photo_url ? (
-          <img
-            src={pet.photo_url}
-            alt={pet.name}
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              objectFit: 'cover',
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: COLORS.creamDark,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 28,
-            }}
-          >
-            {emoji}
-          </div>
-        )}
-
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: COLORS.brown,
-              }}
-            >
-              {pet.name}
-            </span>
-            {pet.status === 'deceased' && (
-              <span
-                style={{
-                  fontSize: 12,
-                  padding: '2px 8px',
-                  backgroundColor: COLORS.creamDark,
-                  color: COLORS.tan,
-                  borderRadius: 12,
-                }}
-              >
-                Memorial
-              </span>
-            )}
-          </div>
-          <span
-            style={{
-              fontSize: 14,
-              color: COLORS.tan,
-              textTransform: 'capitalize',
-            }}
-          >
-            {pet.breed || pet.species}
-          </span>
-          {pet.age && (
-            <span style={{ fontSize: 14, color: COLORS.tanLight, marginLeft: 8 }}>
-              • {pet.age} {pet.age === 1 ? 'year' : 'years'} old
-            </span>
-          )}
-        </div>
-
-        <span style={{ fontSize: 20, color: COLORS.tanLight }}>›</span>
-      </div>
-    );
-  }
-
-  // Native rendering
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${pet.name}, ${pet.breed || pet.species}`}
       className="bg-cream-50 rounded-xl p-4 mb-3 shadow-sm border border-tan-200 flex-row items-center"
       style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
     >

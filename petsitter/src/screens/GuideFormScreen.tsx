@@ -5,7 +5,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Pressable,
   Switch,
@@ -16,11 +15,12 @@ import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, EmergencyContact, HomeInfo, Pet, TravelItinerary, ContactType } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'GuideForm'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
 
 interface FormData {
   title: string;
@@ -186,11 +186,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       navigation.goBack();
     } catch (error: any) {
       const message = error.message || 'Failed to save guide';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -309,59 +305,18 @@ export function GuideFormScreen({ navigation, route }: Props) {
               error={errors.title}
             />
 
-            {Platform.OS === 'web' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => updateField('start_date', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: 8,
-                      border: '1px solid #d1d5db',
-                      fontSize: 16,
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 14, color: COLORS.brown, marginBottom: 8, fontWeight: 500 }}>
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => updateField('end_date', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: 8,
-                      border: '1px solid #d1d5db',
-                      fontSize: 16,
-                    }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Input
-                  label="Start Date"
-                  placeholder="YYYY-MM-DD"
-                  value={formData.start_date}
-                  onChangeText={(v) => updateField('start_date', v)}
-                />
-                <Input
-                  label="End Date"
-                  placeholder="YYYY-MM-DD"
-                  value={formData.end_date}
-                  onChangeText={(v) => updateField('end_date', v)}
-                />
-              </>
-            )}
+            <Input
+              label="Start Date"
+              placeholder="YYYY-MM-DD"
+              value={formData.start_date}
+              onChangeText={(v) => updateField('start_date', v)}
+            />
+            <Input
+              label="End Date"
+              placeholder="YYYY-MM-DD"
+              value={formData.end_date}
+              onChangeText={(v) => updateField('end_date', v)}
+            />
           </Card>
 
           {/* Pet Selection */}
@@ -385,6 +340,9 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   <Pressable
                     key={pet.id}
                     onPress={() => togglePet(pet.id)}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={pet.name}
+                    accessibilityState={{ checked: formData.pet_ids.includes(pet.id) }}
                     className={`flex-row items-center p-3 rounded-lg border ${
                       formData.pet_ids.includes(pet.id)
                         ? 'bg-primary-50 border-primary-200'
@@ -418,26 +376,14 @@ export function GuideFormScreen({ navigation, route }: Props) {
               <Text className="text-lg font-semibold text-brown-800">
                 Emergency Contacts
               </Text>
-              {Platform.OS === 'web' ? (
-                <button
-                  onClick={handleAddContact}
-                  style={{
-                    padding: '6px 12px',
-                    backgroundColor: COLORS.secondaryLight,
-                    color: COLORS.secondary,
-                    border: 'none',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    fontSize: 12,
-                  }}
-                >
-                  + Add Contact
-                </button>
-              ) : (
-                <Pressable onPress={handleAddContact} className="bg-secondary-50 px-3 py-1 rounded">
-                  <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={handleAddContact}
+                className="bg-secondary-50 px-3 py-1 rounded"
+                accessibilityRole="button"
+                accessibilityLabel="Add emergency contact"
+              >
+                <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
+              </Pressable>
             </View>
 
             {formData.emergency_contacts.length === 0 ? (
@@ -475,45 +421,22 @@ export function GuideFormScreen({ navigation, route }: Props) {
                       <Text className="text-primary-600">{contact.phone}</Text>
                     </View>
                     <View className="flex-row gap-2">
-                      {Platform.OS === 'web' ? (
-                        <>
-                          <button
-                            onClick={() => handleEditContact(contact)}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: 'transparent',
-                              color: COLORS.secondary,
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: 12,
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteContact(contact.id)}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: 'transparent',
-                              color: COLORS.accent,
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: 12,
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <Pressable onPress={() => handleEditContact(contact)} className="px-2 py-1">
-                            <Text className="text-secondary-600 text-sm">Edit</Text>
-                          </Pressable>
-                          <Pressable onPress={() => handleDeleteContact(contact.id)} className="px-2 py-1">
-                            <Text className="text-accent-600 text-sm">Delete</Text>
-                          </Pressable>
-                        </>
-                      )}
+                      <Pressable
+                        onPress={() => handleEditContact(contact)}
+                        className="px-2 py-1"
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit contact"
+                      >
+                        <Text className="text-secondary-600 text-sm">Edit</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => handleDeleteContact(contact.id)}
+                        className="px-2 py-1"
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete contact"
+                      >
+                        <Text className="text-accent-600 text-sm">Delete</Text>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
@@ -603,37 +526,18 @@ export function GuideFormScreen({ navigation, route }: Props) {
               onChangeText={(v) => updateHomeInfo('address', v)}
             />
 
-            {Platform.OS === 'web' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Input
-                  label="WiFi Network"
-                  placeholder="Network name"
-                  value={formData.home_info.wifi_name || ''}
-                  onChangeText={(v) => updateHomeInfo('wifi_name', v)}
-                />
-                <Input
-                  label="WiFi Password"
-                  placeholder="Password"
-                  value={formData.home_info.wifi_password || ''}
-                  onChangeText={(v) => updateHomeInfo('wifi_password', v)}
-                />
-              </div>
-            ) : (
-              <>
-                <Input
-                  label="WiFi Network"
-                  placeholder="Network name"
-                  value={formData.home_info.wifi_name || ''}
-                  onChangeText={(v) => updateHomeInfo('wifi_name', v)}
-                />
-                <Input
-                  label="WiFi Password"
-                  placeholder="Password"
-                  value={formData.home_info.wifi_password || ''}
-                  onChangeText={(v) => updateHomeInfo('wifi_password', v)}
-                />
-              </>
-            )}
+            <Input
+              label="WiFi Network"
+              placeholder="Network name"
+              value={formData.home_info.wifi_name || ''}
+              onChangeText={(v) => updateHomeInfo('wifi_name', v)}
+            />
+            <Input
+              label="WiFi Password"
+              placeholder="Password"
+              value={formData.home_info.wifi_password || ''}
+              onChangeText={(v) => updateHomeInfo('wifi_password', v)}
+            />
 
             <Input
               label="Door Code"
@@ -649,49 +553,24 @@ export function GuideFormScreen({ navigation, route }: Props) {
               onChangeText={(v) => updateHomeInfo('alarm_code', v)}
             />
 
-            {Platform.OS === 'web' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                <Input
-                  label="Garage Code"
-                  placeholder="Garage code"
-                  value={formData.home_info.garage_code || ''}
-                  onChangeText={(v) => updateHomeInfo('garage_code', v)}
-                />
-                <Input
-                  label="Gate Code"
-                  placeholder="Gate code"
-                  value={formData.home_info.gate_code || ''}
-                  onChangeText={(v) => updateHomeInfo('gate_code', v)}
-                />
-                <Input
-                  label="Mailbox Code"
-                  placeholder="Mailbox code"
-                  value={formData.home_info.mailbox_code || ''}
-                  onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
-                />
-              </div>
-            ) : (
-              <>
-                <Input
-                  label="Garage Code"
-                  placeholder="Garage code"
-                  value={formData.home_info.garage_code || ''}
-                  onChangeText={(v) => updateHomeInfo('garage_code', v)}
-                />
-                <Input
-                  label="Gate Code"
-                  placeholder="Gate code"
-                  value={formData.home_info.gate_code || ''}
-                  onChangeText={(v) => updateHomeInfo('gate_code', v)}
-                />
-                <Input
-                  label="Mailbox Code"
-                  placeholder="Mailbox code"
-                  value={formData.home_info.mailbox_code || ''}
-                  onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
-                />
-              </>
-            )}
+            <Input
+              label="Garage Code"
+              placeholder="Garage code"
+              value={formData.home_info.garage_code || ''}
+              onChangeText={(v) => updateHomeInfo('garage_code', v)}
+            />
+            <Input
+              label="Gate Code"
+              placeholder="Gate code"
+              value={formData.home_info.gate_code || ''}
+              onChangeText={(v) => updateHomeInfo('gate_code', v)}
+            />
+            <Input
+              label="Mailbox Code"
+              placeholder="Mailbox code"
+              value={formData.home_info.mailbox_code || ''}
+              onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
+            />
 
             <Input
               label="Spare Key Location"

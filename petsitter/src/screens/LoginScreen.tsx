@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { isValidEmail } from '../utils';
+import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { LoginScreenProps } from '../navigation/types';
 
@@ -16,7 +17,8 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, signInWithMagicLink } = useAuth();
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -44,7 +46,34 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       await signIn(email.trim(), password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'An error occurred during login');
+      showAlert('Login Failed', error.message || 'An error occurred during login');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setIsSubmitting(true);
+    try {
+      await signInWithGoogle();
+      // Web: redirects away. Native: not yet supported in this build.
+    } catch (error: any) {
+      showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    if (!email.trim() || !isValidEmail(email)) {
+      setErrors({ email: 'Enter a valid email to receive a magic link' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await signInWithMagicLink(email.trim());
+      setMagicLinkSent(true);
+    } catch (error: any) {
+      showAlert('Magic Link Failed', error.message || 'Could not send magic link');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,6 +141,40 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             loading={isSubmitting}
             disabled={isSubmitting}
           />
+
+          {/* Magic link confirmation */}
+          {magicLinkSent && (
+            <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
+              <Text className="text-primary-700 text-sm text-center">
+                ✉️ Check your inbox for a sign-in link.
+              </Text>
+            </View>
+          )}
+
+          {/* Divider */}
+          <View className="flex-row items-center my-6">
+            <View className="flex-1 h-px bg-tan-300" />
+            <Text className="mx-3 text-tan-500 text-sm">or</Text>
+            <View className="flex-1 h-px bg-tan-300" />
+          </View>
+
+          {/* Google Sign-In */}
+          <Button
+            title="Continue with Google"
+            onPress={handleGoogle}
+            variant="outline"
+            disabled={isSubmitting}
+          />
+
+          {/* Magic Link */}
+          <View className="mt-3">
+            <Button
+              title="Email me a magic link"
+              onPress={handleMagicLink}
+              variant="secondary"
+              disabled={isSubmitting}
+            />
+          </View>
 
           {/* Sign Up Link */}
           <View className="flex-row justify-center mt-6">

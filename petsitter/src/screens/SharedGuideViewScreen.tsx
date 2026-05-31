@@ -4,17 +4,17 @@ import {
   Text,
   ScrollView,
   ActivityIndicator,
-  Platform,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, SectionHeader, ContactCard, PetCard } from '../components';
+import { Button, Card, SectionHeader, ContactCard, SensitiveValue } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { RootStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'SharedGuideView'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'SharedGuideView'>;
 
 export function SharedGuideViewScreen({ navigation, route }: Props) {
   const { code } = route.params;
@@ -110,23 +110,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center px-4 py-3">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
         </View>
 
         <View className="px-4 pb-4">
@@ -167,15 +151,11 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                     <View
                       className="w-16 h-16 rounded-full bg-tan-200 mr-4 overflow-hidden"
                     >
-                      {Platform.OS === 'web' ? (
-                        <img
-                          src={pet.photo_url}
-                          alt={pet.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <View className="w-full h-full bg-tan-200" />
-                      )}
+                      <Image
+                        source={{ uri: pet.photo_url }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
                     </View>
                   ) : (
                     <View className="w-16 h-16 rounded-full bg-primary-100 items-center justify-center mr-4">
@@ -301,19 +281,25 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
             {guide.home_info.wifi_password && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Password:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.wifi_password}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.wifi_password} label="WiFi password" />
+                </View>
               </View>
             )}
             {guide.home_info.door_code && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Door Code:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.door_code}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.door_code} label="door code" />
+                </View>
               </View>
             )}
             {guide.home_info.alarm_code && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Alarm Code:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.alarm_code}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.alarm_code} label="alarm code" />
+                </View>
               </View>
             )}
             {guide.home_info.spare_key_location && (

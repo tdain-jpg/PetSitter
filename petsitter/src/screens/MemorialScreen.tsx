@@ -1,12 +1,11 @@
 import { View, Text, ScrollView, Platform, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, PetCard, Card } from '../components';
+import { Button, Card } from '../components';
 import { useData } from '../contexts';
-import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'Memorial'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
 
 export function MemorialScreen({ navigation }: Props) {
   const { deceasedPets, restorePet, deletePet } = useData();
@@ -60,23 +59,7 @@ export function MemorialScreen({ navigation }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
         </View>
         <View className="mt-4">
           <Text className="text-2xl font-bold text-brown-800">Pet Memorial</Text>

@@ -8,14 +8,15 @@ import {
   Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, SectionHeader, ContactCard, PetCard } from '../components';
+import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'GuideDetail'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
 export function GuideDetailScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
@@ -66,12 +67,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
       const newGuide = await duplicateGuide(guideId);
       (navigation as any).navigate('GuideDetail', { guideId: newGuide.id });
     } catch (error: any) {
-      const message = error.message || 'Failed to duplicate guide';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to duplicate guide');
     }
   };
 
@@ -131,59 +127,10 @@ export function GuideDetailScreen({ navigation, route }: Props) {
       <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
           <View className="flex-row items-center" style={{ gap: 16 }}>
-            {Platform.OS === 'web' ? (
-              <button
-                onClick={() => navigation.goBack()}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'transparent',
-                  color: COLORS.secondary,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                ← Back
-              </button>
-            ) : (
-              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-            )}
-            {Platform.OS === 'web' ? (
-              <button
-                onClick={() => navigation.navigate('Home')}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'transparent',
-                  color: COLORS.tan,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                Home
-              </button>
-            ) : (
-              <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
-            )}
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
           </View>
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={handleEdit}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: COLORS.secondary,
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-            >
-              Edit
-            </button>
-          ) : (
-            <Button title="Edit" onPress={handleEdit} variant="primary" />
-          )}
+          <Button title="Edit" onPress={handleEdit} variant="primary" />
         </View>
 
         <View className="px-4 pb-4">
@@ -263,19 +210,25 @@ export function GuideDetailScreen({ navigation, route }: Props) {
             {guide.home_info.wifi_password && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Password:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.wifi_password}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.wifi_password} label="WiFi password" />
+                </View>
               </View>
             )}
             {guide.home_info.door_code && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Door Code:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.door_code}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.door_code} label="door code" />
+                </View>
               </View>
             )}
             {guide.home_info.alarm_code && (
               <View className="flex-row">
                 <Text className="text-tan-500 w-28">Alarm Code:</Text>
-                <Text className="text-brown-800 flex-1">{guide.home_info.alarm_code}</Text>
+                <View className="flex-1">
+                  <SensitiveValue value={guide.home_info.alarm_code} label="alarm code" />
+                </View>
               </View>
             )}
             {guide.home_info.spare_key_location && (

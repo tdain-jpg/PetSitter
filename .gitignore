@@ -1,0 +1,5 @@
+
+# Local tooling
+.claude/worktrees/
+.claude/settings.local.json
+reviews/

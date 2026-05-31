@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Platform, Image } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card } from '../components';
 import { COLORS } from '../constants';
@@ -86,11 +86,28 @@ export function LandingScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
+      {/* Top nav bar for returning users */}
+      <View
+        style={{ backgroundColor: COLORS.primary }}
+        className="px-6 pt-3 pb-2 flex-row justify-end"
+      >
+        <Pressable
+          onPress={navigateToLogin}
+          accessibilityRole="button"
+          accessibilityLabel="Sign in to existing account"
+          className="px-3 py-1.5"
+        >
+          <Text style={{ color: COLORS.cream }} className="text-base font-semibold">
+            Sign In
+          </Text>
+        </Pressable>
+      </View>
+
       <ScrollView className="flex-1">
         {/* Hero Section */}
         <View
           style={{ backgroundColor: COLORS.primary }}
-          className="px-6 pt-12 pb-12"
+          className="px-6 pt-6 pb-12"
         >
           <View className="items-center">
             {/* Logo */}
@@ -107,56 +124,12 @@ export function LandingScreen({ navigation }: Props) {
             <Text style={{ color: COLORS.primary100 }} className="text-lg text-center mb-6 italic">
               Where Pets Rule the Kingdom!
             </Text>
-            <View className="w-full gap-3 max-w-sm">
-              {Platform.OS === 'web' ? (
-                <>
-                  <button
-                    onClick={navigateToSignUp}
-                    style={{
-                      width: '100%',
-                      padding: '14px 24px',
-                      backgroundColor: COLORS.cream,
-                      color: COLORS.brown,
-                      border: 'none',
-                      borderRadius: 12,
-                      fontSize: 16,
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Get Started Free
-                  </button>
-                  <button
-                    onClick={navigateToLogin}
-                    style={{
-                      width: '100%',
-                      padding: '14px 24px',
-                      backgroundColor: 'transparent',
-                      color: COLORS.cream,
-                      border: `2px solid ${COLORS.cream}`,
-                      borderRadius: 12,
-                      fontSize: 16,
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Sign In
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    title="Get Started Free"
-                    onPress={navigateToSignUp}
-                    variant="secondary"
-                  />
-                  <Button
-                    title="Sign In"
-                    onPress={navigateToLogin}
-                    variant="outline"
-                  />
-                </>
-              )}
+            <View className="w-full max-w-sm">
+              <Button
+                title="Get Started Free"
+                onPress={navigateToSignUp}
+                variant="secondary"
+              />
             </View>
           </View>
         </View>
@@ -181,21 +154,9 @@ export function LandingScreen({ navigation }: Props) {
             Powerful features to make pet care simple
           </Text>
 
-          {Platform.OS === 'web' ? (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: 16,
-            }}>
-              {features.map((feature) => (
-                <FeatureCard key={feature.title} {...feature} />
-              ))}
-            </div>
-          ) : (
-            features.map((feature) => (
-              <FeatureCard key={feature.title} {...feature} />
-            ))
-          )}
+          {features.map((feature) => (
+            <FeatureCard key={feature.title} {...feature} />
+          ))}
         </View>
 
         {/* How It Works */}
@@ -272,30 +233,23 @@ export function LandingScreen({ navigation }: Props) {
               Create your first pet care guide in minutes. It's free to get started!
             </Text>
             <View className="w-full max-w-sm">
-              {Platform.OS === 'web' ? (
-                <button
-                  onClick={navigateToSignUp}
-                  style={{
-                    width: '100%',
-                    padding: '14px 24px',
-                    backgroundColor: COLORS.cream,
-                    color: COLORS.brown,
-                    border: 'none',
-                    borderRadius: 12,
-                    fontSize: 16,
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Create Your Free Account
-                </button>
-              ) : (
-                <Button
-                  title="Create Your Free Account"
-                  onPress={navigateToSignUp}
-                  variant="secondary"
-                />
-              )}
+              <Button
+                title="Create Your Free Account"
+                onPress={navigateToSignUp}
+                variant="secondary"
+              />
+            </View>
+            <View className="flex-row items-center justify-center mt-4">
+              <Text style={{ color: COLORS.primary100 }}>Already have an account? </Text>
+              <Pressable
+                onPress={navigateToLogin}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in to existing account"
+              >
+                <Text style={{ color: COLORS.cream }} className="font-semibold underline">
+                  Sign in
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>

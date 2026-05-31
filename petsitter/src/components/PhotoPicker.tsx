@@ -1,5 +1,6 @@
-import { View, Text, Image, Pressable, Platform } from 'react-native';
+import { View, Text, Image, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { showAlert } from '../lib/showAlert';
 
 interface PhotoPickerProps {
   label?: string;
@@ -20,7 +21,7 @@ export function PhotoPicker({
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      alert('Permission to access photos is required!');
+      showAlert('Permission required', 'Permission to access photos is required.');
       return;
     }
 
@@ -41,66 +42,6 @@ export function PhotoPicker({
     onChange(undefined);
   };
 
-  // Web-specific rendering
-  if (Platform.OS === 'web') {
-    return (
-      <View className="mb-4">
-        {label && (
-          <Text className="text-gray-700 font-medium mb-2">{label}</Text>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div
-            onClick={pickImage}
-            style={{
-              width: size,
-              height: size,
-              borderRadius: size / 2,
-              backgroundColor: value ? 'transparent' : '#f3f4f6',
-              border: '2px dashed #d1d5db',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              overflow: 'hidden',
-            }}
-          >
-            {value ? (
-              <img
-                src={value}
-                alt="Pet photo"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-              />
-            ) : (
-              <span style={{ color: '#9ca3af', fontSize: 14, textAlign: 'center' }}>
-                Tap to add photo
-              </span>
-            )}
-          </div>
-          {value && (
-            <button
-              onClick={removePhoto}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#fee2e2',
-                color: '#dc2626',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-            >
-              Remove
-            </button>
-          )}
-        </div>
-      </View>
-    );
-  }
-
   return (
     <View className="mb-4">
       {label && (
@@ -109,6 +50,8 @@ export function PhotoPicker({
       <View className="flex-row items-center gap-4">
         <Pressable
           onPress={pickImage}
+          accessibilityRole="button"
+          accessibilityLabel={value ? 'Change photo' : 'Add photo'}
           style={{
             width: size,
             height: size,
@@ -137,6 +80,8 @@ export function PhotoPicker({
         {value && (
           <Pressable
             onPress={removePhoto}
+            accessibilityRole="button"
+            accessibilityLabel="Remove photo"
             className="px-4 py-2 bg-red-50 rounded-lg"
           >
             <Text className="text-red-600">Remove</Text>

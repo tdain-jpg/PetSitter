@@ -4,17 +4,16 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Platform,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, Select, SectionHeader } from '../components';
+import { Button, Card, Input, Select, SectionHeader, SensitiveValue } from '../components';
+import { showAlert } from '../lib/showAlert';
 import { useData } from '../contexts';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type {
   Guide,
   HomeCare,
@@ -29,7 +28,7 @@ import type {
   HomeTaskCategory,
 } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'HomeCare'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'HomeCare'>;
 
 const SYSTEM_TYPES: { label: string; value: HomeSystemType }[] = [
   { label: 'HVAC', value: 'hvac' },
@@ -115,12 +114,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
       await updateGuide(guideId, { home_care: updated });
       setHomeCare(updated);
     } catch (error: any) {
-      const message = error.message || 'Failed to save';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -245,23 +239,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
         </View>
         <View className="mt-4">
           <Text className="text-2xl font-bold text-brown-800">🏠 Home Care</Text>
@@ -287,7 +265,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     {system.location && <Text className="text-tan-400 text-sm">📍 {system.location}</Text>}
                     {system.instructions && <Text className="text-tan-600 text-sm mt-1">{system.instructions}</Text>}
                   </View>
-                  <Pressable onPress={() => handleDeleteSystem(system.id)} className="px-2 py-1">
+                  <Pressable
+                    onPress={() => handleDeleteSystem(system.id)}
+                    className="px-2 py-1"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete system ${system.name}`}
+                  >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
@@ -322,7 +305,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     <Text className="text-tan-500 text-sm capitalize">{task.frequency} • {task.category}</Text>
                     {task.instructions && <Text className="text-tan-600 text-sm mt-1">{task.instructions}</Text>}
                   </View>
-                  <Pressable onPress={() => handleDeleteTask(task.id)} className="px-2 py-1">
+                  <Pressable
+                    onPress={() => handleDeleteTask(task.id)}
+                    className="px-2 py-1"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete task ${task.title}`}
+                  >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
@@ -357,7 +345,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
                     {supply.quantity && <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text>}
                   </View>
-                  <Pressable onPress={() => handleDeleteSupply(supply.id)} className="px-2 py-1">
+                  <Pressable
+                    onPress={() => handleDeleteSupply(supply.id)}
+                    className="px-2 py-1"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete supply ${supply.name}`}
+                  >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
@@ -392,7 +385,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     {appliance.location && <Text className="text-tan-500 text-sm">📍 {appliance.location}</Text>}
                     {appliance.instructions && <Text className="text-tan-600 text-sm mt-1">{appliance.instructions}</Text>}
                   </View>
-                  <Pressable onPress={() => handleDeleteAppliance(appliance.id)} className="px-2 py-1">
+                  <Pressable
+                    onPress={() => handleDeleteAppliance(appliance.id)}
+                    className="px-2 py-1"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete appliance ${appliance.name}`}
+                  >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>
@@ -425,10 +423,20 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{amenity.name}</Text>
                     {amenity.location && <Text className="text-tan-500 text-sm">📍 {amenity.location}</Text>}
-                    {amenity.password && <Text className="text-tan-400 text-sm">🔑 {amenity.password}</Text>}
+                    {amenity.password && (
+                      <View className="flex-row items-center mt-1">
+                        <Text className="text-tan-400 text-sm mr-1">🔑</Text>
+                        <SensitiveValue value={amenity.password} label={`${amenity.name} password`} className="text-sm" />
+                      </View>
+                    )}
                     {amenity.instructions && <Text className="text-tan-600 text-sm mt-1">{amenity.instructions}</Text>}
                   </View>
-                  <Pressable onPress={() => handleDeleteAmenity(amenity.id)} className="px-2 py-1">
+                  <Pressable
+                    onPress={() => handleDeleteAmenity(amenity.id)}
+                    className="px-2 py-1"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete amenity ${amenity.name}`}
+                  >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
                 </View>

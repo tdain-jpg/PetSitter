@@ -1,7 +1,34 @@
 # Pet Sitter Guide Pro - Session Tracking
 
-**Last Updated:** 2026-02-05
+**Last Updated:** 2026-04-15
 **Current Completion:** ~97%
+
+---
+
+## Code Review Punch List (2026-04-15)
+
+Automated three-agent review run against `petsitter/src/` using local Ollama
+models. Full reports in [`reviews/2026-04-15/`](reviews/2026-04-15/). Tallies:
+platform 152 (2 Critical), ui 157, ux 6 (1 Critical). See
+[`summary.md`](reviews/2026-04-15/summary.md) for the severity-ordered list.
+
+Working the findings in this order:
+
+1. [x] **Navigation types rename** — `MainTabParamList` → `MainStackParamList`
+   (the "tab" naming was misleading; app is intentionally a stack-with-Home-dashboard).
+2. [ ] **Critical platform bugs** — `HomeCareScreen.loadData` error handling;
+   `PetFormScreen.useEffect` unhandled promise.
+3. [ ] **Delete `Platform.OS === 'web'` branches** across ~12 components
+   (Button, Input, ContactCard, GuideCard, PetCard, SaveStatusIndicator,
+   ScreenHeader, SectionHeader, Select, …). Collapses ~60 findings.
+4. [ ] **Accessibility sweep** — add `accessibilityRole` + `accessibilityLabel`
+   to every `Pressable` (~30 findings).
+5. [ ] **Sensitive field masking** — `HomeCareScreen` / `SharedGuideViewScreen`
+   for WiFi / alarm / gate codes (UX High finding).
+
+Out of scope for this pass (deferred): OAuth, Supabase backend integration,
+bottom-tab navigator (reviewer recommendation rejected — architecture is
+intentional), onboarding-as-optional, merge TripWizard + GuideForm.
 
 ---
 

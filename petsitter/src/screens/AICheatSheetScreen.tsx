@@ -12,11 +12,12 @@ import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { generateCheatSheet } from '../services/AIService';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet, CheatSheet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'AICheatSheet'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
 
 export function AICheatSheetScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
@@ -58,7 +59,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     if (!settings?.gemini_api_key) {
       const message = 'Please add your Gemini API key in Settings first.';
       if (Platform.OS === 'web') {
-        alert(message);
+        window.alert(message);
         (navigation as any).navigate('Settings');
       } else {
         Alert.alert('API Key Required', message, [
@@ -89,11 +90,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       setCheatSheet(newSheet);
     } catch (err: any) {
       setError(err.message);
-      if (Platform.OS === 'web') {
-        alert(err.message);
-      } else {
-        Alert.alert('Generation Failed', err.message);
-      }
+      showAlert('Generation Failed', err.message);
     } finally {
       setGenerating(false);
     }
@@ -105,19 +102,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     try {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(cheatSheet.content);
-        alert('Copied to clipboard!');
       } else {
         const Clipboard = require('expo-clipboard');
         await Clipboard.setStringAsync(cheatSheet.content);
-        Alert.alert('Copied', 'Cheat sheet copied to clipboard!');
       }
+      showAlert('Copied', 'Cheat sheet copied to clipboard!');
     } catch (err) {
-      const message = 'Failed to copy to clipboard';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', 'Failed to copy to clipboard');
     }
   };
 
@@ -196,42 +187,9 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           {cheatSheet && (
-            Platform.OS === 'web' ? (
-              <button
-                onClick={handleCopyToClipboard}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: COLORS.creamDark,
-                  color: COLORS.brown,
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
-              >
-                📋 Copy
-              </button>
-            ) : (
-              <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
-            )
+            <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
           )}
         </View>
         <View className="mt-4">

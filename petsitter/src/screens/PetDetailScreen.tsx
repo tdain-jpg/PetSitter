@@ -5,10 +5,10 @@ import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Pet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'PetDetail'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'PetDetail'>;
 
 const speciesEmoji: Record<string, string> = {
   dog: '🐕',
@@ -96,63 +96,18 @@ export function PetDetailScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.navigate('Home')}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.tan,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-            >
-              Home
-            </button>
-          ) : (
-            <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
         </View>
 
         {/* Pet Header */}
         <View className="items-center pb-6">
           {pet.photo_url ? (
-            Platform.OS === 'web' ? (
-              <img
-                src={pet.photo_url}
-                alt={pet.name}
-                style={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: 60,
-                  objectFit: 'cover',
-                }}
-              />
-            ) : (
-              <Image
-                source={{ uri: pet.photo_url }}
-                className="w-28 h-28 rounded-full"
-                resizeMode="cover"
-              />
-            )
+            <Image
+              source={{ uri: pet.photo_url }}
+              className="w-28 h-28 rounded-full"
+              resizeMode="cover"
+            />
           ) : (
             <View className="w-28 h-28 rounded-full bg-tan-100 items-center justify-center">
               <Text className="text-5xl">{emoji}</Text>

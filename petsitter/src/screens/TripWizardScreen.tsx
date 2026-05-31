@@ -3,19 +3,17 @@ import {
   View,
   Text,
   ScrollView,
-  Platform,
   Pressable,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenHeader } from '../components';
 import { useData, useAuth } from '../contexts';
-import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Pet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'TripWizard'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'TripWizard'>;
 
 type WizardStep = 'pets' | 'dates' | 'schedule' | 'confirm';
 
@@ -128,11 +126,7 @@ export function TripWizardScreen({ navigation }: Props) {
       });
     } catch (error: any) {
       const message = error.message || 'Failed to create guide';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -188,45 +182,20 @@ export function TripWizardScreen({ navigation }: Props) {
         </Text>
         {activePets.length > 0 && (
           <View className="flex-row gap-2">
-            {Platform.OS === 'web' ? (
-              <>
-                <button
-                  onClick={selectAllPets}
-                  style={{
-                    padding: '4px 12px',
-                    backgroundColor: 'transparent',
-                    color: COLORS.secondary,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
-                  Select All
-                </button>
-                <button
-                  onClick={deselectAllPets}
-                  style={{
-                    padding: '4px 12px',
-                    backgroundColor: 'transparent',
-                    color: COLORS.tan,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                  }}
-                >
-                  Clear
-                </button>
-              </>
-            ) : (
-              <>
-                <Pressable onPress={selectAllPets}>
-                  <Text className="text-secondary-600">Select All</Text>
-                </Pressable>
-                <Pressable onPress={deselectAllPets}>
-                  <Text className="text-tan-500">Clear</Text>
-                </Pressable>
-              </>
-            )}
+            <Pressable
+              onPress={selectAllPets}
+              accessibilityRole="button"
+              accessibilityLabel="Select all pets"
+            >
+              <Text className="text-secondary-600">Select All</Text>
+            </Pressable>
+            <Pressable
+              onPress={deselectAllPets}
+              accessibilityRole="button"
+              accessibilityLabel="Clear pet selection"
+            >
+              <Text className="text-tan-500">Clear</Text>
+            </Pressable>
           </View>
         )}
       </View>
@@ -249,6 +218,9 @@ export function TripWizardScreen({ navigation }: Props) {
             <Pressable
               key={pet.id}
               onPress={() => togglePet(pet.id)}
+              accessibilityRole="checkbox"
+              accessibilityLabel={pet.name}
+              accessibilityState={{ checked: selectedPetIds.includes(pet.id) }}
               className={`rounded-xl p-4 border-2 ${
                 selectedPetIds.includes(pet.id)
                   ? 'border-primary-500 bg-primary-50'
@@ -317,7 +289,6 @@ export function TripWizardScreen({ navigation }: Props) {
           placeholder="YYYY-MM-DD"
           value={startDate}
           onChangeText={setStartDate}
-          keyboardType={Platform.OS === 'web' ? undefined : 'default'}
         />
 
         <Input
@@ -325,17 +296,14 @@ export function TripWizardScreen({ navigation }: Props) {
           placeholder="YYYY-MM-DD"
           value={endDate}
           onChangeText={setEndDate}
-          keyboardType={Platform.OS === 'web' ? undefined : 'default'}
         />
       </Card>
 
-      {Platform.OS === 'web' && (
-        <View className="mb-4">
-          <Text className="text-tan-500 text-sm text-center">
-            Tip: Use format YYYY-MM-DD (e.g., 2026-03-15)
-          </Text>
-        </View>
-      )}
+      <View className="mb-4">
+        <Text className="text-tan-500 text-sm text-center">
+          Tip: Use format YYYY-MM-DD (e.g., 2026-03-15)
+        </Text>
+      </View>
     </View>
   );
 
@@ -350,6 +318,9 @@ export function TripWizardScreen({ navigation }: Props) {
           <Text className="text-brown-700">Overnight Stay?</Text>
           <Pressable
             onPress={() => setSchedule((prev) => ({ ...prev, overnight: !prev.overnight }))}
+            accessibilityRole="switch"
+            accessibilityLabel="Overnight stay"
+            accessibilityState={{ checked: schedule.overnight }}
             className={`w-12 h-7 rounded-full justify-center ${
               schedule.overnight ? 'bg-primary-500' : 'bg-tan-200'
             }`}

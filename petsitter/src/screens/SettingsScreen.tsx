@@ -11,11 +11,11 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input, Card } from '../components';
 import { useAuth, useData } from '../contexts';
-import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'Settings'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
@@ -29,11 +29,7 @@ export function SettingsScreen({ navigation }: Props) {
     try {
       await signOut();
     } catch (error: any) {
-      if (Platform.OS === 'web') {
-        alert(error.message || 'Failed to sign out');
-      } else {
-        Alert.alert('Error', error.message || 'Failed to sign out');
-      }
+      showAlert('Error', error.message || 'Failed to sign out');
     }
   };
 
@@ -41,18 +37,9 @@ export function SettingsScreen({ navigation }: Props) {
     setIsSaving(true);
     try {
       await updateSettings({ gemini_api_key: geminiKey.trim() || undefined });
-      if (Platform.OS === 'web') {
-        alert('API key saved successfully!');
-      } else {
-        Alert.alert('Success', 'API key saved successfully!');
-      }
+      showAlert('Success', 'API key saved successfully!');
     } catch (error: any) {
-      const message = error.message || 'Failed to save API key';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to save API key');
     } finally {
       setIsSaving(false);
     }
@@ -72,15 +59,10 @@ export function SettingsScreen({ navigation }: Props) {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        Alert.alert('Export', 'Data exported. In a production app, this would save to device.');
+        showAlert('Export', 'Data exported. In a production app, this would save to device.');
       }
     } catch (error: any) {
-      const message = error.message || 'Failed to export data';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to export data');
     }
   };
 
@@ -88,18 +70,9 @@ export function SettingsScreen({ navigation }: Props) {
     const performClear = async () => {
       try {
         await clearAllData();
-        if (Platform.OS === 'web') {
-          alert('All data has been cleared.');
-        } else {
-          Alert.alert('Success', 'All data has been cleared.');
-        }
+        showAlert('Success', 'All data has been cleared.');
       } catch (error: any) {
-        const message = error.message || 'Failed to clear data';
-        if (Platform.OS === 'web') {
-          alert(message);
-        } else {
-          Alert.alert('Error', message);
-        }
+        showAlert('Error', error.message || 'Failed to clear data');
       }
     };
 
@@ -134,23 +107,7 @@ export function SettingsScreen({ navigation }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           <Text className="text-xl font-bold text-brown-800 ml-4">Settings</Text>
         </View>
       </View>
@@ -178,58 +135,25 @@ export function SettingsScreen({ navigation }: Props) {
             Enter your Google Gemini API key to enable AI-powered features like the Cheat Sheet generator.
           </Text>
 
-          {Platform.OS === 'web' ? (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 14, color: '#374151', marginBottom: 8, fontWeight: 500 }}>
-                API Key
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={geminiKey}
-                  onChange={(e) => setGeminiKey(e.target.value)}
-                  placeholder="Enter your Gemini API key"
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    borderRadius: 8,
-                    border: '1px solid #d1d5db',
-                    fontSize: 14,
-                  }}
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  style={{
-                    padding: '12px 16px',
-                    backgroundColor: COLORS.creamDark,
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {showApiKey ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <View className="flex-row items-center mb-4">
-              <View className="flex-1">
-                <Input
-                  label="API Key"
-                  placeholder="Enter your Gemini API key"
-                  value={geminiKey}
-                  onChangeText={setGeminiKey}
-                  secureTextEntry={!showApiKey}
-                />
-              </View>
-              <Pressable
-                onPress={() => setShowApiKey(!showApiKey)}
-                className="ml-2 p-2"
-              >
-                <Text>{showApiKey ? '🙈' : '👁️'}</Text>
-              </Pressable>
+          <View className="flex-row items-center mb-4">
+            <View className="flex-1">
+              <Input
+                label="API Key"
+                placeholder="Enter your Gemini API key"
+                value={geminiKey}
+                onChangeText={setGeminiKey}
+                secureTextEntry={!showApiKey}
+              />
             </View>
-          )}
+            <Pressable
+              onPress={() => setShowApiKey(!showApiKey)}
+              className="ml-2 p-2"
+              accessibilityRole="button"
+              accessibilityLabel={showApiKey ? 'Hide API key' : 'Show API key'}
+            >
+              <Text>{showApiKey ? '🙈' : '👁️'}</Text>
+            </Pressable>
+          </View>
 
           <Button
             title="Save API Key"
@@ -275,6 +199,8 @@ export function SettingsScreen({ navigation }: Props) {
           <Card className="mb-4">
             <Pressable
               onPress={() => (navigation as any).navigate('Memorial')}
+              accessibilityRole="button"
+              accessibilityLabel="Open pet memorial"
               className="flex-row justify-between items-center"
             >
               <View>

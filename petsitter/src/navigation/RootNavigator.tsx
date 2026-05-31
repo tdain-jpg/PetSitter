@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
+import { SharedGuideViewScreen } from '../screens/SharedGuideViewScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
 import { COLORS } from '../constants';
@@ -26,6 +27,8 @@ export function RootNavigator() {
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       )}
+      {/* Publicly accessible regardless of auth state */}
+      <Stack.Screen name="SharedGuideView" component={SharedGuideViewScreen} />
     </Stack.Navigator>
   );
 }

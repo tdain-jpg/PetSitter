@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Platform,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -15,10 +14,10 @@ import { Button, Card, Select } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'DailyRoutine'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
 
 const TIME_BLOCKS: { id: TimeBlock; label: string; icon: string }[] = [
   { id: 'morning', label: 'Morning', icon: '🌅' },
@@ -428,92 +427,32 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
       <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-2">
           <View className="flex-row items-center">
-            {Platform.OS === 'web' ? (
-              <button
-                onClick={() => navigation.goBack()}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'transparent',
-                  color: COLORS.primary,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                ← Back
-              </button>
-            ) : (
-              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-            )}
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           </View>
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={handleAddTask}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: COLORS.primary,
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 500,
-              }}
-            >
-              + Add Task
-            </button>
-          ) : (
-            <Button title="+ Add Task" onPress={handleAddTask} variant="primary" />
-          )}
+          <Button title="+ Add Task" onPress={handleAddTask} variant="primary" />
         </View>
 
         {/* Date Navigator */}
         <View className="flex-row items-center justify-between px-4 py-3">
-          {Platform.OS === 'web' ? (
-            <>
-              <button
-                onClick={() => changeDate(-1)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: COLORS.creamDark,
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                ←
-              </button>
-              <span style={{ fontSize: 18, fontWeight: 600, color: COLORS.text }}>
-                {formatDate(selectedDate)}
-              </span>
-              <button
-                onClick={() => changeDate(1)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: COLORS.creamDark,
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  fontSize: 16,
-                }}
-              >
-                →
-              </button>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={() => changeDate(-1)} className="bg-tan-100 px-4 py-2 rounded-lg">
-                <Text className="text-lg">←</Text>
-              </Pressable>
-              <Text className="text-lg font-semibold text-brown-800">
-                {formatDate(selectedDate)}
-              </Text>
-              <Pressable onPress={() => changeDate(1)} className="bg-tan-100 px-4 py-2 rounded-lg">
-                <Text className="text-lg">→</Text>
-              </Pressable>
-            </>
-          )}
+          <Pressable
+            onPress={() => changeDate(-1)}
+            className="bg-tan-100 px-4 py-2 rounded-lg"
+            accessibilityRole="button"
+            accessibilityLabel="Previous day"
+          >
+            <Text className="text-lg">←</Text>
+          </Pressable>
+          <Text className="text-lg font-semibold text-brown-800">
+            {formatDate(selectedDate)}
+          </Text>
+          <Pressable
+            onPress={() => changeDate(1)}
+            className="bg-tan-100 px-4 py-2 rounded-lg"
+            accessibilityRole="button"
+            accessibilityLabel="Next day"
+          >
+            <Text className="text-lg">→</Text>
+          </Pressable>
         </View>
 
         {/* Progress Bar */}
@@ -556,6 +495,9 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                   <View key={task.id} className="mb-2">
                     <Pressable
                       onPress={() => handleToggleTask(task)}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={task.title}
+                      accessibilityState={{ checked: completed }}
                       className={`flex-row items-start p-3 rounded-lg border ${
                         completed ? 'bg-primary-50 border-primary-200' : 'bg-cream-50 border-tan-200'
                       }`}
@@ -608,99 +550,42 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                     {/* Edit/Delete/Move buttons for custom tasks */}
                     {task.is_custom && (
                       <View className="flex-row justify-end gap-2 mt-1 px-2">
-                        {Platform.OS === 'web' ? (
-                          <>
-                            {!isFirstCustom && (
-                              <button
-                                onClick={() => handleMoveTask(task, 'up')}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: COLORS.creamDark,
-                                  border: 'none',
-                                  borderRadius: 4,
-                                  cursor: 'pointer',
-                                  fontSize: 12,
-                                }}
-                              >
-                                ↑
-                              </button>
-                            )}
-                            {!isLastCustom && (
-                              <button
-                                onClick={() => handleMoveTask(task, 'down')}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: COLORS.creamDark,
-                                  border: 'none',
-                                  borderRadius: 4,
-                                  cursor: 'pointer',
-                                  fontSize: 12,
-                                }}
-                              >
-                                ↓
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleEditTask(task)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: COLORS.primary100,
-                                color: COLORS.secondary,
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontSize: 12,
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteTask(task.id)}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: COLORS.accentLight,
-                                color: COLORS.accent,
-                                border: 'none',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontSize: 12,
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {!isFirstCustom && (
-                              <Pressable
-                                onPress={() => handleMoveTask(task, 'up')}
-                                className="bg-tan-100 px-2 py-1 rounded"
-                              >
-                                <Text className="text-xs">↑</Text>
-                              </Pressable>
-                            )}
-                            {!isLastCustom && (
-                              <Pressable
-                                onPress={() => handleMoveTask(task, 'down')}
-                                className="bg-tan-100 px-2 py-1 rounded"
-                              >
-                                <Text className="text-xs">↓</Text>
-                              </Pressable>
-                            )}
-                            <Pressable
-                              onPress={() => handleEditTask(task)}
-                              className="bg-secondary-100 px-2 py-1 rounded"
-                            >
-                              <Text className="text-secondary-600 text-xs">Edit</Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => handleDeleteTask(task.id)}
-                              className="bg-accent-100 px-2 py-1 rounded"
-                            >
-                              <Text className="text-accent-600 text-xs">Delete</Text>
-                            </Pressable>
-                          </>
+                        {!isFirstCustom && (
+                          <Pressable
+                            onPress={() => handleMoveTask(task, 'up')}
+                            className="bg-tan-100 px-2 py-1 rounded"
+                            accessibilityRole="button"
+                            accessibilityLabel="Move task up"
+                          >
+                            <Text className="text-xs">↑</Text>
+                          </Pressable>
                         )}
+                        {!isLastCustom && (
+                          <Pressable
+                            onPress={() => handleMoveTask(task, 'down')}
+                            className="bg-tan-100 px-2 py-1 rounded"
+                            accessibilityRole="button"
+                            accessibilityLabel="Move task down"
+                          >
+                            <Text className="text-xs">↓</Text>
+                          </Pressable>
+                        )}
+                        <Pressable
+                          onPress={() => handleEditTask(task)}
+                          className="bg-secondary-100 px-2 py-1 rounded"
+                          accessibilityRole="button"
+                          accessibilityLabel="Edit task"
+                        >
+                          <Text className="text-secondary-600 text-xs">Edit</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleDeleteTask(task.id)}
+                          className="bg-accent-100 px-2 py-1 rounded"
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete task"
+                        >
+                          <Text className="text-accent-600 text-xs">Delete</Text>
+                        </Pressable>
                       </View>
                     )}
                   </View>
@@ -736,24 +621,13 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                 <Text className="text-xl font-bold text-brown-800">
                   {editingTask ? 'Edit Task' : 'Add Custom Task'}
                 </Text>
-                {Platform.OS === 'web' ? (
-                  <button
-                    onClick={() => setShowTaskModal(false)}
-                    style={{
-                      padding: '8px',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: 20,
-                    }}
-                  >
-                    ✕
-                  </button>
-                ) : (
-                  <Pressable onPress={() => setShowTaskModal(false)}>
-                    <Text className="text-2xl text-tan-400">✕</Text>
-                  </Pressable>
-                )}
+                <Pressable
+                  onPress={() => setShowTaskModal(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close task modal"
+                >
+                  <Text className="text-2xl text-tan-400">✕</Text>
+                </Pressable>
               </View>
 
               {/* Task Title */}

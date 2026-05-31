@@ -5,7 +5,6 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  Alert,
   Switch,
   Pressable,
 } from 'react-native';
@@ -15,11 +14,12 @@ import * as Sharing from 'expo-sharing';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'PDFPreview'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
 interface PDFSections {
   emergencyContacts: boolean;
@@ -312,16 +312,11 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             dialogTitle: `${guide.title} - Pet Sitter Guide`,
           });
         } else {
-          Alert.alert('Success', `PDF saved to: ${uri}`);
+          showAlert('Success', `PDF saved to: ${uri}`);
         }
       }
     } catch (error: any) {
-      const message = error.message || 'Failed to export PDF';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to export PDF');
     } finally {
       setExporting(false);
     }
@@ -351,48 +346,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center justify-between">
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={() => navigation.goBack()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'transparent',
-                color: COLORS.secondary,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 16,
-              }}
-            >
-              ← Back
-            </button>
-          ) : (
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          )}
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: COLORS.secondary,
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                cursor: exporting ? 'not-allowed' : 'pointer',
-                fontSize: 14,
-                opacity: exporting ? 0.5 : 1,
-              }}
-            >
-              {exporting ? 'Exporting...' : '🖨️ Print/Save PDF'}
-            </button>
-          ) : (
-            <Button
-              title="🖨️ Export"
-              onPress={handleExport}
-              loading={exporting}
-              disabled={exporting}
-            />
-          )}
+          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          <Button
+            title="🖨️ Export"
+            onPress={handleExport}
+            loading={exporting}
+            disabled={exporting}
+          />
         </View>
         <View className="mt-4">
           <Text className="text-2xl font-bold text-brown-800">📄 PDF Preview</Text>
@@ -473,46 +433,21 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 Select Pets
               </Text>
               <View className="flex-row gap-2">
-                {Platform.OS === 'web' ? (
-                  <>
-                    <button
-                      onClick={selectAllPets}
-                      style={{
-                        padding: '4px 8px',
-                        backgroundColor: 'transparent',
-                        color: COLORS.secondary,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                      }}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={deselectAllPets}
-                      style={{
-                        padding: '4px 8px',
-                        backgroundColor: 'transparent',
-                        color: COLORS.tan,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                      }}
-                    >
-                      None
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Pressable onPress={selectAllPets}>
-                      <Text className="text-primary-600 text-sm">All</Text>
-                    </Pressable>
-                    <Text className="text-tan-300">|</Text>
-                    <Pressable onPress={deselectAllPets}>
-                      <Text className="text-tan-500 text-sm">None</Text>
-                    </Pressable>
-                  </>
-                )}
+                <Pressable
+                  onPress={selectAllPets}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select all pets"
+                >
+                  <Text className="text-primary-600 text-sm">All</Text>
+                </Pressable>
+                <Text className="text-tan-300">|</Text>
+                <Pressable
+                  onPress={deselectAllPets}
+                  accessibilityRole="button"
+                  accessibilityLabel="Deselect all pets"
+                >
+                  <Text className="text-tan-500 text-sm">None</Text>
+                </Pressable>
               </View>
             </View>
 
@@ -521,6 +456,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Pressable
                   key={pet.id}
                   onPress={() => togglePet(pet.id)}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={pet.name}
+                  accessibilityState={{ checked: selectedPetIds.includes(pet.id) }}
                   className={`flex-row items-center p-3 rounded-lg border ${
                     selectedPetIds.includes(pet.id)
                       ? 'bg-primary-50 border-primary-200'

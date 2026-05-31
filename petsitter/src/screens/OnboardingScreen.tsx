@@ -6,19 +6,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Pressable,
-  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input, Select, Card } from '../components';
 import { useData, useAuth } from '../contexts';
-import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { PetSpecies, OnboardingStep } from '../types';
 import { generateId, getCurrentTimestamp } from '../services/DataService';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'Onboarding'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
 const STEPS: OnboardingStep[] = ['welcome', 'create_pet', 'create_guide', 'completion'];
 
@@ -127,12 +125,7 @@ export function OnboardingScreen({ navigation }: Props) {
       setCreatedPetId(pet.id);
       await goToStep('create_guide');
     } catch (error: any) {
-      const message = error.message || 'Failed to create pet';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to create pet');
     } finally {
       setIsSubmitting(false);
     }
@@ -172,12 +165,7 @@ export function OnboardingScreen({ navigation }: Props) {
       setCreatedGuideId(guide.id);
       await goToStep('completion');
     } catch (error: any) {
-      const message = error.message || 'Failed to create guide';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to create guide');
     } finally {
       setIsSubmitting(false);
     }
@@ -189,12 +177,7 @@ export function OnboardingScreen({ navigation }: Props) {
       await completeOnboarding();
       navigation.replace('Home');
     } catch (error: any) {
-      const message = error.message || 'Failed to complete onboarding';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', error.message || 'Failed to complete onboarding');
     } finally {
       setIsSubmitting(false);
     }

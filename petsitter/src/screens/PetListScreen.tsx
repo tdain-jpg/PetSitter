@@ -1,12 +1,12 @@
-import { View, Text, ScrollView, ActivityIndicator, Platform, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, PetCard } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'Pets'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'Pets'>;
 
 export function PetListScreen({ navigation }: Props) {
   const { activePets, loadingPets } = useData();
@@ -33,27 +33,14 @@ export function PetListScreen({ navigation }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        {Platform.OS === 'web' ? (
-          <div style={{ marginBottom: 12 }}>
-            <button
-              onClick={() => navigation.navigate('Home')}
-              style={{
-                padding: '4px 0',
-                backgroundColor: 'transparent',
-                color: COLORS.tan,
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 14,
-              }}
-            >
-              ← Back to Home
-            </button>
-          </div>
-        ) : (
-          <Pressable onPress={() => navigation.navigate('Home')} className="mb-3">
-            <Text className="text-tan-500 text-sm">← Back to Home</Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={() => navigation.navigate('Home')}
+          className="mb-3"
+          accessibilityRole="button"
+          accessibilityLabel="Back to home"
+        >
+          <Text className="text-tan-500 text-sm">← Back to Home</Text>
+        </Pressable>
         <View className="flex-row justify-between items-center">
           <View>
             <Text className="text-2xl font-bold text-brown-800">My Pets</Text>
@@ -61,29 +48,11 @@ export function PetListScreen({ navigation }: Props) {
               {activePets.length} {activePets.length === 1 ? 'pet' : 'pets'}
             </Text>
           </View>
-          {Platform.OS === 'web' ? (
-            <button
-              onClick={handleAddPet}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: COLORS.secondary,
-                color: 'white',
-                border: 'none',
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              + Add Pet
-            </button>
-          ) : (
-            <Button
-              title="+ Add Pet"
-              onPress={handleAddPet}
-              variant="primary"
-            />
-          )}
+          <Button
+            title="+ Add Pet"
+            onPress={handleAddPet}
+            variant="primary"
+          />
         </View>
       </View>
 

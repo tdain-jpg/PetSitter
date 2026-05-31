@@ -1,4 +1,4 @@
-import { View, Animated, Platform } from 'react-native';
+import { View, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
 
 interface SkeletonProps {
@@ -35,21 +35,6 @@ export function Skeleton({
     animation.start();
     return () => animation.stop();
   }, [opacity]);
-
-  if (Platform.OS === 'web') {
-    return (
-      <div
-        className={className}
-        style={{
-          width,
-          height,
-          borderRadius,
-          backgroundColor: '#D4C4A8',
-          animation: 'skeleton-pulse 1.5s ease-in-out infinite',
-        }}
-      />
-    );
-  }
 
   return (
     <Animated.View

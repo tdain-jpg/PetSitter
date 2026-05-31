@@ -5,10 +5,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Switch,
 } from 'react-native';
+import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
 import {
   Button,
@@ -26,10 +26,10 @@ import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 import type { Pet, PetSpecies, PetSex, EnergyLevel, SociabilityLevel, PetPersonality, FeedingSchedule, Medication, VetInfo, Insurance, HealthProtocol } from '../types';
 
-type Props = NativeStackScreenProps<MainTabParamList, 'PetForm'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'PetForm'>;
 
 const speciesOptions = [
   { label: 'Dog', value: 'dog' },
@@ -375,11 +375,7 @@ export function PetFormScreen({ navigation, route }: Props) {
       navigation.goBack();
     } catch (error: any) {
       const message = error.message || 'Failed to save pet';
-      if (Platform.OS === 'web') {
-        alert(message);
-      } else {
-        Alert.alert('Error', message);
-      }
+      showAlert('Error', message);
     } finally {
       setIsSubmitting(false);
     }
@@ -469,109 +465,48 @@ export function PetFormScreen({ navigation, route }: Props) {
               onChangeText={(v) => updateField('nicknames', v)}
             />
 
-            {Platform.OS === 'web' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Select
-                  label="Sex"
-                  value={formData.sex}
-                  options={sexOptions}
-                  onValueChange={(v) => updateField('sex', v as PetSex)}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', paddingTop: 24 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.is_neutered}
-                      onChange={(e) => updateField('is_neutered', e.target.checked)}
-                      style={{ marginRight: 8, width: 18, height: 18 }}
-                    />
-                    <span style={{ fontSize: 14, color: COLORS.brown }}>Spayed/Neutered</span>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <>
-                <Select
-                  label="Sex"
-                  value={formData.sex}
-                  options={sexOptions}
-                  onValueChange={(v) => updateField('sex', v as PetSex)}
-                />
-                <View className="flex-row items-center mb-4">
-                  <Switch
-                    value={formData.is_neutered}
-                    onValueChange={(v) => updateField('is_neutered', v)}
-                  />
-                  <Text className="ml-2 text-brown-600">Spayed/Neutered</Text>
-                </View>
-              </>
-            )}
+            <Select
+              label="Sex"
+              value={formData.sex}
+              options={sexOptions}
+              onValueChange={(v) => updateField('sex', v as PetSex)}
+            />
+            <View className="flex-row items-center mb-4">
+              <Switch
+                value={formData.is_neutered}
+                onValueChange={(v) => updateField('is_neutered', v)}
+              />
+              <Text className="ml-2 text-brown-600">Spayed/Neutered</Text>
+            </View>
 
-            {Platform.OS === 'web' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Input
+              label="Age (years)"
+              placeholder="e.g., 3"
+              value={formData.age}
+              onChangeText={(v) => updateField('age', v)}
+              keyboardType="numeric"
+              error={errors.age}
+            />
+            <View className="flex-row gap-2">
+              <View className="flex-1">
                 <Input
-                  label="Age (years)"
-                  placeholder="e.g., 3"
-                  value={formData.age}
-                  onChangeText={(v) => updateField('age', v)}
+                  label="Weight"
+                  placeholder="e.g., 50"
+                  value={formData.weight}
+                  onChangeText={(v) => updateField('weight', v)}
                   keyboardType="numeric"
-                  error={errors.age}
+                  error={errors.weight}
                 />
-                <div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1 }}>
-                      <Input
-                        label="Weight"
-                        placeholder="e.g., 50"
-                        value={formData.weight}
-                        onChangeText={(v) => updateField('weight', v)}
-                        keyboardType="numeric"
-                        error={errors.weight}
-                      />
-                    </div>
-                    <div style={{ width: 120 }}>
-                      <Select
-                        label="Unit"
-                        value={formData.weight_unit}
-                        options={weightUnitOptions}
-                        onValueChange={(v) => updateField('weight_unit', v as 'lbs' | 'kg')}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <Input
-                  label="Age (years)"
-                  placeholder="e.g., 3"
-                  value={formData.age}
-                  onChangeText={(v) => updateField('age', v)}
-                  keyboardType="numeric"
-                  error={errors.age}
+              </View>
+              <View style={{ width: 120 }}>
+                <Select
+                  label="Unit"
+                  value={formData.weight_unit}
+                  options={weightUnitOptions}
+                  onValueChange={(v) => updateField('weight_unit', v as 'lbs' | 'kg')}
                 />
-                <View className="flex-row gap-2">
-                  <View className="flex-1">
-                    <Input
-                      label="Weight"
-                      placeholder="e.g., 50"
-                      value={formData.weight}
-                      onChangeText={(v) => updateField('weight', v)}
-                      keyboardType="numeric"
-                      error={errors.weight}
-                    />
-                  </View>
-                  <View style={{ width: 120 }}>
-                    <Select
-                      label="Unit"
-                      value={formData.weight_unit}
-                      options={weightUnitOptions}
-                      onValueChange={(v) => updateField('weight_unit', v as 'lbs' | 'kg')}
-                    />
-                  </View>
-                </View>
-              </>
-            )}
+              </View>
+            </View>
 
             <Input
               label="Color/Markings"

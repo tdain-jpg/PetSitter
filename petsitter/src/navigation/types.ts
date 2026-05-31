@@ -14,9 +14,9 @@ export type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login
 export type SignUpScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
 // ============================================
-// Main Tab Navigator (Bottom Tabs)
+// Main Stack Navigator
 // ============================================
-export type MainTabParamList = {
+export type MainStackParamList = {
   // Home/Dashboard
   Home: undefined;
 
@@ -39,7 +39,6 @@ export type MainTabParamList = {
 
   // Share & Export
   ShareGuide: { guideId: string };
-  SharedGuideView: { code: string };
   PDFPreview: { guideId: string };
 
   // AI Features
@@ -58,33 +57,33 @@ export type MainTabParamList = {
 };
 
 // Screen Props Types
-export type HomeScreenProps = NativeStackScreenProps<MainTabParamList, 'Home'>;
+export type HomeScreenProps = NativeStackScreenProps<MainStackParamList, 'Home'>;
 
-export type PetListScreenProps = NativeStackScreenProps<MainTabParamList, 'Pets'>;
-export type PetDetailScreenProps = NativeStackScreenProps<MainTabParamList, 'PetDetail'>;
-export type PetFormScreenProps = NativeStackScreenProps<MainTabParamList, 'PetForm'>;
+export type PetListScreenProps = NativeStackScreenProps<MainStackParamList, 'Pets'>;
+export type PetDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'PetDetail'>;
+export type PetFormScreenProps = NativeStackScreenProps<MainStackParamList, 'PetForm'>;
 
-export type GuideListScreenProps = NativeStackScreenProps<MainTabParamList, 'Guides'>;
-export type GuideDetailScreenProps = NativeStackScreenProps<MainTabParamList, 'GuideDetail'>;
-export type GuideFormScreenProps = NativeStackScreenProps<MainTabParamList, 'GuideForm'>;
+export type GuideListScreenProps = NativeStackScreenProps<MainStackParamList, 'Guides'>;
+export type GuideDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
+export type GuideFormScreenProps = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
 
-export type EmergencyContactsScreenProps = NativeStackScreenProps<MainTabParamList, 'EmergencyContacts'>;
-export type HomeInfoScreenProps = NativeStackScreenProps<MainTabParamList, 'HomeInfo'>;
-export type TravelItineraryScreenProps = NativeStackScreenProps<MainTabParamList, 'TravelItinerary'>;
-export type DailyRoutineScreenProps = NativeStackScreenProps<MainTabParamList, 'DailyRoutine'>;
-export type HomeCareScreenProps = NativeStackScreenProps<MainTabParamList, 'HomeCare'>;
+export type EmergencyContactsScreenProps = NativeStackScreenProps<MainStackParamList, 'EmergencyContacts'>;
+export type HomeInfoScreenProps = NativeStackScreenProps<MainStackParamList, 'HomeInfo'>;
+export type TravelItineraryScreenProps = NativeStackScreenProps<MainStackParamList, 'TravelItinerary'>;
+export type DailyRoutineScreenProps = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
+export type HomeCareScreenProps = NativeStackScreenProps<MainStackParamList, 'HomeCare'>;
 
-export type ShareGuideScreenProps = NativeStackScreenProps<MainTabParamList, 'ShareGuide'>;
-export type SharedGuideViewScreenProps = NativeStackScreenProps<MainTabParamList, 'SharedGuideView'>;
-export type PDFPreviewScreenProps = NativeStackScreenProps<MainTabParamList, 'PDFPreview'>;
+export type ShareGuideScreenProps = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
+export type SharedGuideViewScreenProps = NativeStackScreenProps<RootStackParamList, 'SharedGuideView'>;
+export type PDFPreviewScreenProps = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
-export type AICheatSheetScreenProps = NativeStackScreenProps<MainTabParamList, 'AICheatSheet'>;
+export type AICheatSheetScreenProps = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
 
-export type SettingsScreenProps = NativeStackScreenProps<MainTabParamList, 'Settings'>;
-export type ProfileScreenProps = NativeStackScreenProps<MainTabParamList, 'Profile'>;
-export type MemorialScreenProps = NativeStackScreenProps<MainTabParamList, 'Memorial'>;
+export type SettingsScreenProps = NativeStackScreenProps<MainStackParamList, 'Settings'>;
+export type ProfileScreenProps = NativeStackScreenProps<MainStackParamList, 'Profile'>;
+export type MemorialScreenProps = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
 
-export type OnboardingScreenProps = NativeStackScreenProps<MainTabParamList, 'Onboarding'>;
+export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
 // ============================================
 // Root Stack
@@ -92,6 +91,7 @@ export type OnboardingScreenProps = NativeStackScreenProps<MainTabParamList, 'On
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  SharedGuideView: { code: string };
 };
 
 declare global {

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { isValidEmail } from '../utils';
+import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { SignUpScreenProps } from '../navigation/types';
 
@@ -21,7 +22,8 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const validate = (): boolean => {
     const newErrors: {
@@ -58,10 +60,23 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
     setIsSubmitting(true);
     try {
       await signUp(email.trim(), password);
-      // User is automatically logged in after signup
+      // Supabase may require email confirmation depending on project settings.
+      // If confirmation is OFF, the user is signed in immediately (AuthContext picks it up).
+      // If ON, show a confirmation-pending state.
+      setConfirmationSent(true);
     } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message || 'An error occurred during sign up');
+      showAlert('Sign Up Failed', error.message || 'An error occurred during sign up');
     } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setIsSubmitting(true);
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
       setIsSubmitting(false);
     }
   };
@@ -135,6 +150,31 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
             title="Create Account"
             onPress={handleSignUp}
             loading={isSubmitting}
+            disabled={isSubmitting}
+          />
+
+          {/* Confirmation message */}
+          {confirmationSent && (
+            <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
+              <Text className="text-primary-700 text-sm text-center">
+                ✉️ If email confirmation is enabled, check your inbox to verify your account.
+                Otherwise you're signed in.
+              </Text>
+            </View>
+          )}
+
+          {/* Divider */}
+          <View className="flex-row items-center my-6">
+            <View className="flex-1 h-px bg-tan-300" />
+            <Text className="mx-3 text-tan-500 text-sm">or</Text>
+            <View className="flex-1 h-px bg-tan-300" />
+          </View>
+
+          {/* Google Sign-Up */}
+          <Button
+            title="Continue with Google"
+            onPress={handleGoogle}
+            variant="outline"
             disabled={isSubmitting}
           />
 

@@ -1,4 +1,4 @@
-import { TextInput, View, Text, Pressable, Platform } from 'react-native';
+import { TextInput, View, Text, Pressable } from 'react-native';
 import { useState } from 'react';
 import { formatPhoneNumber } from '../utils';
 
@@ -80,34 +80,15 @@ export function Input({
           maxLength={formatAsPhone ? 14 : undefined}
         />
         {secureTextEntry && (
-          Platform.OS === 'web' ? (
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              style={{
-                position: 'absolute',
-                right: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 4,
-                fontSize: 18,
-              }}
-              tabIndex={-1}
-            >
-              {isPasswordVisible ? '🙈' : '👁️'}
-            </button>
-          ) : (
-            <Pressable
-              onPress={togglePasswordVisibility}
-              className="absolute right-3 top-0 bottom-0 justify-center"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text className="text-lg">{isPasswordVisible ? '🙈' : '👁️'}</Text>
-            </Pressable>
-          )
+          <Pressable
+            onPress={togglePasswordVisibility}
+            accessibilityRole="button"
+            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
+            className="absolute right-3 top-0 bottom-0 justify-center"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text className="text-lg">{isPasswordVisible ? '🙈' : '👁️'}</Text>
+          </Pressable>
         )}
       </View>
       {error && (

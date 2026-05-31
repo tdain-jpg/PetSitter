@@ -4,12 +4,26 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, DataProvider } from './src/contexts';
 import { RootNavigator } from './src/navigation';
 
+const linking = {
+  // Native deep links (petsitter://) + web origin (https://your-domain)
+  prefixes: [
+    'petsitter://',
+    ...(typeof window !== 'undefined' && window.location?.origin ? [window.location.origin] : []),
+  ],
+  config: {
+    screens: {
+      // Public share route — works whether the viewer is signed in or not
+      SharedGuideView: 'share/:code',
+    },
+  },
+};
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <DataProvider>
-          <NavigationContainer>
+          <NavigationContainer linking={linking}>
             <RootNavigator />
           </NavigationContainer>
         </DataProvider>

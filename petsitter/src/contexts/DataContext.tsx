@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { dataService } from '../services/AsyncStorageAdapter';
+import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
 import type {
   Pet,

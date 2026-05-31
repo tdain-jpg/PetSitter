@@ -1,8 +1,7 @@
-import { View, Text, Pressable, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS } from '../constants';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainTabParamList } from '../navigation/types';
+import type { MainStackParamList } from '../navigation/types';
 
 interface ScreenHeaderProps {
   title: string;
@@ -12,7 +11,7 @@ interface ScreenHeaderProps {
   onBack?: () => void;
 }
 
-type NavigationProp = NativeStackNavigationProp<MainTabParamList>;
+type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
 export function ScreenHeader({
   title,
@@ -35,70 +34,16 @@ export function ScreenHeader({
     navigation.navigate('Home');
   };
 
-  const linkStyle = {
-    padding: '8px 12px',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: 14,
-  };
-
-  if (Platform.OS === 'web') {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingLeft: 16,
-          paddingRight: 16,
-          paddingTop: 48,
-          paddingBottom: 16,
-          backgroundColor: COLORS.cream,
-          borderBottom: `1px solid ${COLORS.creamDark}`,
-        }}
-      >
-        <div style={{ width: 80 }}>
-          {showBack && (
-            <button
-              onClick={handleBack}
-              style={{ ...linkStyle, color: COLORS.secondary }}
-            >
-              {backLabel}
-            </button>
-          )}
-        </div>
-        <span
-          style={{
-            fontSize: 18,
-            fontWeight: 600,
-            color: COLORS.brown,
-            textAlign: 'center',
-            flex: 1,
-          }}
-        >
-          {title}
-        </span>
-        <div style={{ width: 80, display: 'flex', justifyContent: 'flex-end' }}>
-          {showHome && (
-            <button
-              onClick={handleHome}
-              style={{ ...linkStyle, color: COLORS.tan }}
-            >
-              Home
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <View className="flex-row items-center justify-between px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
       <View style={{ width: 80 }}>
         {showBack && (
-          <Pressable onPress={handleBack} className="py-2">
+          <Pressable
+            onPress={handleBack}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            className="py-2"
+          >
             <Text className="text-secondary-600 text-sm">{backLabel}</Text>
           </Pressable>
         )}
@@ -108,7 +53,12 @@ export function ScreenHeader({
       </Text>
       <View style={{ width: 80, alignItems: 'flex-end' }}>
         {showHome && (
-          <Pressable onPress={handleHome} className="py-2">
+          <Pressable
+            onPress={handleHome}
+            accessibilityRole="button"
+            accessibilityLabel="Go to home"
+            className="py-2"
+          >
             <Text className="text-tan-500 text-sm">Home</Text>
           </Pressable>
         )}
