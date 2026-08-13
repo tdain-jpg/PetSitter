@@ -43,7 +43,7 @@ export interface DataService {
   // ============================================
   getTaskCompletions(guideId: string, date: string): Promise<TaskCompletion[]>;
   markTaskComplete(completion: Omit<TaskCompletion, 'id'>): Promise<TaskCompletion>;
-  markTaskIncomplete(taskId: string, date: string): Promise<void>;
+  markTaskIncomplete(guideId: string, taskId: string, date: string): Promise<void>;
   getCompletionHistory(guideId: string): Promise<TaskCompletion[]>;
 
   // ============================================
@@ -54,6 +54,13 @@ export interface DataService {
   getShareLinks(userId: string): Promise<ShareableLink[]>;
   deactivateShareLink(linkId: string): Promise<void>;
   incrementViewCount(linkId: string): Promise<void>;
+  /**
+   * Resolve a share code with ONE resolve_share RPC call, returning guide and
+   * pets together. Prefer this over getSharedGuide/getSharedGuidePets — each
+   * of those makes its own RPC call, and the RPC increments view_count per
+   * invocation.
+   */
+  getSharedGuideBundle(code: string): Promise<SharedGuideBundle | null>;
   getSharedGuide(code: string): Promise<Guide | null>;
   getSharedGuidePets(code: string): Promise<Pet[]>;
 
@@ -86,7 +93,17 @@ export interface DataService {
 }
 
 /**
- * Exported data structure for backup/restore
+ * A shared guide resolved from a share code (single RPC round trip).
+ */
+export interface SharedGuideBundle {
+  guide: Guide;
+  pets: Pet[];
+}
+
+/**
+ * Exported data structure for backup/restore.
+ * share_links and cheat_sheets are optional so backups written before
+ * version 1.1 still import.
  */
 export interface ExportedData {
   version: string;
@@ -94,6 +111,8 @@ export interface ExportedData {
   pets: Pet[];
   guides: Guide[];
   task_completions: TaskCompletion[];
+  share_links?: ShareableLink[];
+  cheat_sheets?: CheatSheet[];
   settings: AppSettings;
 }
 
@@ -112,13 +131,34 @@ export function getCurrentTimestamp(): string {
 }
 
 /**
- * Generate a short share code
+ * Generate a short share code.
+ *
+ * Entropy note: the code is the ONLY secret protecting a shared guide (which
+ * includes the home address and door/alarm codes), so it must come from a
+ * CSPRNG — Math.random() is predictable (its internal state is recoverable
+ * from a few outputs). 12 chars over this 55-char alphabet is ~69 bits of
+ * entropy, far beyond practical enumeration of the public resolve RPC. The
+ * slight modulo bias per character is negligible at this length.
+ *
+ * Platform note: Hermes (iOS/Android) ships no global `crypto` and this
+ * project bundles no polyfill, so on native we throw a clear error instead of
+ * silently falling back to Math.random — a predictable fallback would defeat
+ * the CSPRNG requirement above. Callers surface the message to the user
+ * (ShareGuideScreen shows error.message in an alert).
  */
 export function generateShareCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const cryptoObj = globalThis.crypto;
+  if (typeof cryptoObj?.getRandomValues !== 'function') {
+    throw new Error(
+      'Secure share codes are not available on this device. Please create the share link from the web app instead.'
+    );
+  }
+  const bytes = new Uint8Array(12);
+  cryptoObj.getRandomValues(bytes);
   let code = '';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < bytes.length; i++) {
+    code += chars.charAt(bytes[i] % chars.length);
   }
   return code;
 }

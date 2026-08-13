@@ -1,6 +1,7 @@
 import { View, Text, Image, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { showAlert } from '../lib/showAlert';
+import { COLORS } from '../constants';
 
 interface PhotoPickerProps {
   label?: string;
@@ -45,7 +46,7 @@ export function PhotoPicker({
   return (
     <View className="mb-4">
       {label && (
-        <Text className="text-gray-700 font-medium mb-2">{label}</Text>
+        <Text className="text-brown-600 font-medium mb-2">{label}</Text>
       )}
       <View className="flex-row items-center gap-4">
         <Pressable
@@ -56,10 +57,10 @@ export function PhotoPicker({
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: value ? 'transparent' : '#f3f4f6',
+            backgroundColor: value ? 'transparent' : COLORS.cream,
             borderWidth: 2,
             borderStyle: 'dashed',
-            borderColor: '#d1d5db',
+            borderColor: COLORS.borderDark,
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
@@ -72,7 +73,7 @@ export function PhotoPicker({
               resizeMode="cover"
             />
           ) : (
-            <Text className="text-gray-400 text-sm text-center">
+            <Text className="text-tan-500 text-sm text-center">
               Tap to{'\n'}add photo
             </Text>
           )}
@@ -82,9 +83,9 @@ export function PhotoPicker({
             onPress={removePhoto}
             accessibilityRole="button"
             accessibilityLabel="Remove photo"
-            className="px-4 py-2 bg-red-50 rounded-lg"
+            className="px-4 py-2 bg-accent-50 rounded-lg"
           >
-            <Text className="text-red-600">Remove</Text>
+            <Text className="text-accent-600">Remove</Text>
           </Pressable>
         )}
       </View>

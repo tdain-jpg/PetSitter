@@ -64,7 +64,9 @@ export interface Pet {
   behavioral_notes?: string;
   special_instructions?: string;
   status: PetStatus;
-  deceased_date?: string;
+  // null explicitly clears the column on update; undefined keys are DROPPED
+  // from the JSON body by supabase-js and leave the stored value untouched.
+  deceased_date?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, PetCard } from '../components';
+import { Button, Card, PetCard, ScreenHeader } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -31,35 +31,28 @@ export function PetListScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
-      {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <Pressable
-          onPress={() => navigation.navigate('Home')}
-          className="mb-3"
-          accessibilityRole="button"
-          accessibilityLabel="Back to home"
-        >
-          <Text className="text-tan-500 text-sm">← Back to Home</Text>
-        </Pressable>
-        <View className="flex-row justify-between items-center">
-          <View>
-            <Text className="text-2xl font-bold text-brown-800">My Pets</Text>
-            <Text className="text-tan-500">
-              {activePets.length} {activePets.length === 1 ? 'pet' : 'pets'}
-            </Text>
-          </View>
-          <Button
-            title="+ Add Pet"
-            onPress={handleAddPet}
-            variant="primary"
-          />
-        </View>
+      <ScreenHeader
+        title="My Pets"
+        backLabel="← Home"
+        onBack={() => navigation.navigate('Home')}
+        showHome={false}
+      />
+
+      <View className="flex-row justify-between items-center px-4 pt-4">
+        <Text className="text-tan-500">
+          {activePets.length} {activePets.length === 1 ? 'pet' : 'pets'}
+        </Text>
+        <Button
+          title="+ Add Pet"
+          onPress={handleAddPet}
+          variant="primary"
+        />
       </View>
 
       <ScrollView className="flex-1 p-4">
         {activePets.length === 0 ? (
-          <View className="items-center justify-center py-16">
-            <Text className="text-6xl mb-4">🐾</Text>
+          <Card className="items-center py-8">
+            <Text className="text-5xl mb-4">🐾</Text>
             <Text className="text-xl font-semibold text-brown-800 mb-2">
               No pets yet
             </Text>
@@ -71,7 +64,7 @@ export function PetListScreen({ navigation }: Props) {
               onPress={handleAddPet}
               variant="primary"
             />
-          </View>
+          </Card>
         ) : (
           activePets.map((pet) => (
             <PetCard

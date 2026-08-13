@@ -15,6 +15,7 @@ import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { escapeHtml } from '../lib/escapeHtml';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -92,19 +93,23 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const generateHTML = (): string => {
     if (!guide) return '';
 
+    // Every user/AI-supplied value MUST pass through esc() — on web this HTML
+    // is written into a same-origin print window (XSS surface).
+    const esc = escapeHtml;
+
     const selectedPets = guidePets.filter((p) => selectedPetIds.includes(p.id));
 
     const petSections = selectedPets.map((pet) => `
       <div class="section">
-        <h2>${pet.name} (${pet.species}${pet.breed ? ` - ${pet.breed}` : ''})</h2>
-        ${pet.age ? `<p><strong>Age:</strong> ${pet.age} years</p>` : ''}
-        ${pet.weight ? `<p><strong>Weight:</strong> ${pet.weight} ${pet.weight_unit || 'lbs'}</p>` : ''}
+        <h2>${esc(pet.name)} (${esc(pet.species)}${pet.breed ? ` - ${esc(pet.breed)}` : ''})</h2>
+        ${pet.age ? `<p><strong>Age:</strong> ${esc(pet.age)} years</p>` : ''}
+        ${pet.weight ? `<p><strong>Weight:</strong> ${esc(pet.weight)} ${esc(pet.weight_unit || 'lbs')}</p>` : ''}
 
         ${pet.feeding_schedule.length > 0 ? `
           <h3>Feeding Schedule</h3>
           <ul>
             ${pet.feeding_schedule.map((f) => `
-              <li><strong>${f.time}</strong>: ${f.amount} of ${f.food_type}${f.notes ? ` (${f.notes})` : ''}</li>
+              <li><strong>${esc(f.time)}</strong>: ${esc(f.amount)} of ${esc(f.food_type)}${f.notes ? ` (${esc(f.notes)})` : ''}</li>
             `).join('')}
           </ul>
         ` : ''}
@@ -113,80 +118,121 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           <h3>Medications</h3>
           <ul>
             ${pet.medications.map((m) => `
-              <li><strong>${m.name}</strong>: ${m.dosage}, ${m.frequency}${m.with_food ? ' (give with food)' : ''}${m.notes ? ` - ${m.notes}` : ''}</li>
+              <li><strong>${esc(m.name)}</strong>: ${esc(m.dosage)}, ${esc(m.frequency)}${m.with_food ? ' (give with food)' : ''}${m.notes ? ` - ${esc(m.notes)}` : ''}</li>
             `).join('')}
           </ul>
         ` : ''}
 
-        ${pet.behavioral_notes ? `<p><strong>Behavioral Notes:</strong> ${pet.behavioral_notes}</p>` : ''}
-        ${pet.special_instructions ? `<p><strong>Special Instructions:</strong> ${pet.special_instructions}</p>` : ''}
-        ${pet.medical_notes ? `<p><strong>Medical Notes:</strong> ${pet.medical_notes}</p>` : ''}
+        ${pet.behavioral_notes ? `<p><strong>Behavioral Notes:</strong> ${esc(pet.behavioral_notes)}</p>` : ''}
+        ${pet.special_instructions ? `<p><strong>Special Instructions:</strong> ${esc(pet.special_instructions)}</p>` : ''}
+        ${pet.medical_notes ? `<p><strong>Medical Notes:</strong> ${esc(pet.medical_notes)}</p>` : ''}
 
         ${pet.vet_info ? `
           <h3>Veterinarian</h3>
-          <p>${pet.vet_info.name} at ${pet.vet_info.clinic}<br>
-          Phone: ${pet.vet_info.phone}${pet.vet_info.emergency_phone ? `<br>Emergency: ${pet.vet_info.emergency_phone}` : ''}</p>
+          <p>${esc(pet.vet_info.name)} at ${esc(pet.vet_info.clinic)}<br>
+          Phone: ${esc(pet.vet_info.phone)}${pet.vet_info.emergency_phone ? `<br>Emergency: ${esc(pet.vet_info.emergency_phone)}` : ''}</p>
         ` : ''}
       </div>
     `).join('<hr>');
+
+    const itinerary = guide.travel_itinerary;
+    const travelSection = sections.travelItinerary && itinerary ? `
+      <div class="travel">
+        <h2>✈️ Travel Itinerary</h2>
+        ${itinerary.destination ? `<p><strong>Destination:</strong> ${esc(itinerary.destination)}</p>` : ''}
+        ${itinerary.departure_date ? `<p><strong>Departure:</strong> ${esc(itinerary.departure_date)}</p>` : ''}
+        ${itinerary.return_date ? `<p><strong>Return:</strong> ${esc(itinerary.return_date)}</p>` : ''}
+        ${itinerary.contact_while_away ? `<p><strong>Contact While Away:</strong> ${esc(itinerary.contact_while_away)}</p>` : ''}
+        ${itinerary.timezone_difference ? `<p><strong>Timezone Difference:</strong> ${esc(itinerary.timezone_difference)}</p>` : ''}
+        ${itinerary.flights.length > 0 ? `
+          <h3>Flights</h3>
+          <ul>
+            ${itinerary.flights.map((flight) => `
+              <li>
+                <strong>${flight.type === 'departure' ? '✈️ Departure' : '🛬 Return'}</strong>:
+                ${esc(flight.airline)} ${esc(flight.flight_number)},
+                ${esc(flight.departure_airport)} → ${esc(flight.arrival_airport)}
+                (${esc(flight.departure_time)} → ${esc(flight.arrival_time)})
+              </li>
+            `).join('')}
+          </ul>
+        ` : ''}
+        ${itinerary.hotel_info ? `
+          <h3>Hotel</h3>
+          <p>${esc(itinerary.hotel_info.name)}${itinerary.hotel_info.address ? `<br>${esc(itinerary.hotel_info.address)}` : ''}${itinerary.hotel_info.phone ? `<br>Phone: ${esc(itinerary.hotel_info.phone)}` : ''}${itinerary.hotel_info.confirmation_number ? `<br>Confirmation #: ${esc(itinerary.hotel_info.confirmation_number)}` : ''}</p>
+        ` : ''}
+        ${itinerary.notes ? `<p><strong>Notes:</strong> ${esc(itinerary.notes)}</p>` : ''}
+      </div>
+    ` : '';
 
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <title>${guide.title}</title>
+        <title>${esc(guide.title)}</title>
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: ${COLORS.text};
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
           }
           h1 {
-            color: ${COLORS.primary};
+            color: ${COLORS.secondary};
             border-bottom: 2px solid ${COLORS.primary};
             padding-bottom: 10px;
           }
           h2 {
-            color: #1f2937;
+            color: ${COLORS.secondary};
             margin-top: 30px;
           }
           h3 {
-            color: #374151;
+            color: ${COLORS.primaryDark};
             margin-top: 20px;
           }
           .header {
             margin-bottom: 30px;
           }
           .dates {
-            color: #6b7280;
+            color: ${COLORS.textMuted};
             font-size: 14px;
           }
           .section {
             margin-bottom: 30px;
           }
           .emergency {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
+            background: #FBF0EF; /* accent-50 */
+            border: 1px solid #ECBCB8; /* accent-200 */
             border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
           }
           .emergency h2 {
-            color: #dc2626;
+            color: ${COLORS.accent};
             margin-top: 0;
           }
           .home-info {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
+            background: ${COLORS.cream};
+            border: 1px solid ${COLORS.border};
             border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
           }
           .home-info h2 {
+            color: ${COLORS.secondary};
+            margin-top: 0;
+          }
+          .travel {
+            background: ${COLORS.cream};
+            border: 1px solid ${COLORS.border};
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+          }
+          .travel h2 {
             color: ${COLORS.secondary};
             margin-top: 0;
           }
@@ -198,12 +244,12 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           }
           hr {
             border: none;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid ${COLORS.border};
             margin: 30px 0;
           }
           .cheat-sheet {
-            background: #f0fdf4;
-            border: 1px solid #86efac;
+            background: ${COLORS.primary50};
+            border: 1px solid ${COLORS.primary200};
             border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
@@ -212,8 +258,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           .footer {
             margin-top: 40px;
             padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #9ca3af;
+            border-top: 1px solid ${COLORS.border};
+            color: ${COLORS.textMuted};
             font-size: 12px;
             text-align: center;
           }
@@ -221,7 +267,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
       </head>
       <body>
         <div class="header">
-          <h1>🐾 ${guide.title}</h1>
+          <h1>🐾 ${esc(guide.title)}</h1>
           ${guide.start_date || guide.end_date ? `
             <p class="dates">
               ${guide.start_date ? new Date(guide.start_date).toLocaleDateString() : ''}
@@ -236,8 +282,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             <ul>
               ${guide.emergency_contacts.map((c) => `
                 <li>
-                  <strong>${c.name}</strong> (${c.relationship})${c.is_primary ? ' - PRIMARY' : ''}${c.has_key ? ' 🔑' : ''}<br>
-                  Phone: ${c.phone}${c.email ? `<br>Email: ${c.email}` : ''}
+                  <strong>${esc(c.name)}</strong> (${esc(c.relationship)})${c.is_primary ? ' - PRIMARY' : ''}${c.has_key ? ' 🔑' : ''}<br>
+                  Phone: ${esc(c.phone)}${c.email ? `<br>Email: ${esc(c.email)}` : ''}
                 </li>
               `).join('')}
             </ul>
@@ -247,16 +293,16 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         ${sections.homeInfo ? `
         <div class="home-info">
           <h2>🏠 Home Information</h2>
-          ${guide.home_info.address ? `<p><strong>Address:</strong> ${guide.home_info.address}</p>` : ''}
-          ${guide.home_info.wifi_name ? `<p><strong>WiFi:</strong> ${guide.home_info.wifi_name}${guide.home_info.wifi_password ? ` / Password: ${guide.home_info.wifi_password}` : ''}</p>` : ''}
-          ${guide.home_info.door_code ? `<p><strong>Door Code:</strong> ${guide.home_info.door_code}</p>` : ''}
-          ${guide.home_info.alarm_code ? `<p><strong>Alarm Code:</strong> ${guide.home_info.alarm_code}</p>` : ''}
-          ${guide.home_info.garage_code ? `<p><strong>Garage Code:</strong> ${guide.home_info.garage_code}</p>` : ''}
-          ${guide.home_info.gate_code ? `<p><strong>Gate Code:</strong> ${guide.home_info.gate_code}</p>` : ''}
-          ${guide.home_info.mailbox_code ? `<p><strong>Mailbox Code:</strong> ${guide.home_info.mailbox_code}</p>` : ''}
-          ${guide.home_info.spare_key_location ? `<p><strong>Spare Key:</strong> ${guide.home_info.spare_key_location}</p>` : ''}
-          ${guide.home_info.trash_day ? `<p><strong>Trash Day:</strong> ${guide.home_info.trash_day}</p>` : ''}
-          ${guide.home_info.notes ? `<p><strong>Notes:</strong> ${guide.home_info.notes}</p>` : ''}
+          ${guide.home_info.address ? `<p><strong>Address:</strong> ${esc(guide.home_info.address)}</p>` : ''}
+          ${guide.home_info.wifi_name ? `<p><strong>WiFi:</strong> ${esc(guide.home_info.wifi_name)}${guide.home_info.wifi_password ? ` / Password: ${esc(guide.home_info.wifi_password)}` : ''}</p>` : ''}
+          ${guide.home_info.door_code ? `<p><strong>Door Code:</strong> ${esc(guide.home_info.door_code)}</p>` : ''}
+          ${guide.home_info.alarm_code ? `<p><strong>Alarm Code:</strong> ${esc(guide.home_info.alarm_code)}</p>` : ''}
+          ${guide.home_info.garage_code ? `<p><strong>Garage Code:</strong> ${esc(guide.home_info.garage_code)}</p>` : ''}
+          ${guide.home_info.gate_code ? `<p><strong>Gate Code:</strong> ${esc(guide.home_info.gate_code)}</p>` : ''}
+          ${guide.home_info.mailbox_code ? `<p><strong>Mailbox Code:</strong> ${esc(guide.home_info.mailbox_code)}</p>` : ''}
+          ${guide.home_info.spare_key_location ? `<p><strong>Spare Key:</strong> ${esc(guide.home_info.spare_key_location)}</p>` : ''}
+          ${guide.home_info.trash_day ? `<p><strong>Trash Day:</strong> ${esc(guide.home_info.trash_day)}</p>` : ''}
+          ${guide.home_info.notes ? `<p><strong>Notes:</strong> ${esc(guide.home_info.notes)}</p>` : ''}
         </div>
         ` : ''}
 
@@ -265,22 +311,24 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         ${petSections || '<p>No pets selected.</p>'}
         ` : ''}
 
+        ${travelSection}
+
         ${sections.aiCheatSheet && cheatSheetContent ? `
           <div class="cheat-sheet">
             <h2>🤖 AI Cheat Sheet</h2>
-            <div>${cheatSheetContent.replace(/\n/g, '<br>')}</div>
+            <div>${esc(cheatSheetContent).replace(/\n/g, '<br>')}</div>
           </div>
         ` : ''}
 
         ${sections.additionalNotes && guide.additional_notes ? `
           <div class="section">
             <h2>📝 Additional Notes</h2>
-            <p>${guide.additional_notes}</p>
+            <p>${esc(guide.additional_notes)}</p>
           </div>
         ` : ''}
 
         <div class="footer">
-          Generated by Pet Sitter Guide Pro • ${new Date().toLocaleDateString()}
+          Generated by Pawstructions • ${new Date().toLocaleDateString()}
         </div>
       </body>
       </html>
@@ -301,6 +349,11 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           printWindow.document.write(html);
           printWindow.document.close();
           printWindow.print();
+        } else {
+          showAlert(
+            'Popup Blocked',
+            'Your browser blocked the print window. Allow popups for this site, then tap Export again.'
+          );
         }
       } else {
         // For native, generate PDF
@@ -309,7 +362,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, {
             mimeType: 'application/pdf',
-            dialogTitle: `${guide.title} - Pet Sitter Guide`,
+            dialogTitle: `${guide.title} - Pawstructions Guide`,
           });
         } else {
           showAlert('Success', `PDF saved to: ${uri}`);
@@ -374,6 +427,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Switch
                 value={sections.emergencyContacts}
                 onValueChange={() => toggleSection('emergencyContacts')}
+                trackColor={{ true: COLORS.primary }}
               />
             </View>
 
@@ -382,6 +436,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Switch
                 value={sections.homeInfo}
                 onValueChange={() => toggleSection('homeInfo')}
+                trackColor={{ true: COLORS.primary }}
               />
             </View>
 
@@ -390,6 +445,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Switch
                 value={sections.pets}
                 onValueChange={() => toggleSection('pets')}
+                trackColor={{ true: COLORS.primary }}
               />
             </View>
 
@@ -399,6 +455,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Switch
                   value={sections.travelItinerary}
                   onValueChange={() => toggleSection('travelItinerary')}
+                  trackColor={{ true: COLORS.primary }}
                 />
               </View>
             )}
@@ -409,6 +466,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Switch
                   value={sections.aiCheatSheet}
                   onValueChange={() => toggleSection('aiCheatSheet')}
+                  trackColor={{ true: COLORS.primary }}
                 />
               </View>
             )}
@@ -419,6 +477,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Switch
                   value={sections.additionalNotes}
                   onValueChange={() => toggleSection('additionalNotes')}
+                  trackColor={{ true: COLORS.primary }}
                 />
               </View>
             )}
@@ -491,7 +550,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         {/* Tip for cheat sheet */}
         {!cheatSheetContent && (
           <Card className="mb-4">
-            <Text className="text-orange-600 font-medium mb-2">💡 Tip</Text>
+            <Text className="text-warm-600 font-medium mb-2">💡 Tip</Text>
             <Text className="text-tan-600">
               Generate an AI Cheat Sheet first to include a quick-reference summary in your PDF.
             </Text>
@@ -513,6 +572,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               sections.emergencyContacts && guide.emergency_contacts.length > 0 && `${guide.emergency_contacts.length} contacts`,
               sections.homeInfo && 'Home info',
               sections.pets && selectedPetIds.length > 0 && `${selectedPetIds.length} pets`,
+              sections.travelItinerary && guide.travel_itinerary && 'Travel itinerary',
               sections.aiCheatSheet && cheatSheetContent && 'AI cheat sheet',
               sections.additionalNotes && guide.additional_notes && 'Notes',
             ].filter(Boolean).join(' • ') || 'No sections selected'}
@@ -524,7 +584,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             title={exporting ? 'Exporting...' : '📄 Export as PDF'}
             onPress={handleExport}
             loading={exporting}
-            disabled={exporting || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.aiCheatSheet && !sections.additionalNotes)}
+            disabled={exporting || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.travelItinerary && !sections.aiCheatSheet && !sections.additionalNotes)}
           />
         </View>
       </ScrollView>

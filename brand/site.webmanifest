@@ -1,0 +1,27 @@
+{
+  "name": "Pawstructions",
+  "short_name": "Pawstructions",
+  "description": "Everything they need to know while you're away.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5EDD6",
+  "theme_color": "#1E3A5F",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

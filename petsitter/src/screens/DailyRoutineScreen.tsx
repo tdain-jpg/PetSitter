@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   Pressable,
   ActivityIndicator,
   Modal,
-  TextInput,
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Select } from '../components';
+import { Button, Card, Input, Select } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
@@ -39,6 +39,19 @@ const TASK_CATEGORIES: { value: TaskCategory; label: string }[] = [
 
 const generateId = () => `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+// Date keys use the LOCAL calendar day. toISOString() is UTC — for a US user
+// after ~5-8pm local it is already tomorrow's date, so completions would be
+// recorded (and read back) under the wrong day.
+const toLocalDateKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Parse a YYYY-MM-DD key as a LOCAL date. `new Date('YYYY-MM-DD')` parses as
+// UTC midnight, which renders as the previous day west of UTC.
+const parseLocalDateKey = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export function DailyRoutineScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
   const {
@@ -54,11 +67,13 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()));
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
   const [customTasks, setCustomTasks] = useState<RoutineTask[]>([]);
+
+  // Task ids with a toggle currently in flight — taps on them are ignored so
+  // rapid double-taps can't fire duplicate requests.
+  const pendingTaskIds = useRef<Set<string>>(new Set());
 
   // Modal state for adding/editing tasks
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -107,7 +122,11 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     setCompletions(data);
   };
 
-  // Generate tasks from pet schedules
+  // Generate tasks from pet schedules.
+  // Every generated id is prefixed with the guide id: completions are keyed by
+  // (guide_id, task_id, date), and unprefixed ids ('walk-morning',
+  // 'feeding-<petId>-...') would repeat across guides covering the same pet
+  // (or duplicated guides), colliding in the checklist history.
   const generatedTasks = useMemo(() => {
     const tasks: RoutineTask[] = [];
     let order = 0;
@@ -122,7 +141,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
 
         tasks.push({
-          id: `feeding-${pet.id}-${feeding.id}`,
+          id: `feeding-${guideId}-${pet.id}-${feeding.id}`,
           pet_id: pet.id,
           time_block: timeBlock,
           time: feeding.time,
@@ -142,7 +161,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         // If no specific times, create a single morning task
         if (times.length === 0) {
           tasks.push({
-            id: `med-${pet.id}-${med.id}`,
+            id: `med-${guideId}-${pet.id}-${med.id}`,
             pet_id: pet.id,
             time_block: 'morning',
             title: `Give ${pet.name} medication`,
@@ -162,7 +181,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
             else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
 
             tasks.push({
-              id: `med-${pet.id}-${med.id}-${timeIndex}`,
+              id: `med-${guideId}-${pet.id}-${med.id}-${timeIndex}`,
               pet_id: pet.id,
               time_block: timeBlock,
               time: time,
@@ -181,7 +200,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     // Add general tasks
     if (guidePets.some((p) => p.species === 'dog')) {
       tasks.push({
-        id: 'walk-morning',
+        id: `gd-${guideId}-walk-morning`,
         time_block: 'morning',
         title: 'Morning walk',
         is_recurring: true,
@@ -190,7 +209,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         order: order++,
       });
       tasks.push({
-        id: 'walk-evening',
+        id: `gd-${guideId}-walk-evening`,
         time_block: 'evening',
         title: 'Evening walk',
         is_recurring: true,
@@ -202,7 +221,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
     if (guidePets.some((p) => p.species === 'cat')) {
       tasks.push({
-        id: 'litter-morning',
+        id: `gd-${guideId}-litter-morning`,
         time_block: 'morning',
         title: 'Clean litter box',
         is_recurring: true,
@@ -214,7 +233,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
     // Water refresh
     tasks.push({
-      id: 'water-morning',
+      id: `gd-${guideId}-water-morning`,
       time_block: 'morning',
       title: 'Refresh water bowls',
       is_recurring: true,
@@ -224,7 +243,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     });
 
     return tasks;
-  }, [guidePets]);
+  }, [guidePets, guideId]);
 
   // Combine auto-generated and custom tasks
   const allTasks = useMemo(() => {
@@ -245,39 +264,54 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   };
 
   const handleToggleTask = async (task: RoutineTask) => {
-    const isCompleted = isTaskCompleted(task.id);
+    // Ignore taps while a toggle for this task is already in flight
+    if (pendingTaskIds.current.has(task.id)) return;
+    pendingTaskIds.current.add(task.id);
 
-    if (isCompleted) {
-      await markTaskIncomplete(task.id, selectedDate);
-      setCompletions((prev) => prev.filter((c) => c.task_id !== task.id));
-    } else {
-      const completion = await markTaskComplete({
-        task_id: task.id,
-        guide_id: guideId,
-        date: selectedDate,
-        completed_at: new Date().toISOString(),
-      });
-      setCompletions((prev) => [...prev, completion]);
+    const isCompleted = isTaskCompleted(task.id);
+    try {
+      if (isCompleted) {
+        await markTaskIncomplete(guideId, task.id, selectedDate);
+        setCompletions((prev) => prev.filter((c) => c.task_id !== task.id));
+      } else {
+        const completion = await markTaskComplete({
+          task_id: task.id,
+          guide_id: guideId,
+          date: selectedDate,
+          completed_at: new Date().toISOString(),
+        });
+        setCompletions((prev) => [
+          ...prev.filter((c) => c.task_id !== task.id),
+          completion,
+        ]);
+      }
+    } catch (err: any) {
+      // State is only mutated after a successful write, so the checkbox
+      // stays in its pre-tap state — just tell the user why.
+      showAlert('Error', err?.message || 'Failed to update the task. Please try again.');
+    } finally {
+      pendingTaskIds.current.delete(task.id);
     }
   };
 
   const changeDate = (offset: number) => {
-    const date = new Date(selectedDate);
+    const date = parseLocalDateKey(selectedDate);
     date.setDate(date.getDate() + offset);
-    setSelectedDate(date.toISOString().split('T')[0]);
+    setSelectedDate(toLocalDateKey(date));
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const now = new Date();
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(now.getDate() + 1);
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(now.getDate() - 1);
 
-    if (dateStr === today) return 'Today';
-    if (dateStr === tomorrow) return 'Tomorrow';
-    if (dateStr === yesterday) return 'Yesterday';
+    if (dateStr === toLocalDateKey(now)) return 'Today';
+    if (dateStr === toLocalDateKey(tomorrowDate)) return 'Tomorrow';
+    if (dateStr === toLocalDateKey(yesterdayDate)) return 'Yesterday';
 
-    return date.toLocaleDateString('en-US', {
+    return parseLocalDateKey(dateStr).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -347,7 +381,14 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
       );
       await saveCustomTasks(updatedTasks);
     } else {
-      // Create new task
+      // Create new task. Order is max(existing)+1 — counting tasks
+      // (customTasks.length + generatedTasks.length) could collide with an
+      // existing order when the generated count later shrinks, which would
+      // make the move up/down swap a no-op.
+      const maxOrder = [...generatedTasks, ...customTasks].reduce(
+        (max, t) => Math.max(max, t.order),
+        -1
+      );
       const newTask: RoutineTask = {
         id: generateId(),
         title: taskForm.title,
@@ -359,7 +400,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         pet_id: taskForm.pet_id || undefined,
         is_recurring: taskForm.is_recurring,
         is_custom: true,
-        order: customTasks.length + generatedTasks.length,
+        order: maxOrder + 1,
       };
       await saveCustomTasks([...customTasks, newTask]);
     }
@@ -387,13 +428,18 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= blockTasks.length) return;
 
-    // Swap orders
-    const otherTask = blockTasks[newIndex];
-    const updatedTasks = customTasks.map((t) => {
-      if (t.id === task.id) return { ...t, order: otherTask.order };
-      if (t.id === otherTask.id) return { ...t, order: task.order };
-      return t;
-    });
+    // Reorder within the block, then NORMALIZE orders to sequential values.
+    // Swapping raw order values is a no-op when two tasks ended up with the
+    // same order (possible when the generated task count changed between
+    // creates). Custom orders start after the generated tasks' 0..n-1 range
+    // so they keep sorting after them within a time block.
+    const reordered = [...blockTasks];
+    [reordered[currentIndex], reordered[newIndex]] = [reordered[newIndex], reordered[currentIndex]];
+    const base = generatedTasks.length;
+    const orderById = new Map(reordered.map((t, i) => [t.id, base + i]));
+    const updatedTasks = customTasks.map((t) =>
+      orderById.has(t.id) ? { ...t, order: orderById.get(t.id)! } : t
+    );
 
     await saveCustomTasks(updatedTasks);
   };
@@ -535,12 +581,12 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                           </Text>
                         )}
                         {task.time && (
-                          <Text className={`text-xs ${completed ? 'text-primary-500' : 'text-tan-400'}`}>
+                          <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
                             ⏰ {task.time}
                           </Text>
                         )}
                         {pet && (
-                          <Text className={`text-xs ${completed ? 'text-primary-500' : 'text-tan-400'}`}>
+                          <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
                             🐾 {pet.name}
                           </Text>
                         )}
@@ -631,86 +677,71 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
               </View>
 
               {/* Task Title */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Task Title *</Text>
-                <TextInput
-                  className="border border-tan-300 rounded-lg px-4 py-3 text-brown-800"
-                  value={taskForm.title}
-                  onChangeText={(text) => setTaskForm((f) => ({ ...f, title: text }))}
-                  placeholder="e.g., Give treats"
-                />
-              </View>
+              <Input
+                label="Task Title *"
+                value={taskForm.title}
+                onChangeText={(text) => setTaskForm((f) => ({ ...f, title: text }))}
+                placeholder="e.g., Give treats"
+                autoCapitalize="sentences"
+              />
 
               {/* Description */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Description</Text>
-                <TextInput
-                  className="border border-tan-300 rounded-lg px-4 py-3 text-brown-800"
-                  value={taskForm.description}
-                  onChangeText={(text) => setTaskForm((f) => ({ ...f, description: text }))}
-                  placeholder="Brief description of the task"
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
+              <Input
+                label="Description"
+                value={taskForm.description}
+                onChangeText={(text) => setTaskForm((f) => ({ ...f, description: text }))}
+                placeholder="Brief description of the task"
+                autoCapitalize="sentences"
+                multiline
+                numberOfLines={2}
+              />
 
               {/* Notes */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Notes</Text>
-                <TextInput
-                  className="border border-tan-300 rounded-lg px-4 py-3 text-brown-800"
-                  value={taskForm.notes}
-                  onChangeText={(text) => setTaskForm((f) => ({ ...f, notes: text }))}
-                  placeholder="Additional notes for the sitter"
-                  multiline
-                  numberOfLines={2}
-                />
-              </View>
+              <Input
+                label="Notes"
+                value={taskForm.notes}
+                onChangeText={(text) => setTaskForm((f) => ({ ...f, notes: text }))}
+                placeholder="Additional notes for the sitter"
+                autoCapitalize="sentences"
+                multiline
+                numberOfLines={2}
+              />
 
               {/* Time Block */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Time Block *</Text>
-                <Select
-                  value={taskForm.time_block}
-                  onValueChange={(value) => setTaskForm((f) => ({ ...f, time_block: value as TimeBlock }))}
-                  options={TIME_BLOCKS.map((tb) => ({ value: tb.id, label: `${tb.icon} ${tb.label}` }))}
-                />
-              </View>
+              <Select
+                label="Time Block *"
+                value={taskForm.time_block}
+                onValueChange={(value) => setTaskForm((f) => ({ ...f, time_block: value as TimeBlock }))}
+                options={TIME_BLOCKS.map((tb) => ({ value: tb.id, label: `${tb.icon} ${tb.label}` }))}
+              />
 
               {/* Specific Time */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Specific Time (optional)</Text>
-                <TextInput
-                  className="border border-tan-300 rounded-lg px-4 py-3 text-brown-800"
-                  value={taskForm.time}
-                  onChangeText={(text) => setTaskForm((f) => ({ ...f, time: text }))}
-                  placeholder="e.g., 14:30 or 2:30 PM"
-                />
-              </View>
+              <Input
+                label="Specific Time (optional)"
+                value={taskForm.time}
+                onChangeText={(text) => setTaskForm((f) => ({ ...f, time: text }))}
+                placeholder="e.g., 14:30 or 2:30 PM"
+              />
 
               {/* Category */}
-              <View className="mb-4">
-                <Text className="text-sm font-medium text-brown-600 mb-1">Category</Text>
-                <Select
-                  value={taskForm.category}
-                  onValueChange={(value) => setTaskForm((f) => ({ ...f, category: value as TaskCategory }))}
-                  options={TASK_CATEGORIES}
-                />
-              </View>
+              <Select
+                label="Category"
+                value={taskForm.category}
+                onValueChange={(value) => setTaskForm((f) => ({ ...f, category: value as TaskCategory }))}
+                options={TASK_CATEGORIES}
+              />
 
               {/* Pet Selection */}
               {guidePets.length > 0 && (
-                <View className="mb-4">
-                  <Text className="text-sm font-medium text-brown-600 mb-1">For Pet (optional)</Text>
-                  <Select
-                    value={taskForm.pet_id}
-                    onValueChange={(value) => setTaskForm((f) => ({ ...f, pet_id: value }))}
-                    options={[
-                      { value: '', label: 'General (no specific pet)' },
-                      ...guidePets.map((p) => ({ value: p.id, label: p.name })),
-                    ]}
-                  />
-                </View>
+                <Select
+                  label="For Pet (optional)"
+                  value={taskForm.pet_id}
+                  onValueChange={(value) => setTaskForm((f) => ({ ...f, pet_id: value }))}
+                  options={[
+                    { value: '', label: 'General (no specific pet)' },
+                    ...guidePets.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                />
               )}
 
               {/* Is Recurring */}

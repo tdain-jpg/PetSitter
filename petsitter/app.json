@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "Pet Sitter Guide Pro",
-    "slug": "pet-sitter-guide-pro",
+    "name": "Pawstructions",
+    "slug": "pawstructions",
+    "scheme": "pawstructions",
     "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,19 +11,19 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#3b82f6"
+      "backgroundColor": "#1E3A5F"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.petsitterguide.app"
+      "bundleIdentifier": "com.pawstructions.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#3b82f6"
+        "backgroundColor": "#1E3A5F"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.petsitterguide.app"
+      "package": "com.pawstructions.app"
     },
     "web": {
       "bundler": "metro",

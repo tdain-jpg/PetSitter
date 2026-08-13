@@ -1,5 +1,6 @@
 import { TextInput, View, Text, Pressable } from 'react-native';
 import { useState } from 'react';
+import { COLORS } from '../constants';
 import { formatPhoneNumber } from '../utils';
 
 interface InputProps {
@@ -66,7 +67,9 @@ export function Input({
         <TextInput
           className={inputStyles}
           placeholder={placeholder}
-          placeholderTextColor="#A08060"
+          placeholderTextColor={COLORS.tan}
+          accessibilityLabel={label || placeholder}
+          accessibilityHint={error}
           value={displayValue}
           onChangeText={handleTextChange}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
@@ -92,7 +95,9 @@ export function Input({
         )}
       </View>
       {error && (
-        <Text className="text-accent-500 text-sm mt-1">{error}</Text>
+        <Text accessibilityLiveRegion="polite" className="text-accent-500 text-sm mt-1">
+          {error}
+        </Text>
       )}
     </View>
   );

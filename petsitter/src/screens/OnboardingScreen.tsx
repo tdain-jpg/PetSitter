@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -49,6 +49,7 @@ export function OnboardingScreen({ navigation }: Props) {
   const { user } = useAuth();
   const {
     createPet,
+    updatePet,
     createGuide,
     updateOnboardingState,
     completeOnboarding,
@@ -87,14 +88,41 @@ export function OnboardingScreen({ navigation }: Props) {
   const currentStepIndex = STEPS.indexOf(currentStep);
   const progress = ((currentStepIndex + 1) / STEPS.length) * 100;
 
+  // Resume-race guard: onboardingState loads asynchronously and can land AFTER
+  // this screen mounts (HomeScreen redirects as soon as settings resolve), so
+  // the useState initializers above may have captured null. Sync the persisted
+  // step/ids once when the state arrives — but never move the step after the
+  // user has started navigating, so a stale load can't yank them backwards.
+  const hasInteractedRef = useRef(false);
+  const hasSyncedResumeRef = useRef(false);
+
+  useEffect(() => {
+    if (!onboardingState || hasSyncedResumeRef.current) return;
+    hasSyncedResumeRef.current = true;
+    // Always recover previously created ids (prevents duplicate creation on
+    // resume); only jump to the persisted step if the user hasn't interacted.
+    const { first_pet_id, first_guide_id, current_step } = onboardingState;
+    if (first_pet_id) setCreatedPetId((prev) => prev ?? first_pet_id);
+    if (first_guide_id) setCreatedGuideId((prev) => prev ?? first_guide_id);
+    if (!hasInteractedRef.current) setCurrentStep(current_step);
+  }, [onboardingState]);
+
   const goToStep = useCallback(
-    async (step: OnboardingStep) => {
+    async (
+      step: OnboardingStep,
+      ids?: { first_pet_id?: string; first_guide_id?: string }
+    ) => {
+      hasInteractedRef.current = true;
       setCurrentStep(step);
       await updateOnboardingState({
         current_step: step,
         completed_steps: STEPS.slice(0, STEPS.indexOf(step)),
-        first_pet_id: createdPetId,
-        first_guide_id: createdGuideId,
+        // Callers pass freshly created ids explicitly: the setCreatedPetId /
+        // setCreatedGuideId call preceding goToStep hasn't re-rendered yet, so
+        // the closured values here can be one update behind (persisting
+        // first_pet_id as undefined used to break resume).
+        first_pet_id: ids?.first_pet_id ?? createdPetId,
+        first_guide_id: ids?.first_guide_id ?? createdGuideId,
       });
     },
     [updateOnboardingState, createdPetId, createdGuideId]
@@ -112,18 +140,28 @@ export function OnboardingScreen({ navigation }: Props) {
 
     setIsSubmitting(true);
     try {
-      const pet = await createPet({
-        user_id: user.id,
+      const petFields = {
         name: petForm.name.trim(),
         species: petForm.species,
         breed: petForm.breed.trim() || undefined,
         age: petForm.age ? Number(petForm.age) : undefined,
-        feeding_schedule: [],
-        medications: [],
-        status: 'active',
-      });
-      setCreatedPetId(pet.id);
-      await goToStep('create_guide');
+      };
+      if (createdPetId) {
+        // The pet already exists (Go Back then Continue, or a resumed
+        // session): update it instead of creating a duplicate.
+        await updatePet(createdPetId, petFields);
+        await goToStep('create_guide', { first_pet_id: createdPetId });
+      } else {
+        const pet = await createPet({
+          user_id: user.id,
+          ...petFields,
+          feeding_schedule: [],
+          medications: [],
+          status: 'active',
+        });
+        setCreatedPetId(pet.id);
+        await goToStep('create_guide', { first_pet_id: pet.id });
+      }
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to create pet');
     } finally {
@@ -163,7 +201,7 @@ export function OnboardingScreen({ navigation }: Props) {
         },
       });
       setCreatedGuideId(guide.id);
-      await goToStep('completion');
+      await goToStep('completion', { first_guide_id: guide.id });
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to create guide');
     } finally {
@@ -176,6 +214,21 @@ export function OnboardingScreen({ navigation }: Props) {
     try {
       await completeOnboarding();
       navigation.replace('Home');
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to complete onboarding');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleViewGuide = async () => {
+    if (!createdGuideId) return;
+    setIsSubmitting(true);
+    try {
+      // Await before navigating: otherwise settings still show onboarding as
+      // incomplete and HomeScreen bounces the user back into the wizard.
+      await completeOnboarding();
+      navigation.replace('GuideDetail', { guideId: createdGuideId });
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to complete onboarding');
     } finally {
@@ -215,7 +268,7 @@ export function OnboardingScreen({ navigation }: Props) {
               <Text className="text-5xl">🐾</Text>
             </View>
             <Text className="text-3xl font-bold text-brown-800 text-center mb-4">
-              Welcome to Pet Sitter Guide Pro!
+              Welcome to Pawstructions!
             </Text>
             <Text className="text-lg text-tan-600 text-center mb-8">
               Create comprehensive pet care guides for your pet sitters. Let's get started by setting up your first pet and guide.
@@ -379,6 +432,12 @@ export function OnboardingScreen({ navigation }: Props) {
                 variant="outline"
                 disabled={isSubmitting}
               />
+              <Button
+                title="Skip for Now"
+                onPress={handleSkip}
+                variant="outline"
+                disabled={isSubmitting}
+              />
             </View>
           </ScrollView>
         );
@@ -430,10 +489,7 @@ export function OnboardingScreen({ navigation }: Props) {
               {createdGuideId && (
                 <Button
                   title="View Your Guide"
-                  onPress={() => {
-                    completeOnboarding();
-                    (navigation as any).navigate('GuideDetail', { guideId: createdGuideId });
-                  }}
+                  onPress={handleViewGuide}
                   variant="outline"
                   disabled={isSubmitting}
                 />

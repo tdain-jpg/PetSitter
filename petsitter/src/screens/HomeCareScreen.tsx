@@ -248,8 +248,13 @@ export function HomeCareScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView className="flex-1 p-4">
+        {/* Each SectionHeader keys off its form's visibility: SectionHeader keeps
+            its expanded state internally, so remounting it when "+ Add" opens the
+            form re-applies defaultExpanded and guarantees the new form is visible
+            even if the user had collapsed the section. */}
         {/* Home Systems */}
         <SectionHeader
+          key={showSystemForm ? 'systems-form-open' : 'systems'}
           title={`Home Systems (${homeCare.systems.length})`}
           rightAction={{ label: '+ Add', onPress: () => setShowSystemForm(true) }}
         >
@@ -291,6 +296,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
         {/* Home Tasks */}
         <SectionHeader
+          key={showTaskForm ? 'tasks-form-open' : 'tasks'}
           title={`Home Tasks (${homeCare.tasks.length})`}
           rightAction={{ label: '+ Add', onPress: () => setShowTaskForm(true) }}
         >
@@ -331,6 +337,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
         {/* Supplies */}
         <SectionHeader
+          key={showSupplyForm ? 'supplies-form-open' : 'supplies'}
           title={`Supplies (${homeCare.supplies.length})`}
           rightAction={{ label: '+ Add', onPress: () => setShowSupplyForm(true) }}
         >
@@ -371,6 +378,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
         {/* Appliances */}
         <SectionHeader
+          key={showApplianceForm ? 'appliances-form-open' : 'appliances'}
           title={`Appliances (${homeCare.appliances.length})`}
           rightAction={{ label: '+ Add', onPress: () => setShowApplianceForm(true) }}
         >
@@ -411,6 +419,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
         {/* Guest Amenities */}
         <SectionHeader
+          key={showAmenityForm ? 'amenities-form-open' : 'amenities'}
           title={`Guest Amenities (${homeCare.guest_amenities.length})`}
           rightAction={{ label: '+ Add', onPress: () => setShowAmenityForm(true) }}
         >

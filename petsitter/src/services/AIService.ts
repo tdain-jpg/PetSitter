@@ -27,11 +27,14 @@ export async function generateCheatSheet(
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // The API key travels in a header, never the URL: query strings
+          // leak into browser history, proxy/access logs, and Referer headers.
+          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
           contents: [
@@ -107,11 +110,23 @@ Veterinarian: ${pet.vet_info ? `${pet.vet_info.name} at ${pet.vet_info.clinic} -
     .map((c) => `- ${c.name} (${c.relationship}): ${c.phone}${c.is_primary ? ' [PRIMARY]' : ''}`)
     .join('\n');
 
+  // SECURITY: physical-access codes (door, alarm, garage, gate, mailbox) are
+  // deliberately REDACTED before this prompt leaves the device — it is sent to
+  // Google's Gemini API and the generated cheat sheet is stored in plaintext,
+  // so real codes must never ride along. "(see guide)" tells the model (and
+  // the sitter) that a code exists; the actual value stays in the app/PDF.
+  // WiFi credentials and the address are kept: sitters need them verbatim in
+  // the summary, and unlike access codes they don't open the house.
+  const redactCode = (value?: string) => (value ? '(see guide)' : 'Not provided');
+
   const homeInfo = `
 Address: ${guide.home_info.address || 'Not provided'}
 WiFi: ${guide.home_info.wifi_name || 'Not provided'}${guide.home_info.wifi_password ? ` / Password: ${guide.home_info.wifi_password}` : ''}
-Door Code: ${guide.home_info.door_code || 'Not provided'}
-Alarm Code: ${guide.home_info.alarm_code || 'Not provided'}
+Door Code: ${redactCode(guide.home_info.door_code)}
+Alarm Code: ${redactCode(guide.home_info.alarm_code)}
+Garage Code: ${redactCode(guide.home_info.garage_code)}
+Gate Code: ${redactCode(guide.home_info.gate_code)}
+Mailbox Code: ${redactCode(guide.home_info.mailbox_code)}
 Spare Key: ${guide.home_info.spare_key_location || 'Not provided'}
 Trash Day: ${guide.home_info.trash_day || 'Not specified'}
 `;
@@ -138,7 +153,7 @@ Please create a cheat sheet that includes:
 1. A quick daily schedule summary for each pet
 2. Important medications and times
 3. Emergency contact quick reference
-4. Key home codes/access info
+4. Key home access info — access codes are redacted as "(see guide)"; keep that placeholder text exactly, never invent a code
 5. Important reminders and warnings
 
 Format it using markdown with clear sections, bullet points, and bold text for important items. Keep it concise but comprehensive - this should fit on 1-2 pages when printed.`;

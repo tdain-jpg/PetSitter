@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
 import type {
@@ -10,7 +10,7 @@ import type {
   CheatSheet,
   OnboardingState,
 } from '../types';
-import type { ExportedData } from '../services/DataService';
+import type { ExportedData, SharedGuideBundle } from '../services/DataService';
 
 interface DataContextType {
   // Pets
@@ -18,6 +18,8 @@ interface DataContextType {
   activePets: Pet[];
   deceasedPets: Pet[];
   loadingPets: boolean;
+  /** Set when the last pets load failed — lets screens distinguish "failed to load" from "no pets". */
+  petsError: string | null;
   refreshPets: () => Promise<void>;
   createPet: (pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>) => Promise<Pet>;
   updatePet: (petId: string, updates: Partial<Pet>) => Promise<Pet>;
@@ -28,6 +30,8 @@ interface DataContextType {
   // Guides
   guides: Guide[];
   loadingGuides: boolean;
+  /** Set when the last guides load failed — lets screens distinguish "failed to load" from "no guides". */
+  guidesError: string | null;
   refreshGuides: () => Promise<void>;
   getGuide: (guideId: string) => Promise<Guide | null>;
   createGuide: (guide: Omit<Guide, 'id' | 'created_at' | 'updated_at'>) => Promise<Guide>;
@@ -38,12 +42,14 @@ interface DataContextType {
   // Task Completions
   getTaskCompletions: (guideId: string, date: string) => Promise<TaskCompletion[]>;
   markTaskComplete: (completion: Omit<TaskCompletion, 'id'>) => Promise<TaskCompletion>;
-  markTaskIncomplete: (taskId: string, date: string) => Promise<void>;
+  markTaskIncomplete: (guideId: string, taskId: string, date: string) => Promise<void>;
 
   // Share Links
   createShareLink: (guideId: string, expiresInDays?: number) => Promise<ShareableLink>;
   getShareLinks: () => Promise<ShareableLink[]>;
   deactivateShareLink: (linkId: string) => Promise<void>;
+  /** Resolves guide + pets in ONE resolve_share RPC call (one view_count increment). */
+  getSharedGuideBundle: (code: string) => Promise<SharedGuideBundle | null>;
   getSharedGuide: (code: string) => Promise<Guide | null>;
   getSharedGuidePets: (code: string) => Promise<Pet[]>;
 
@@ -80,10 +86,18 @@ export function DataProvider({ children }: DataProviderProps) {
   // Pets state
   const [pets, setPets] = useState<Pet[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
+  const [petsError, setPetsError] = useState<string | null>(null);
 
   // Guides state
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loadingGuides, setLoadingGuides] = useState(true);
+  const [guidesError, setGuidesError] = useState<string | null>(null);
+
+  // Stale-response guard: loads capture the userId they started with and bail
+  // before setState if the signed-in user changed mid-flight (sign-out or
+  // account switch), so a slow response can't repopulate another user's state.
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   // Settings state
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -110,6 +124,8 @@ export function DataProvider({ children }: DataProviderProps) {
       setGuides([]);
       setSettings(null);
       setOnboardingState(null);
+      setPetsError(null);
+      setGuidesError(null);
       setLoadingPets(false);
       setLoadingGuides(false);
       setLoadingSettings(false);
@@ -124,9 +140,15 @@ export function DataProvider({ children }: DataProviderProps) {
     setLoadingPets(true);
     try {
       const data = await dataService.getPets(userId);
+      if (userIdRef.current !== userId) return; // stale response — user changed
       setPets(data);
+      setPetsError(null);
+    } catch (err: any) {
+      console.error('Failed to load pets:', err);
+      if (userIdRef.current !== userId) return;
+      setPetsError(err?.message || 'Failed to load pets');
     } finally {
-      setLoadingPets(false);
+      if (userIdRef.current === userId) setLoadingPets(false);
     }
   }, [userId]);
 
@@ -170,9 +192,15 @@ export function DataProvider({ children }: DataProviderProps) {
     setLoadingGuides(true);
     try {
       const data = await dataService.getGuides(userId);
+      if (userIdRef.current !== userId) return; // stale response — user changed
       setGuides(data);
+      setGuidesError(null);
+    } catch (err: any) {
+      console.error('Failed to load guides:', err);
+      if (userIdRef.current !== userId) return;
+      setGuidesError(err?.message || 'Failed to load guides');
     } finally {
-      setLoadingGuides(false);
+      if (userIdRef.current === userId) setLoadingGuides(false);
     }
   }, [userId]);
 
@@ -220,9 +248,12 @@ export function DataProvider({ children }: DataProviderProps) {
     []
   );
 
-  const markTaskIncomplete = useCallback(async (taskId: string, date: string) => {
-    await dataService.markTaskIncomplete(taskId, date);
-  }, []);
+  const markTaskIncomplete = useCallback(
+    async (guideId: string, taskId: string, date: string) => {
+      await dataService.markTaskIncomplete(guideId, taskId, date);
+    },
+    []
+  );
 
   // ============================================
   // Share Link Operations
@@ -242,6 +273,10 @@ export function DataProvider({ children }: DataProviderProps) {
 
   const deactivateShareLink = useCallback(async (linkId: string) => {
     await dataService.deactivateShareLink(linkId);
+  }, []);
+
+  const getSharedGuideBundle = useCallback(async (code: string) => {
+    return dataService.getSharedGuideBundle(code);
   }, []);
 
   const getSharedGuide = useCallback(async (code: string) => {
@@ -274,9 +309,12 @@ export function DataProvider({ children }: DataProviderProps) {
     setLoadingSettings(true);
     try {
       const data = await dataService.getSettings(userId);
+      if (userIdRef.current !== userId) return; // stale response — user changed
       setSettings(data);
+    } catch (err) {
+      console.error('Failed to load settings:', err);
     } finally {
-      setLoadingSettings(false);
+      if (userIdRef.current === userId) setLoadingSettings(false);
     }
   }, [userId]);
 
@@ -295,8 +333,13 @@ export function DataProvider({ children }: DataProviderProps) {
   // ============================================
   const loadOnboardingState = useCallback(async () => {
     if (!userId) return;
-    const state = await dataService.getOnboardingState(userId);
-    setOnboardingState(state);
+    try {
+      const state = await dataService.getOnboardingState(userId);
+      if (userIdRef.current !== userId) return; // stale response — user changed
+      setOnboardingState(state);
+    } catch (err) {
+      console.error('Failed to load onboarding state:', err);
+    }
   }, [userId]);
 
   const updateOnboardingStateCallback = useCallback(
@@ -348,6 +391,7 @@ export function DataProvider({ children }: DataProviderProps) {
     activePets,
     deceasedPets,
     loadingPets,
+    petsError,
     refreshPets,
     createPet,
     updatePet,
@@ -358,6 +402,7 @@ export function DataProvider({ children }: DataProviderProps) {
     // Guides
     guides,
     loadingGuides,
+    guidesError,
     refreshGuides,
     getGuide,
     createGuide,
@@ -374,6 +419,7 @@ export function DataProvider({ children }: DataProviderProps) {
     createShareLink,
     getShareLinks,
     deactivateShareLink,
+    getSharedGuideBundle,
     getSharedGuide,
     getSharedGuidePets,
 

@@ -11,7 +11,7 @@ export function AuthNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#f9fafb' },
+        contentStyle: { backgroundColor: '#FAF6EA' },
       }}
     >
       <Stack.Screen name="Landing" component={LandingScreen} />

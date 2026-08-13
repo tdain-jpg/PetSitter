@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
+import { Button } from './Button';
 import { Input } from './Input';
 import { generateId } from '../services';
 import type { TravelItinerary, FlightInfo, HotelInfo } from '../types';
@@ -96,18 +97,18 @@ export function TravelItineraryEditor({
   const renderFlightRow = (flight: FlightInfo) => (
     <View
       key={flight.id}
-      className="bg-gray-50 rounded-lg p-3 mb-2 border border-gray-100"
+      className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200"
     >
       <View className="flex-row justify-between items-start">
         <View className="flex-1">
-          <Text className="font-medium text-gray-900">
+          <Text className="font-medium text-brown-800">
             {flight.airline} {flight.flight_number}
           </Text>
-          <Text className="text-gray-600 text-sm">
+          <Text className="text-tan-600 text-sm">
             {flight.departure_airport} → {flight.arrival_airport}
           </Text>
           {(flight.departure_time || flight.arrival_time) && (
-            <Text className="text-gray-500 text-sm">
+            <Text className="text-tan-500 text-sm">
               {flight.departure_time} - {flight.arrival_time}
             </Text>
           )}
@@ -125,9 +126,9 @@ export function TravelItineraryEditor({
             onPress={() => handleDeleteFlight(flight.id)}
             accessibilityRole="button"
             accessibilityLabel={`Remove flight ${flight.flight_number}`}
-            className="px-2 py-1 bg-red-50 rounded"
+            className="px-2 py-1 bg-accent-50 rounded"
           >
-            <Text className="text-red-600 text-xs">Remove</Text>
+            <Text className="text-accent-600 text-xs">Remove</Text>
           </Pressable>
         </View>
       </View>
@@ -161,7 +162,7 @@ export function TravelItineraryEditor({
       {/* Departure Flights */}
       <View className="mt-4 mb-2">
         <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-gray-700 font-medium">Departure Flights</Text>
+          <Text className="text-brown-600 font-medium">Departure Flights</Text>
           <Pressable
             onPress={() => handleAddFlight('departure')}
             accessibilityRole="button"
@@ -173,7 +174,7 @@ export function TravelItineraryEditor({
         </View>
 
         {departureFlights.length === 0 ? (
-          <Text className="text-gray-400 text-sm">No departure flights added.</Text>
+          <Text className="text-tan-500 text-sm">No departure flights added.</Text>
         ) : (
           departureFlights.map(renderFlightRow)
         )}
@@ -182,7 +183,7 @@ export function TravelItineraryEditor({
       {/* Return Flights */}
       <View className="mt-4 mb-2">
         <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-gray-700 font-medium">Return Flights</Text>
+          <Text className="text-brown-600 font-medium">Return Flights</Text>
           <Pressable
             onPress={() => handleAddFlight('return')}
             accessibilityRole="button"
@@ -194,7 +195,7 @@ export function TravelItineraryEditor({
         </View>
 
         {returnFlights.length === 0 ? (
-          <Text className="text-gray-400 text-sm">No return flights added.</Text>
+          <Text className="text-tan-500 text-sm">No return flights added.</Text>
         ) : (
           returnFlights.map(renderFlightRow)
         )}
@@ -202,8 +203,8 @@ export function TravelItineraryEditor({
 
       {/* Flight Form */}
       {showFlightForm && (
-        <View className="mt-4 p-4 bg-gray-100 rounded-lg">
-          <Text className="font-semibold text-gray-900 mb-3">
+        <View className="mt-4 p-4 bg-tan-100 rounded-lg">
+          <Text className="font-semibold text-brown-800 mb-3">
             {editingFlightId ? 'Edit Flight' : `Add ${flightForm.type === 'departure' ? 'Departure' : 'Return'} Flight`}
           </Text>
 
@@ -245,34 +246,24 @@ export function TravelItineraryEditor({
           />
 
           <View className="flex-row gap-2 mt-4">
-            <Pressable
-              onPress={handleSaveFlight}
-              accessibilityRole="button"
-              accessibilityLabel="Save flight"
-              className="px-4 py-2 bg-primary-600 rounded-lg"
-            >
-              <Text className="text-white font-medium">Save</Text>
-            </Pressable>
-            <Pressable
+            <Button title="Save" onPress={handleSaveFlight} variant="primary" />
+            <Button
+              title="Cancel"
               onPress={() => {
                 setShowFlightForm(false);
                 setFlightForm({});
                 setEditingFlightId(null);
               }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-              className="px-4 py-2 bg-gray-200 rounded-lg"
-            >
-              <Text className="text-gray-700 font-medium">Cancel</Text>
-            </Pressable>
+              variant="outline"
+            />
           </View>
         </View>
       )}
 
       {/* Hotel Information */}
       <View className="mt-6">
-        <Text className="text-gray-700 font-medium mb-2">Hotel / Accommodation</Text>
-        <View className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+        <Text className="text-brown-600 font-medium mb-2">Hotel / Accommodation</Text>
+        <View className="bg-cream-200 rounded-lg p-4 border border-tan-200">
           <Input
             label="Hotel Name"
             placeholder="e.g., Grand Hotel Paris"

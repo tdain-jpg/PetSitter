@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, GuideCard } from '../components';
+import { Button, Card, GuideCard, ScreenHeader } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,7 +9,9 @@ import type { MainStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<MainStackParamList, 'Guides'>;
 
 export function GuideListScreen({ navigation }: Props) {
-  const { guides, activePets, loadingGuides } = useData();
+  // Resolve guide pets against ALL pets (active + memorial) so cards match
+  // GuideDetail — guides can still reference pets moved to the memorial.
+  const { guides, pets, loadingGuides } = useData();
 
   const handleAddGuide = () => {
     (navigation as any).navigate('GuideForm', { mode: 'create' });
@@ -31,35 +33,28 @@ export function GuideListScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
-      {/* Header */}
-      <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <Pressable
-          onPress={() => navigation.navigate('Home')}
-          className="mb-3"
-          accessibilityRole="button"
-          accessibilityLabel="Back to home"
-        >
-          <Text className="text-tan-500 text-sm">← Back to Home</Text>
-        </Pressable>
-        <View className="flex-row justify-between items-center">
-          <View>
-            <Text className="text-2xl font-bold text-brown-800">My Guides</Text>
-            <Text className="text-tan-500">
-              {guides.length} {guides.length === 1 ? 'guide' : 'guides'}
-            </Text>
-          </View>
-          <Button
-            title="+ New Guide"
-            onPress={handleAddGuide}
-            variant="primary"
-          />
-        </View>
+      <ScreenHeader
+        title="My Guides"
+        backLabel="← Home"
+        onBack={() => navigation.navigate('Home')}
+        showHome={false}
+      />
+
+      <View className="flex-row justify-between items-center px-4 pt-4">
+        <Text className="text-tan-500">
+          {guides.length} {guides.length === 1 ? 'guide' : 'guides'}
+        </Text>
+        <Button
+          title="+ New Guide"
+          onPress={handleAddGuide}
+          variant="primary"
+        />
       </View>
 
       <ScrollView className="flex-1 p-4">
         {guides.length === 0 ? (
-          <View className="items-center justify-center py-16">
-            <Text className="text-6xl mb-4">📋</Text>
+          <Card className="items-center py-8">
+            <Text className="text-5xl mb-4">📋</Text>
             <Text className="text-xl font-semibold text-brown-800 mb-2">
               No guides yet
             </Text>
@@ -71,13 +66,13 @@ export function GuideListScreen({ navigation }: Props) {
               onPress={handleAddGuide}
               variant="primary"
             />
-          </View>
+          </Card>
         ) : (
           guides.map((guide) => (
             <GuideCard
               key={guide.id}
               guide={guide}
-              pets={activePets}
+              pets={pets}
               onPress={() => handleGuidePress(guide.id)}
             />
           ))

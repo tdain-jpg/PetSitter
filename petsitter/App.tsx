@@ -5,9 +5,9 @@ import { AuthProvider, DataProvider } from './src/contexts';
 import { RootNavigator } from './src/navigation';
 
 const linking = {
-  // Native deep links (petsitter://) + web origin (https://your-domain)
+  // Native deep links (pawstructions://) + web origin (https://your-domain)
   prefixes: [
-    'petsitter://',
+    'pawstructions://',
     ...(typeof window !== 'undefined' && window.location?.origin ? [window.location.origin] : []),
   ],
   config: {

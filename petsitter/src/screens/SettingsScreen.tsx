@@ -19,11 +19,12 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
-  const { settings, updateSettings, exportAllData, clearAllData, deceasedPets } = useData();
+  const { settings, updateSettings, exportAllData, importData, clearAllData, deceasedPets } =
+    useData();
 
   const [geminiKey, setGeminiKey] = useState(settings?.gemini_api_key || '');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -36,8 +37,14 @@ export function SettingsScreen({ navigation }: Props) {
   const handleSaveApiKey = async () => {
     setIsSaving(true);
     try {
-      await updateSettings({ gemini_api_key: geminiKey.trim() || undefined });
-      showAlert('Success', 'API key saved successfully!');
+      const trimmed = geminiKey.trim();
+      // Send null (not undefined) when the field is empty: undefined keys are
+      // dropped from the UPDATE payload entirely, so the stored key would
+      // never actually be cleared.
+      await updateSettings({
+        gemini_api_key: (trimmed || null) as unknown as string | undefined,
+      });
+      showAlert('Success', trimmed ? 'API key saved successfully!' : 'API key removed.');
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to save API key');
     } finally {
@@ -55,7 +62,7 @@ export function SettingsScreen({ navigation }: Props) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `petsitter-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `pawstructions-backup-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -64,6 +71,50 @@ export function SettingsScreen({ navigation }: Props) {
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to export data');
     }
+  };
+
+  const handleImport = () => {
+    if (Platform.OS !== 'web') {
+      showAlert('Import Backup', 'Import is available on the web app.');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.style.display = 'none';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const performImport = async () => {
+          setIsImporting(true);
+          try {
+            const data = JSON.parse(String(reader.result));
+            await importData(data);
+            showAlert('Success', 'Backup imported successfully!');
+          } catch (error: any) {
+            showAlert('Import Failed', error?.message || 'Could not import the backup file.');
+          } finally {
+            setIsImporting(false);
+          }
+        };
+
+        if (
+          window.confirm(
+            'Importing a backup REPLACES all of your current data (pets, guides, and share links). ' +
+              'Share links stored in the backup keep working after the import. Continue?'
+          )
+        ) {
+          performImport();
+        }
+      };
+      reader.onerror = () => showAlert('Import Failed', 'Could not read the selected file.');
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const handleClearData = () => {
@@ -135,25 +186,14 @@ export function SettingsScreen({ navigation }: Props) {
             Enter your Google Gemini API key to enable AI-powered features like the Cheat Sheet generator.
           </Text>
 
-          <View className="flex-row items-center mb-4">
-            <View className="flex-1">
-              <Input
-                label="API Key"
-                placeholder="Enter your Gemini API key"
-                value={geminiKey}
-                onChangeText={setGeminiKey}
-                secureTextEntry={!showApiKey}
-              />
-            </View>
-            <Pressable
-              onPress={() => setShowApiKey(!showApiKey)}
-              className="ml-2 p-2"
-              accessibilityRole="button"
-              accessibilityLabel={showApiKey ? 'Hide API key' : 'Show API key'}
-            >
-              <Text>{showApiKey ? '🙈' : '👁️'}</Text>
-            </Pressable>
-          </View>
+          {/* Input's built-in secureTextEntry eye toggle is the single show/hide control */}
+          <Input
+            label="API Key"
+            placeholder="Enter your Gemini API key"
+            value={geminiKey}
+            onChangeText={setGeminiKey}
+            secureTextEntry
+          />
 
           <Button
             title="Save API Key"
@@ -177,6 +217,7 @@ export function SettingsScreen({ navigation }: Props) {
             <Switch
               value={settings?.auto_save_enabled ?? true}
               onValueChange={(v) => handleToggleSetting('auto_save_enabled', v)}
+              accessibilityLabel="Auto-save changes as you type"
             />
           </View>
 
@@ -190,6 +231,7 @@ export function SettingsScreen({ navigation }: Props) {
             <Switch
               value={settings?.notifications_enabled ?? true}
               onValueChange={(v) => handleToggleSetting('notifications_enabled', v)}
+              accessibilityLabel="Receive reminders and updates"
             />
           </View>
         </Card>
@@ -220,6 +262,13 @@ export function SettingsScreen({ navigation }: Props) {
 
           <View className="gap-3">
             <Button title="📤 Export Data" onPress={handleExport} variant="outline" />
+            <Button
+              title="📥 Import Backup"
+              onPress={handleImport}
+              variant="outline"
+              loading={isImporting}
+              disabled={isImporting}
+            />
             <Button title="🗑️ Clear All Data" onPress={handleClearData} variant="outline" />
           </View>
         </Card>

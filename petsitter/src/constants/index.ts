@@ -1,72 +1,75 @@
-export const APP_NAME = 'Pet Sitter Guide Pro';
+export const APP_NAME = 'Pawstructions';
 export const APP_VERSION = '2.0.0';
 
-// Color palette extracted from the Pet Sitter Pro logo
+// Base URL for the deployed web app (share links, marketing)
+export const WEB_BASE_URL = 'https://pawstructions.com';
+
+// Castles & Currents brand palette
 export const COLORS = {
-  // Primary - Gold/Bronze (from logo border)
-  primary: '#C4913D',
-  primaryLight: '#D4A84A',
-  primaryDark: '#A67432',
-  primary50: '#FDF8F0',
-  primary100: '#FAF0DC',
-  primary200: '#F5E1B8',
+  // Castles & Currents brand — teal (CTAs, active states, links)
+  primary: '#4A7D90',
+  primaryLight: '#5B95A8',
+  primaryDark: '#3C6779',
+  primary50: '#F0F6F8',
+  primary100: '#DCEAEE',
+  primary200: '#BBD5DD',
 
-  // Secondary - Royal Blue (from parrot/flag)
-  secondary: '#2E5090',
-  secondaryLight: '#4A7DC4',
-  secondaryDark: '#264278',
+  // Castles & Currents brand — navy (headings-adjacent, secondary buttons)
+  secondary: '#1E3A5F',
+  secondaryLight: '#4C6E9E',
+  secondaryDark: '#182F4E',
 
-  // Accent - Warm Red (from parrot)
-  accent: '#B84233',
-  accentLight: '#E06B5C',
-  accentDark: '#9A3529',
+  // Castles & Currents brand — coral-red (destructive only)
+  accent: '#A6453F',
+  accentLight: '#C4655E',
+  accentDark: '#8B3833',
 
-  // Warm - Orange/Ginger (from cat)
-  warm: '#D2783C',
-  warmLight: '#E8944D',
-  warmDark: '#B35F2D',
+  // Castles & Currents brand — gold (highlights, decorative)
+  warm: '#C6A75E',
+  warmLight: '#DCC488',
+  warmDark: '#97783B',
 
-  // Cream - Background tones (from logo background)
-  cream: '#FAF3E3',
-  creamLight: '#FDF8F0',
-  creamDark: '#F5E6C8',
+  // Castles & Currents brand — warm cream backgrounds
+  cream: '#F5EDD6',
+  creamLight: '#FEFDF9',
+  creamDark: '#EDE0BC',
 
-  // Brown - Text and dark elements (from dog/outlines)
-  brown: '#5D4037',
-  brownLight: '#7D6555',
-  brownDark: '#4A3328',
+  // Castles & Currents brand — navy-slate ink (all text)
+  brown: '#304254',
+  brownLight: '#56687C',
+  brownDark: '#263544',
 
-  // Tan - Secondary text, borders (from rabbit/ferret)
-  tan: '#A08060',
-  tanLight: '#BDA888',
-  tanDark: '#86694D',
+  // Castles & Currents brand — blue-gray mist (secondary text, borders)
+  tan: '#62758B',
+  tanLight: '#9FAEBF',
+  tanDark: '#4F6072',
 
   // Semantic colors
-  success: '#5D7A3D',
-  successLight: '#7A9E4D',
-  warning: '#D2783C',
-  warningLight: '#E8944D',
-  error: '#B84233',
-  errorLight: '#E06B5C',
-  info: '#2E5090',
-  infoLight: '#4A7DC4',
+  success: '#3E7A5E',
+  successLight: '#5E9A7C',
+  warning: '#B3924A',
+  warningLight: '#C6A75E',
+  error: '#A6453F',
+  errorLight: '#C4655E',
+  info: '#4A7D90',
+  infoLight: '#5B95A8',
 
   // Base colors
-  background: '#FAF3E3',
-  backgroundLight: '#FDF8F0',
-  cardBackground: '#FFFEFB',
+  background: '#F5EDD6',
+  backgroundLight: '#FAF6EA',
+  cardBackground: '#FEFDF9',
   white: '#ffffff',
   black: '#000000',
 
   // Text colors
-  text: '#3D2E24',
-  textLight: '#7D6555',
-  textMuted: '#A08060',
+  text: '#263544',
+  textLight: '#56687C',
+  textMuted: '#62758B',
 
   // Border colors
-  border: '#E8DCC8',
-  borderLight: '#F2EBE4',
-  borderDark: '#D4C4A8',
+  border: '#DCE3EB',
+  borderLight: '#ECF0F5',
+  borderDark: '#C2CDD9',
 };
 
 export const PET_SPECIES = [

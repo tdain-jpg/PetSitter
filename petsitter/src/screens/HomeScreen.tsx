@@ -59,7 +59,7 @@ export function HomeScreen({ navigation }: Props) {
             />
             <View>
               <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.brown, letterSpacing: 0.5 }}>
-                Pet Sitter Pro
+                Pawstructions
               </Text>
               <Text style={{ fontSize: 12, color: COLORS.primary, fontStyle: 'italic' }}>
                 Where Pets Rule the Kingdom!

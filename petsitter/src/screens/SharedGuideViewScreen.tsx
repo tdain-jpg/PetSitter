@@ -18,12 +18,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SharedGuideView'>;
 
 export function SharedGuideViewScreen({ navigation, route }: Props) {
   const { code } = route.params;
-  const { getSharedGuide, getSharedGuidePets } = useData();
+  const { getSharedGuideBundle } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Direct share-link visitors (the primary audience) land here as the only
+  // screen in the stack, where goBack() would be a dead button.
+  const canGoBack = navigation.canGoBack();
 
   useEffect(() => {
     loadSharedGuide();
@@ -33,18 +37,17 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [sharedGuide, sharedPets] = await Promise.all([
-        getSharedGuide(code),
-        getSharedGuidePets(code),
-      ]);
+      // Single RPC call for guide + pets — resolve_share increments the
+      // link's view_count per invocation, so this must not be two calls.
+      const bundle = await getSharedGuideBundle(code);
 
-      if (!sharedGuide) {
+      if (!bundle) {
         setError('This share link is invalid or has expired.');
         return;
       }
 
-      setGuide(sharedGuide);
-      setGuidePets(sharedPets);
+      setGuide(bundle.guide);
+      setGuidePets(bundle.pets);
     } catch (err: any) {
       setError(err.message || 'Failed to load shared guide.');
     } finally {
@@ -82,11 +85,15 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
         <Text className="text-tan-500 text-center mb-6">
           {error || 'This share link is invalid or has expired.'}
         </Text>
-        <Button
-          title="Go Back"
-          onPress={() => navigation.goBack()}
-          variant="outline"
-        />
+        {canGoBack ? (
+          <Button
+            title="Go Back"
+            onPress={() => navigation.goBack()}
+            variant="outline"
+          />
+        ) : (
+          <Text className="text-tan-400 font-semibold">🐾 Pawstructions</Text>
+        )}
       </View>
     );
   }
@@ -110,7 +117,11 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
       {/* Header */}
       <View className="bg-cream-50 border-b border-tan-200">
         <View className="flex-row items-center px-4 py-3">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          {canGoBack ? (
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          ) : (
+            <Text className="text-lg font-bold text-brown-800">🐾 Pawstructions</Text>
+          )}
         </View>
 
         <View className="px-4 pb-4">
@@ -207,9 +218,15 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                         <Text className="text-brown-600 font-medium">{med.name}</Text>
                         <Text className="text-tan-500 text-sm">
                           {med.dosage} - {med.frequency}
+                          {med.with_food ? ' (with food)' : ''}
                         </Text>
-                        {med.instructions && (
-                          <Text className="text-tan-400 text-sm">{med.instructions}</Text>
+                        {med.times && med.times.filter(Boolean).length > 0 && (
+                          <Text className="text-tan-500 text-sm">
+                            ⏰ {med.times.filter(Boolean).join(', ')}
+                          </Text>
+                        )}
+                        {med.notes && (
+                          <Text className="text-tan-500 text-sm">{med.notes}</Text>
                         )}
                       </View>
                     ))}
@@ -380,10 +397,10 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
         {/* Footer */}
         <View className="items-center py-8 mb-8">
           <Text className="text-tan-400 text-sm text-center">
-            Shared via Pet Sitter Guide Pro
+            Shared via Pawstructions
           </Text>
           <Text className="text-tan-300 text-xs mt-1">
-            petsitterguide.pro
+            pawstructions.com
           </Text>
         </View>
       </ScrollView>

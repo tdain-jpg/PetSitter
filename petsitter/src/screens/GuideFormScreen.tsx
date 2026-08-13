@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ScreenHeader, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
+import { Button, Input, Card, ContactCard, ScreenHeader, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
@@ -67,6 +67,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const [showContactForm, setShowContactForm] = useState(false);
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [contactForm, setContactForm] = useState<Partial<EmergencyContact>>({});
+  const [contactErrors, setContactErrors] = useState<{ name?: string; phone?: string }>({});
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Build guide data from form data object (accepts data as parameter to avoid stale closures)
@@ -111,11 +112,17 @@ export function GuideFormScreen({ navigation, route }: Props) {
     enabled: !!isEditing && dataLoaded && !!formData.title.trim(),
   });
 
-  // Load existing guide data for editing
+  // Load existing guide data for editing — hydrate only once per guideId.
+  // `guides` stays in the deps so a late-arriving fetch can still hydrate,
+  // but the ref guard stops auto-save updates (which replace the guides
+  // array) from resetting the form and clobbering in-flight keystrokes.
+  const hydratedGuideIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (isEditing && guideId) {
+      if (hydratedGuideIdRef.current === guideId) return;
       const guide = guides.find((g) => g.id === guideId);
       if (guide) {
+        hydratedGuideIdRef.current = guideId;
         setFormData({
           title: guide.title,
           pet_ids: guide.pet_ids,
@@ -198,22 +205,32 @@ export function GuideFormScreen({ navigation, route }: Props) {
       name: '',
       phone: '',
       relationship: '',
+      contact_type: 'personal',
       is_primary: formData.emergency_contacts.length === 0,
     });
+    setContactErrors({});
     setEditingContactId(null);
     setShowContactForm(true);
   };
 
   const handleEditContact = (contact: EmergencyContact) => {
     setContactForm({ ...contact });
+    setContactErrors({});
     setEditingContactId(contact.id);
     setShowContactForm(true);
   };
 
   const handleSaveContact = () => {
-    if (!contactForm.name || !contactForm.phone) {
+    const name = contactForm.name;
+    const phone = contactForm.phone;
+    if (!name || !phone) {
+      setContactErrors({
+        name: name ? undefined : 'Name is required',
+        phone: phone ? undefined : 'Phone is required',
+      });
       return;
     }
+    setContactErrors({});
 
     if (editingContactId) {
       // Update existing
@@ -227,11 +244,13 @@ export function GuideFormScreen({ navigation, route }: Props) {
       // Add new
       const newContact: EmergencyContact = {
         id: generateId(),
-        name: contactForm.name,
-        phone: contactForm.phone,
+        name,
+        phone,
         email: contactForm.email,
         relationship: contactForm.relationship || 'Contact',
+        contact_type: contactForm.contact_type || 'personal',
         is_primary: contactForm.is_primary || false,
+        has_key: contactForm.has_key || false,
         notes: contactForm.notes,
       };
       setFormData((prev) => ({
@@ -390,56 +409,12 @@ export function GuideFormScreen({ navigation, route }: Props) {
               <Text className="text-tan-500">No emergency contacts added.</Text>
             ) : (
               formData.emergency_contacts.map((contact) => (
-                <View
+                <ContactCard
                   key={contact.id}
-                  className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200"
-                >
-                  <View className="flex-row justify-between items-start">
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2 flex-wrap">
-                        <Text className="font-semibold text-brown-800">{contact.name}</Text>
-                        {contact.is_primary && (
-                          <View className="bg-primary-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-primary-600 text-xs">PRIMARY</Text>
-                          </View>
-                        )}
-                        {contact.contact_type?.startsWith('vet') && (
-                          <View className="bg-secondary-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-secondary-600 text-xs">
-                              {contact.contact_type === 'vet_primary' ? 'VET' :
-                               contact.contact_type === 'vet_emergency' ? 'VET 24HR' : 'SPECIALIST'}
-                            </Text>
-                          </View>
-                        )}
-                        {contact.has_key && (
-                          <View className="bg-amber-100 px-2 py-0.5 rounded-full">
-                            <Text className="text-amber-600 text-xs">HAS KEY</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="text-tan-500">{contact.relationship}</Text>
-                      <Text className="text-primary-600">{contact.phone}</Text>
-                    </View>
-                    <View className="flex-row gap-2">
-                      <Pressable
-                        onPress={() => handleEditContact(contact)}
-                        className="px-2 py-1"
-                        accessibilityRole="button"
-                        accessibilityLabel="Edit contact"
-                      >
-                        <Text className="text-secondary-600 text-sm">Edit</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => handleDeleteContact(contact.id)}
-                        className="px-2 py-1"
-                        accessibilityRole="button"
-                        accessibilityLabel="Delete contact"
-                      >
-                        <Text className="text-accent-600 text-sm">Delete</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </View>
+                  contact={contact}
+                  onEdit={() => handleEditContact(contact)}
+                  onDelete={() => handleDeleteContact(contact.id)}
+                />
               ))
             )}
 
@@ -453,14 +428,26 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   label="Name *"
                   placeholder="Contact name"
                   value={contactForm.name || ''}
-                  onChangeText={(v) => setContactForm((prev) => ({ ...prev, name: v }))}
+                  onChangeText={(v) => {
+                    setContactForm((prev) => ({ ...prev, name: v }));
+                    if (contactErrors.name) {
+                      setContactErrors((prev) => ({ ...prev, name: undefined }));
+                    }
+                  }}
+                  error={contactErrors.name}
                 />
                 <Input
                   label="Phone *"
                   placeholder="(555) 123-4567"
                   value={contactForm.phone || ''}
-                  onChangeText={(v) => setContactForm((prev) => ({ ...prev, phone: v }))}
+                  onChangeText={(v) => {
+                    setContactForm((prev) => ({ ...prev, phone: v }));
+                    if (contactErrors.phone) {
+                      setContactErrors((prev) => ({ ...prev, phone: undefined }));
+                    }
+                  }}
                   formatAsPhone
+                  error={contactErrors.phone}
                 />
                 <Input
                   label="Email"
@@ -504,6 +491,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                     onPress={() => {
                       setShowContactForm(false);
                       setContactForm({});
+                      setContactErrors({});
                       setEditingContactId(null);
                     }}
                     variant="outline"

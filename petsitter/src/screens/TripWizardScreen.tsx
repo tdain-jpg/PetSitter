@@ -24,6 +24,29 @@ interface SitterSchedule {
   special_instructions: string;
 }
 
+/**
+ * Parses a YYYY-MM-DD string as a LOCAL calendar date. `new Date('2026-03-15')`
+ * parses as UTC midnight, which displays as the previous day in timezones west
+ * of UTC; building the Date from its parts keeps it local. Returns null unless
+ * the string is a real calendar date (rejects rollovers like 2026-02-30).
+ */
+function parseLocalDate(dateStr: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
 export function TripWizardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { activePets, createGuide } = useData();
@@ -66,12 +89,33 @@ export function TripWizardScreen({ navigation }: Props) {
     setSelectedPetIds([]);
   };
 
+  // Inline date validation — errors show once the user has typed something,
+  // and Next stays disabled until both dates are real and in order.
+  const parsedStartDate = parseLocalDate(startDate);
+  const parsedEndDate = parseLocalDate(endDate);
+  const startDateError =
+    startDate.trim() !== '' && !parsedStartDate
+      ? 'Enter a real date in YYYY-MM-DD format'
+      : undefined;
+  const endDateError =
+    endDate.trim() !== '' && !parsedEndDate
+      ? 'Enter a real date in YYYY-MM-DD format'
+      : parsedStartDate &&
+          parsedEndDate &&
+          parsedEndDate.getTime() < parsedStartDate.getTime()
+        ? 'End date must be on or after the start date'
+        : undefined;
+
   const canProceed = (): boolean => {
     switch (step) {
       case 'pets':
         return selectedPetIds.length > 0;
       case 'dates':
-        return startDate.trim() !== '' && endDate.trim() !== '';
+        return (
+          !!parsedStartDate &&
+          !!parsedEndDate &&
+          parsedEndDate.getTime() >= parsedStartDate.getTime()
+        );
       case 'schedule':
         return true;
       case 'confirm':
@@ -103,17 +147,39 @@ export function TripWizardScreen({ navigation }: Props) {
     setIsSubmitting(true);
     try {
       // Generate a default title if not provided
-      const title = tripTitle.trim() || `Trip: ${startDate} - ${endDate}`;
+      const start = startDate.trim();
+      const end = endDate.trim();
+      const title = tripTitle.trim() || `Trip: ${start} - ${end}`;
+
+      // The Guide schema has no dedicated sitter-schedule field, so fold the
+      // schedule step (arrival/departure/overnight) into additional_notes —
+      // otherwise those answers would be silently discarded.
+      const scheduleSummary = schedule.overnight
+        ? 'Overnight stay'
+        : [
+            schedule.arrival_time.trim() &&
+              `arrival ${schedule.arrival_time.trim()}`,
+            schedule.departure_time.trim() &&
+              `departure ${schedule.departure_time.trim()}`,
+          ]
+            .filter(Boolean)
+            .join(', ');
+      const additionalNotes = [
+        scheduleSummary && `Sitter schedule: ${scheduleSummary}`,
+        schedule.special_instructions.trim(),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
 
       const newGuide = await createGuide({
         user_id: user.id,
         title,
         pet_ids: selectedPetIds,
-        start_date: startDate,
-        end_date: endDate,
+        start_date: start,
+        end_date: end,
         emergency_contacts: [],
         home_info: {},
-        additional_notes: schedule.special_instructions || undefined,
+        additional_notes: additionalNotes || undefined,
       });
 
       // Navigate to the new guide detail
@@ -136,7 +202,8 @@ export function TripWizardScreen({ navigation }: Props) {
 
   const formatDateForDisplay = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const date = parseLocalDate(dateStr);
+    if (!date) return dateStr;
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -289,6 +356,7 @@ export function TripWizardScreen({ navigation }: Props) {
           placeholder="YYYY-MM-DD"
           value={startDate}
           onChangeText={setStartDate}
+          error={startDateError}
         />
 
         <Input
@@ -296,6 +364,7 @@ export function TripWizardScreen({ navigation }: Props) {
           placeholder="YYYY-MM-DD"
           value={endDate}
           onChangeText={setEndDate}
+          error={endDateError}
         />
       </Card>
 

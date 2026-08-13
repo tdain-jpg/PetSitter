@@ -44,7 +44,7 @@ export function ContactCard({
             <Text className="text-secondary-600 text-sm">✉️ {contact.email}</Text>
           )}
           {contact.notes && (
-            <Text className="text-tan-400 text-sm mt-1">{contact.notes}</Text>
+            <Text className="text-tan-500 text-sm mt-1">{contact.notes}</Text>
           )}
         </View>
 
@@ -55,7 +55,8 @@ export function ContactCard({
                 onPress={onEdit}
                 accessibilityRole="button"
                 accessibilityLabel={`Edit contact ${contact.name}`}
-                className="px-2 py-1"
+                className="px-3 py-2.5 justify-center"
+                style={{ minHeight: 44 }}
               >
                 <Text className="text-secondary-600 text-sm">Edit</Text>
               </Pressable>
@@ -65,7 +66,8 @@ export function ContactCard({
                 onPress={onDelete}
                 accessibilityRole="button"
                 accessibilityLabel={`Delete contact ${contact.name}`}
-                className="px-2 py-1"
+                className="px-3 py-2.5 justify-center"
+                style={{ minHeight: 44 }}
               >
                 <Text className="text-accent-600 text-sm">Delete</Text>
               </Pressable>

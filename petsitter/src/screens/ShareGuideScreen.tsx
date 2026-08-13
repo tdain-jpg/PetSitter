@@ -4,13 +4,13 @@ import {
   Text,
   ScrollView,
   ActivityIndicator,
+  Alert,
   Platform,
-  Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
-import { COLORS } from '../constants';
+import { COLORS, WEB_BASE_URL } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -57,20 +57,37 @@ export function ShareGuideScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleDeactivate = async (linkId: string) => {
-    try {
-      await deactivateShareLink(linkId);
-      setLinks((prev) =>
-        prev.map((l) => (l.id === linkId ? { ...l, is_active: false } : l))
-      );
-    } catch (error: any) {
-      const message = error.message || 'Failed to deactivate link';
-      showAlert('Error', message);
+  const handleDeactivate = (linkId: string) => {
+    const confirmDeactivate = async () => {
+      try {
+        await deactivateShareLink(linkId);
+        setLinks((prev) =>
+          prev.map((l) => (l.id === linkId ? { ...l, is_active: false } : l))
+        );
+      } catch (error: any) {
+        const message = error.message || 'Failed to deactivate link';
+        showAlert('Error', message);
+      }
+    };
+
+    const warning =
+      "Your pet sitter's link will stop working immediately and cannot be reactivated.";
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Deactivate this share link?\n\n${warning}`)) {
+        confirmDeactivate();
+      }
+    } else {
+      Alert.alert('Deactivate Link', warning, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Deactivate', style: 'destructive', onPress: confirmDeactivate },
+      ]);
     }
   };
 
   const handleCopyLink = async (code: string) => {
-    const url = `${Platform.OS === 'web' ? window.location.origin : 'petsitter://'}/share/${code}`;
+    // Always copy a web URL — recipients (pet sitters) may not have the app installed.
+    const origin = Platform.OS === 'web' ? window.location.origin : WEB_BASE_URL;
+    const url = `${origin}/share/${code}`;
 
     try {
       if (Platform.OS === 'web') {
@@ -190,14 +207,13 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                 </View>
 
                 <View className="flex-row gap-2 flex-wrap">
-                  <Pressable
-                    onPress={() => handlePreview(link.code)}
-                    className="bg-secondary-500 px-4 py-2 rounded-lg"
-                    accessibilityRole="button"
-                    accessibilityLabel="Preview shared guide"
-                  >
-                    <Text className="text-white">👁️ Preview</Text>
-                  </Pressable>
+                  <View className="flex-1">
+                    <Button
+                      title="👁️ Preview"
+                      onPress={() => handlePreview(link.code)}
+                      variant="secondary"
+                    />
+                  </View>
                   <View className="flex-1">
                     <Button
                       title="📋 Copy"
@@ -205,14 +221,13 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                       variant="outline"
                     />
                   </View>
-                  <Pressable
-                    onPress={() => handleDeactivate(link.id)}
-                    className="bg-accent-50 px-4 py-2 rounded-lg"
-                    accessibilityRole="button"
-                    accessibilityLabel="Deactivate share link"
-                  >
-                    <Text className="text-accent-600">Deactivate</Text>
-                  </Pressable>
+                  <View className="flex-1">
+                    <Button
+                      title="Deactivate"
+                      onPress={() => handleDeactivate(link.id)}
+                      variant="danger"
+                    />
+                  </View>
                 </View>
               </View>
             ))}

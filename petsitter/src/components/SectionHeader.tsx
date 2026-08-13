@@ -25,16 +25,18 @@ export function SectionHeader({
 
   return (
     <View className="bg-cream-50 rounded-xl mb-4 shadow-sm border border-tan-200 overflow-hidden">
-      <Pressable
-        onPress={() => setExpanded(!expanded)}
-        accessibilityRole="button"
-        accessibilityLabel={`${title} section`}
-        accessibilityState={{ expanded }}
-        className={`flex-row justify-between items-center p-4 ${
+      <View
+        className={`flex-row justify-between items-center ${
           expanded ? 'border-b border-tan-200' : ''
         }`}
       >
-        <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => setExpanded(!expanded)}
+          accessibilityRole="button"
+          accessibilityLabel={`${title} section`}
+          accessibilityState={{ expanded }}
+          className="flex-1 flex-row items-center gap-2 p-4"
+        >
           <Text
             style={{
               transform: [{ rotate: expanded ? '90deg' : '0deg' }],
@@ -45,21 +47,19 @@ export function SectionHeader({
           </Text>
           {icon && <Text style={{ fontSize: 18 }}>{icon}</Text>}
           <Text className="text-base font-semibold text-brown-800">{title}</Text>
-        </View>
+        </Pressable>
         {rightAction && (
           <Pressable
-            onPress={(e) => {
-              e.stopPropagation?.();
-              rightAction.onPress();
-            }}
+            onPress={rightAction.onPress}
             accessibilityRole="button"
             accessibilityLabel={rightAction.label}
-            className="bg-primary-50 px-3 py-1 rounded"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            className="bg-primary-50 px-3 py-1 rounded mr-4"
           >
             <Text className="text-primary-600 text-xs">{rightAction.label}</Text>
           </Pressable>
         )}
-      </Pressable>
+      </View>
       {expanded && <View className="p-4">{children}</View>}
     </View>
   );

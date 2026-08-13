@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { isValidEmail } from '../utils';
 import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
@@ -23,7 +24,9 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { signUp, signInWithGoogle } = useAuth();
-  const [confirmationSent, setConfirmationSent] = useState(false);
+  // Set to the submitted address when signup succeeded but no session was
+  // created — i.e. the account is pending email confirmation.
+  const [confirmationSentTo, setConfirmationSentTo] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const newErrors: {
@@ -57,13 +60,17 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
   const handleSignUp = async () => {
     if (!validate()) return;
 
+    const submittedEmail = email.trim();
     setIsSubmitting(true);
     try {
-      await signUp(email.trim(), password);
-      // Supabase may require email confirmation depending on project settings.
-      // If confirmation is OFF, the user is signed in immediately (AuthContext picks it up).
-      // If ON, show a confirmation-pending state.
-      setConfirmationSent(true);
+      await signUp(submittedEmail, password);
+      // If email confirmation is OFF, signUp creates a session and AuthContext
+      // switches to the signed-in stack automatically — no banner needed.
+      // If no session appeared, the account is pending email verification.
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setConfirmationSentTo(submittedEmail);
+      }
     } catch (error: any) {
       showAlert('Sign Up Failed', error.message || 'An error occurred during sign up');
     } finally {
@@ -75,8 +82,12 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
     setIsSubmitting(true);
     try {
       await signInWithGoogle();
+      // Web: redirects away. Native: AuthContext throws (surfaced below).
     } catch (error: any) {
       showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+    } finally {
+      // Always re-enable the form — without this, a resolved-but-not-redirected
+      // sign-in would leave every button on the screen disabled.
       setIsSubmitting(false);
     }
   };
@@ -104,7 +115,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
           {/* Header */}
           <View className="mb-8 items-center">
             <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.brown, letterSpacing: 1, textAlign: 'center' }}>
-              Pet Sitter Pro
+              Pawstructions
             </Text>
             <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
               Where Pets Rule the Kingdom!
@@ -153,12 +164,14 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
             disabled={isSubmitting}
           />
 
-          {/* Confirmation message */}
-          {confirmationSent && (
+          {/* Confirmation-pending state (no session yet — email verification required) */}
+          {confirmationSentTo && (
             <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
               <Text className="text-primary-700 text-sm text-center">
-                ✉️ If email confirmation is enabled, check your inbox to verify your account.
-                Otherwise you're signed in.
+                ✉️ Check your email to verify your account — then sign in.
+              </Text>
+              <Text className="text-primary-700 text-sm text-center font-semibold mt-1">
+                {confirmationSentTo}
               </Text>
             </View>
           )}
@@ -181,12 +194,14 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
           {/* Login Link */}
           <View className="flex-row justify-center mt-6">
             <Text className="text-tan-600">Already have an account? </Text>
-            <Text
-              className="text-primary-600 font-semibold"
+            <Pressable
               onPress={() => navigation.navigate('Login')}
+              accessibilityRole="link"
+              accessibilityLabel="Sign in to your existing account"
+              hitSlop={12}
             >
-              Sign In
-            </Text>
+              <Text className="text-primary-600 font-semibold">Sign In</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>

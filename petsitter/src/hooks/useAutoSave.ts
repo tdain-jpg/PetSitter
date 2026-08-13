@@ -55,10 +55,17 @@ export function useAutoSave<T>({
     }
   }, [onSave, enabled]);
 
+  // Always call the LATEST performSave. The debounced function is created
+  // once (ref) — invoking `performSave` directly would permanently close over
+  // the first render's `enabled`/`onSave` (enabled is often false on mount,
+  // e.g. GuideFormScreen edit mode), silently disabling auto-save forever.
+  const performSaveRef = useRef(performSave);
+  performSaveRef.current = performSave;
+
   // Create debounced save function
   const debouncedSave = useRef(
     debounce(() => {
-      performSave();
+      performSaveRef.current();
     }, debounceMs)
   ).current;
 

@@ -1,0 +1,34 @@
+name: Supabase keep-alive
+
+# Free-tier Supabase pauses projects after ~7 days without API activity.
+# This pings the REST endpoint daily so the database never idles out.
+# Requires two repo secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL      e.g. https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY the publishable/anon key (safe for client use; kept as
+#                     a secret here purely for hygiene)
+#
+# Note: GitHub disables scheduled workflows after 60 days with no repo
+# activity — any commit re-enables it, or re-enable from the Actions tab.
+
+on:
+  schedule:
+    - cron: '17 9 * * *' # daily 09:17 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/pets?select=id&limit=1")
+          echo "Supabase responded with HTTP $code"
+          # 200 = OK (RLS returns empty array for anon; still counts as activity)
+          # Anything >=500 or 000 means the project may be paused/unreachable
+          if [ "$code" -ge 500 ] || [ "$code" = "000" ]; then
+            echo "::error::Supabase appears unreachable (HTTP $code) — project may be paused"
+            exit 1
+          fi

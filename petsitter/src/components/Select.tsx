@@ -46,7 +46,7 @@ export function Select({
           ${error ? 'border-accent-500' : 'border-tan-300'}
         `}
       >
-        <Text className={selectedOption ? 'text-brown-800' : 'text-tan-400'}>
+        <Text className={selectedOption ? 'text-brown-800' : 'text-tan-500'}>
           {selectedOption?.label || placeholder}
         </Text>
         <Text className="text-tan-400">▼</Text>

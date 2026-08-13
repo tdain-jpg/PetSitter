@@ -1,4 +1,5 @@
 import { Text, ActivityIndicator, Pressable } from 'react-native';
+import { COLORS } from '../constants';
 
 interface ButtonProps {
   title: string;
@@ -7,13 +8,6 @@ interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
 }
-
-// Color palette from logo
-const COLORS = {
-  gold: '#C4913D',
-  brown: '#5D4037',
-  red: '#B84233',
-};
 
 export function Button({
   title,
@@ -25,14 +19,14 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const bgColor = {
-    primary: COLORS.gold,
-    secondary: COLORS.brown,
+    primary: COLORS.primary,
+    secondary: COLORS.secondary,
     outline: 'transparent',
-    danger: COLORS.red,
+    danger: COLORS.error,
   }[variant];
 
-  const textColor = variant === 'outline' ? COLORS.gold : '#ffffff';
-  const borderColor = variant === 'outline' ? COLORS.gold : variant === 'danger' ? COLORS.red : COLORS.gold;
+  const textColor = variant === 'outline' ? COLORS.primaryDark : COLORS.white;
+  const borderColor = variant === 'outline' ? COLORS.primary : variant === 'danger' ? COLORS.error : COLORS.primary;
 
   return (
     <Pressable

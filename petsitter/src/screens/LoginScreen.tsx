@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input } from '../components';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,9 +56,12 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     setIsSubmitting(true);
     try {
       await signInWithGoogle();
-      // Web: redirects away. Native: not yet supported in this build.
+      // Web: redirects away. Native: AuthContext throws (surfaced below).
     } catch (error: any) {
       showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+    } finally {
+      // Always re-enable the form — without this, a resolved-but-not-redirected
+      // sign-in would leave every button on the screen disabled.
       setIsSubmitting(false);
     }
   };
@@ -102,7 +105,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Header */}
           <View className="mb-8 items-center">
             <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.brown, letterSpacing: 1, textAlign: 'center' }}>
-              Pet Sitter Pro
+              Pawstructions
             </Text>
             <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
               Where Pets Rule the Kingdom!
@@ -179,12 +182,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {/* Sign Up Link */}
           <View className="flex-row justify-center mt-6">
             <Text className="text-tan-600">Don't have an account? </Text>
-            <Text
-              className="text-primary-600 font-semibold"
+            <Pressable
               onPress={() => navigation.navigate('SignUp')}
+              accessibilityRole="link"
+              accessibilityLabel="Sign up for a new account"
+              hitSlop={12}
             >
-              Sign Up
-            </Text>
+              <Text className="text-primary-600 font-semibold">Sign Up</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>

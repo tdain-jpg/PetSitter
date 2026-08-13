@@ -1,8 +1,10 @@
 import { View, Animated } from 'react-native';
 import { useEffect, useRef } from 'react';
+import { COLORS } from '../constants';
+import type { DimensionValue } from 'react-native';
 
 interface SkeletonProps {
-  width?: number | string;
+  width?: DimensionValue;
   height?: number;
   borderRadius?: number;
   className?: string;
@@ -43,7 +45,7 @@ export function Skeleton({
         width,
         height,
         borderRadius,
-        backgroundColor: '#D4C4A8',
+        backgroundColor: COLORS.borderDark,
         opacity,
       }}
     />

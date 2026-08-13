@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  Alert,
 } from 'react-native';
 import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
@@ -166,6 +167,10 @@ export function PetFormScreen({ navigation, route }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!isEditing);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  // Tracks which pet has been hydrated into the form, so context updates
+  // (e.g. auto-save round-trips) never re-hydrate and clobber typing
+  const loadedPetIdRef = useRef<string | null>(null);
 
   // Build pet data from form data object (accepts data as parameter to avoid stale closures)
   const buildPetDataFromForm = useCallback((data: FormData) => {
@@ -270,12 +275,16 @@ export function PetFormScreen({ navigation, route }: Props) {
     enabled: !!isEditing && dataLoaded && !!formData.name.trim(),
   });
 
-  // Load existing pet data for editing
+  // Load existing pet data for editing — hydrate exactly once per petId.
+  // Auto-save round-trips update the pets arrays in context; re-hydrating from
+  // them here would reset formData and drop keystrokes typed mid-save.
   useEffect(() => {
     if (isEditing && petId) {
+      if (loadedPetIdRef.current === petId) return;
       const allPets = [...activePets, ...deceasedPets];
       const pet = allPets.find((p) => p.id === petId);
       if (pet) {
+        loadedPetIdRef.current = petId;
         setFormData({
           name: pet.name,
           species: pet.species,
@@ -327,6 +336,7 @@ export function PetFormScreen({ navigation, route }: Props) {
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
     // Clear error when field is updated
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -354,6 +364,29 @@ export function PetFormScreen({ navigation, route }: Props) {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleBack = () => {
+    // In create mode, confirm before discarding unsaved input.
+    // Edit mode is protected by auto-save, so leaving is always safe.
+    if (!isEditing && isDirty) {
+      if (Platform.OS === 'web') {
+        if (window.confirm('Discard this pet? Your unsaved changes will be lost.')) {
+          navigation.goBack();
+        }
+      } else {
+        Alert.alert(
+          'Discard Pet',
+          'Your unsaved changes will be lost.',
+          [
+            { text: 'Keep Editing', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+          ]
+        );
+      }
+      return;
+    }
+    navigation.goBack();
   };
 
   const handleSubmit = async () => {
@@ -401,7 +434,7 @@ export function PetFormScreen({ navigation, route }: Props) {
         <ScreenHeader
           title={isEditing ? 'Edit Pet' : 'Add Pet'}
           backLabel={isEditing ? '← Done' : 'Cancel'}
-          onBack={() => navigation.goBack()}
+          onBack={handleBack}
         />
 
         {/* Auto-save status indicator for edit mode */}

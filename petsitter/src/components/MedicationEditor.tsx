@@ -152,6 +152,7 @@ export function MedicationEditor({
               onValueChange={(with_food) =>
                 updateMedication(med.id, { with_food })
               }
+              accessibilityLabel="Give with food"
             />
             <Text className="ml-2 text-brown-600">Give with food</Text>
           </View>

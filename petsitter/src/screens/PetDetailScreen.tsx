@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { showAlert } from '../lib/showAlert';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
@@ -40,9 +41,13 @@ export function PetDetailScreen({ navigation, route }: Props) {
   };
 
   const handleDelete = () => {
-    const confirmDelete = () => {
-      deletePet(petId);
-      navigation.goBack();
+    const confirmDelete = async () => {
+      try {
+        await deletePet(petId);
+        navigation.goBack();
+      } catch (error: any) {
+        showAlert('Error', error.message || 'Failed to delete pet');
+      }
     };
 
     if (Platform.OS === 'web') {
@@ -62,12 +67,37 @@ export function PetDetailScreen({ navigation, route }: Props) {
   };
 
   const handleMemorial = () => {
-    const today = new Date().toISOString().split('T')[0];
-    markPetDeceased(petId, today);
+    const confirmMemorial = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      try {
+        await markPetDeceased(petId, today);
+      } catch (error: any) {
+        showAlert('Error', error.message || 'Failed to move pet to memorial');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Move ${pet?.name} to memorial? You can restore them later.`)) {
+        confirmMemorial();
+      }
+    } else {
+      Alert.alert(
+        'Move to Memorial',
+        `Move ${pet?.name} to memorial? You can restore them later.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Move', onPress: confirmMemorial },
+        ]
+      );
+    }
   };
 
-  const handleRestore = () => {
-    restorePet(petId);
+  const handleRestore = async () => {
+    try {
+      await restorePet(petId);
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to restore pet');
+    }
   };
 
   if (loading) {

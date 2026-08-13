@@ -10,57 +10,58 @@ const logo = require('../../assets/logo.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Landing'>;
 
+// Icon-chip tints come from the brand token scales (teal/navy/gold/accent) —
+// no raw hex values, so a palette swap restyles these along with everything else.
 const features = [
   {
     icon: '🐾',
     title: 'Pet Profiles',
     description: 'Store all your pet information in one place - feeding schedules, medications, vet info, and more.',
     color: COLORS.primary,
-    bgColor: COLORS.primary50,
+    bgClass: 'bg-primary-50',
   },
   {
     icon: '📋',
     title: 'Care Guides',
     description: 'Create comprehensive guides with home info, emergency contacts, and daily routines.',
     color: COLORS.secondary,
-    bgColor: '#E8EFF8',
+    bgClass: 'bg-secondary-50',
   },
   {
     icon: '✅',
     title: 'Daily Checklists',
     description: 'Generate interactive checklists organized by time of day for your pet sitter.',
     color: COLORS.success,
-    bgColor: '#EEF4E8',
+    bgClass: 'bg-primary-100',
   },
   {
     icon: '📄',
     title: 'PDF Export',
     description: 'Export your guides as professional PDFs to print or share digitally.',
     color: COLORS.warm,
-    bgColor: '#FDF4EC',
+    bgClass: 'bg-warm-100',
   },
   {
     icon: '🔗',
     title: 'Easy Sharing',
     description: 'Share read-only links with your pet sitter - no account required for them to view.',
     color: COLORS.accent,
-    bgColor: '#FAE8E6',
+    bgClass: 'bg-accent-50',
   },
 ];
 
-function FeatureCard({ icon, title, description, color, bgColor }: {
+function FeatureCard({ icon, title, description, color, bgClass }: {
   icon: string;
   title: string;
   description: string;
   color: string;
-  bgColor: string;
+  bgClass: string;
 }) {
   return (
     <Card className="mb-4">
       <View className="flex-row items-start">
         <View
-          style={{ backgroundColor: bgColor }}
-          className="w-12 h-12 rounded-xl items-center justify-center mr-4"
+          className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${bgClass}`}
         >
           <Text className="text-2xl">{icon}</Text>
         </View>
@@ -97,7 +98,7 @@ export function LandingScreen({ navigation }: Props) {
           accessibilityLabel="Sign in to existing account"
           className="px-3 py-1.5"
         >
-          <Text style={{ color: COLORS.cream }} className="text-base font-semibold">
+          <Text style={{ color: COLORS.white }} className="text-base font-semibold">
             Sign In
           </Text>
         </Pressable>
@@ -119,9 +120,10 @@ export function LandingScreen({ navigation }: Props) {
               />
             </View>
             <Text style={{ color: COLORS.cream }} className="text-3xl font-bold text-center mb-2">
-              Pet Sitter Guide Pro
+              Pawstructions
             </Text>
-            <Text style={{ color: COLORS.primary100 }} className="text-lg text-center mb-6 italic">
+            {/* White on primary-500 — the only body-size pairing that clears 4.5:1 */}
+            <Text style={{ color: COLORS.white }} className="text-lg text-center mb-6 italic">
               Where Pets Rule the Kingdom!
             </Text>
             <View className="w-full max-w-sm">
@@ -229,7 +231,7 @@ export function LandingScreen({ navigation }: Props) {
             <Text style={{ color: COLORS.cream }} className="text-2xl font-bold text-center mb-2">
               Ready to Travel with Peace of Mind?
             </Text>
-            <Text style={{ color: COLORS.primary100 }} className="text-center mb-6">
+            <Text style={{ color: COLORS.white }} className="text-center mb-6">
               Create your first pet care guide in minutes. It's free to get started!
             </Text>
             <View className="w-full max-w-sm">
@@ -240,13 +242,13 @@ export function LandingScreen({ navigation }: Props) {
               />
             </View>
             <View className="flex-row items-center justify-center mt-4">
-              <Text style={{ color: COLORS.primary100 }}>Already have an account? </Text>
+              <Text style={{ color: COLORS.white }}>Already have an account? </Text>
               <Pressable
                 onPress={navigateToLogin}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in to existing account"
               >
-                <Text style={{ color: COLORS.cream }} className="font-semibold underline">
+                <Text style={{ color: COLORS.white }} className="font-semibold underline">
                   Sign in
                 </Text>
               </Pressable>
@@ -257,7 +259,7 @@ export function LandingScreen({ navigation }: Props) {
         {/* Footer */}
         <View className="px-6 py-6 bg-cream-100 items-center">
           <Text className="text-tan-500 text-sm">
-            Pet Sitter Guide Pro® 2026
+            Pawstructions® 2026
           </Text>
           <Text className="text-tan-400 text-xs mt-1">
             Made with love for pet parents everywhere

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #F5EDD6; font-family: 'Nunito', sans-serif; color: #263544; }
+    a { color: #4A7D90; } a:hover { color: #1E3A5F; }
+  </style>
+</helmet>
+<section style="padding:72px; display:flex; flex-direction:column; gap:64px; max-width:1480px;">
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-weight:800; font-size:44px; color:#1E3A5F;">Pawstructions brand assets</div>
+    <div style="font-weight:600; font-size:19px; color:#62758B;">Vector masters (SVG) + production PNGs · pawstructions.com</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">Primary lockup</div>
+    <div style="align-self:flex-start; background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px; padding:56px; display:flex; align-items:center; gap:36px; white-space:nowrap; width:max-content;">
+      <img src="assets/svg/pawstructions-mark.svg" style="height:130px; width:auto;">
+      <div style="font-weight:800; font-size:96px; line-height:1;"><span style="color:#1E3A5F;">Paw</span><span style="color:#5B95A8;">struct</span><span style="color:#5B95A8; position:relative; display:inline-block;">&#305;<svg viewBox="0 0 24 20" style="position:absolute; width:0.24em; left:0.02em; top:-0.16em;"><path fill="#5B95A8" d="M0 6C0 2 3 0 6 0c3 0 4 2 6 4 2-2 3-4 6-4 3 0 6 2 6 6 0 6-12 14-12 14S0 12 0 6Z"></path></svg></span><span style="color:#5B95A8;">ons</span></div>
+    </div>
+    <div style="font-weight:600; font-size:15px; color:#62758B;">assets/svg/pawstructions-lockup.svg</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">Wordmark — two-tone / navy / reversed</div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div style="align-self:flex-start; padding:36px 48px; background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px;"><div id="wm-color" style="font-weight:800; font-size:72px; line-height:1;"><span style="color:#1E3A5F;">Paw</span><span style="color:#5B95A8;">struct</span><span style="color:#5B95A8; position:relative; display:inline-block;">&#305;<svg viewBox="0 0 24 20" style="position:absolute; width:0.24em; left:0.02em; top:-0.16em;"><path fill="#5B95A8" d="M0 6C0 2 3 0 6 0c3 0 4 2 6 4 2-2 3-4 6-4 3 0 6 2 6 6 0 6-12 14-12 14S0 12 0 6Z"></path></svg></span><span style="color:#5B95A8;">ons</span></div></div>
+      <div style="align-self:flex-start; padding:36px 48px; background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px;"><div id="wm-navy" style="font-weight:800; font-size:72px; line-height:1; color:#1E3A5F;">Pawstruct<span style="position:relative; display:inline-block;">&#305;<svg viewBox="0 0 24 20" style="position:absolute; width:0.24em; left:0.02em; top:-0.16em;"><path fill="#1E3A5F" d="M0 6C0 2 3 0 6 0c3 0 4 2 6 4 2-2 3-4 6-4 3 0 6 2 6 6 0 6-12 14-12 14S0 12 0 6Z"></path></svg></span>ons</div></div>
+      <div style="align-self:flex-start; padding:36px 48px; background:#1E3A5F; border-radius:12px;"><div id="wm-white" style="font-weight:800; font-size:72px; line-height:1; color:#FFFFFF;">Pawstruct<span style="position:relative; display:inline-block;">&#305;<svg viewBox="0 0 24 20" style="position:absolute; width:0.24em; left:0.02em; top:-0.16em;"><path fill="#FFFFFF" d="M0 6C0 2 3 0 6 0c3 0 4 2 6 4 2-2 3-4 6-4 3 0 6 2 6 6 0 6-12 14-12 14S0 12 0 6Z"></path></svg></span>ons</div></div>
+    </div>
+    <div style="font-weight:600; font-size:15px; color:#62758B;">assets/svg/pawstructions-wordmark(-navy/-white).svg · PNG exports in assets/png/</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">Mark — color / navy / reversed</div>
+    <div style="display:flex; gap:16px;">
+      <div style="background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px; padding:40px 56px;"><img src="assets/svg/pawstructions-mark.svg" style="height:160px;"></div>
+      <div style="background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px; padding:40px 56px;"><img src="assets/svg/pawstructions-mark-navy.svg" style="height:160px;"></div>
+      <div style="background:#1E3A5F; border-radius:12px; padding:40px 56px;"><img src="assets/svg/pawstructions-mark-white.svg" style="height:160px;"></div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">App icon &amp; PWA tiles</div>
+    <div style="display:flex; gap:24px; align-items:flex-end;">
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center;"><img src="assets/svg/app-icon.svg" style="width:160px; border-radius:36px;"><span style="font-weight:600; font-size:14px; color:#62758B;">app-icon · 512/192/180</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center;"><img src="assets/svg/app-icon-teal.svg" style="width:160px; border-radius:36px;"><span style="font-weight:600; font-size:14px; color:#62758B;">alt · teal</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center;"><img src="assets/svg/app-icon-maskable.svg" style="width:160px; border-radius:80px;"><span style="font-weight:600; font-size:14px; color:#62758B;">maskable · safe zone</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; align-items:center;"><img src="assets/svg/favicon.svg" style="width:96px; border-radius:20px;"><span style="font-weight:600; font-size:14px; color:#62758B;">favicon · 48/32/16</span></div>
+      <div style="display:flex; gap:12px; align-items:flex-end;"><img src="assets/svg/favicon.svg" style="width:48px;"><img src="assets/svg/favicon.svg" style="width:32px;"><img src="assets/svg/favicon.svg" style="width:16px;"></div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">Palette</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <sc-for list="{{ swatches }}" as="s" hint-placeholder-count="8">
+        <div style="display:flex; flex-direction:column; gap:8px; width:150px;">
+          <div style="height:72px; border-radius:10px; background:{{ s.hex }}; border:1px solid #DCE3EB;"></div>
+          <div style="font-weight:800; font-size:14px; color:#1E3A5F;">{{ s.hex }}</div>
+          <div style="font-weight:600; font-size:13px; color:#62758B;">{{ s.role }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">File manifest</div>
+    <div style="background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px; padding:32px 40px; display:flex; flex-direction:column; gap:8px; font-weight:600; font-size:16px;">
+      <sc-for list="{{ files }}" as="f" hint-placeholder-count="6">
+        <div style="display:flex; gap:16px;"><a href="{{ f.path }}" style="font-weight:700;">{{ f.path }}</a><span style="color:#62758B;">{{ f.note }}</span></div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      swatches: [
+        {hex:'#1E3A5F', role:'Headings, secondary buttons, splash'},
+        {hex:'#5B95A8', role:'Signature hue — decorative, icons'},
+        {hex:'#4A7D90', role:'Primary buttons'},
+        {hex:'#C6A75E', role:'Flourishes, highlights'},
+        {hex:'#F5EDD6', role:'App background · cards #FEFDF9'},
+        {hex:'#263544', role:'Body & heading text'},
+        {hex:'#A6453F', role:'Destructive, errors only'},
+        {hex:'#62758B', role:'Secondary text · borders #DCE3EB'},
+      ],
+      files: [
+        {path:'assets/svg/pawstructions-lockup.svg', note:'Primary lockup (mark + wordmark)'},
+        {path:'assets/svg/pawstructions-mark.svg', note:'Mark — color, transparent'},
+        {path:'assets/svg/pawstructions-mark-navy.svg', note:'Mark — mono navy'},
+        {path:'assets/svg/pawstructions-mark-white.svg', note:'Mark — reversed'},
+        {path:'assets/svg/pawstructions-wordmark.svg', note:'Wordmark — two-tone (needs Nunito loaded)'},
+        {path:'assets/svg/pawstructions-wordmark-navy.svg', note:'Wordmark — mono navy'},
+        {path:'assets/svg/pawstructions-wordmark-white.svg', note:'Wordmark — reversed'},
+        {path:'assets/svg/app-icon.svg', note:'App icon master → png/icon-512/192, apple-touch-180'},
+        {path:'assets/svg/app-icon-maskable.svg', note:'PWA maskable → png/icon-maskable-512'},
+        {path:'assets/svg/favicon.svg', note:'Favicon → png/favicon-48/32/16'},
+        {path:'assets/site.webmanifest', note:'PWA manifest, theme colors wired'},
+        {path:'assets/png/', note:'favicon-16/32/48 · apple-touch-icon-180 · icon-192/512 · icon-maskable-512 · icon-teal-512 · mark-512 (+white) · wordmark color/navy/white @2x'},
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

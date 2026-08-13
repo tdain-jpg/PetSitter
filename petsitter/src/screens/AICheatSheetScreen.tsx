@@ -15,7 +15,7 @@ import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Guide, Pet, CheatSheet } from '../types';
+import type { Guide, CheatSheet } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
 
@@ -24,7 +24,6 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   const { guides, activePets, deceasedPets, settings, getCheatSheet, saveCheatSheet } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
-  const [guidePets, setGuidePets] = useState<Pet[]>([]);
   const [cheatSheet, setCheatSheet] = useState<CheatSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -40,8 +39,6 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       const foundGuide = guides.find((g) => g.id === guideId);
       if (foundGuide) {
         setGuide(foundGuide);
-        const allPets = [...activePets, ...deceasedPets];
-        setGuidePets(allPets.filter((p) => foundGuide.pet_ids.includes(p.id)));
       }
 
       const existingSheet = await getCheatSheet(guideId);
@@ -54,7 +51,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   };
 
   const handleGenerate = async () => {
-    if (!guide) return;
+    // Resolve the guide and its pets from live context state at generate time —
+    // the mount-time snapshot in local state goes stale if the guide or pets
+    // are edited while this screen sits in the navigation stack.
+    const liveGuide = guides.find((g) => g.id === guideId);
+    if (!liveGuide) return;
+    const livePets = [...activePets, ...deceasedPets].filter((p) =>
+      liveGuide.pet_ids.includes(p.id)
+    );
 
     if (!settings?.gemini_api_key) {
       const message = 'Please add your Gemini API key in Settings first.';
@@ -75,8 +79,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
     try {
       const content = await generateCheatSheet(
-        guide,
-        guidePets,
+        liveGuide,
+        livePets,
         settings.gemini_api_key
       );
 
@@ -220,8 +224,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               disabled={generating}
             />
 
-            <Text className="text-tan-400 text-sm mt-4 text-center">
-              Powered by Google Gemini
+            <Text className="text-tan-500 text-sm mt-4 text-center">
+              Guide contents are sent to Google Gemini to create the summary.
             </Text>
           </Card>
         ) : (
@@ -251,6 +255,9 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                 disabled={generating}
                 variant="outline"
               />
+              <Text className="text-tan-500 text-sm text-center">
+                Guide contents are sent to Google Gemini to create the summary.
+              </Text>
             </View>
           </>
         )}

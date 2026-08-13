@@ -1,5 +1,6 @@
 import { View, Text, ScrollView, Platform, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { showAlert } from '../lib/showAlert';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -12,7 +13,11 @@ export function MemorialScreen({ navigation }: Props) {
 
   const handleRestore = async (petId: string, petName: string) => {
     const performRestore = async () => {
-      await restorePet(petId);
+      try {
+        await restorePet(petId);
+      } catch (error: any) {
+        showAlert('Error', error.message || `Failed to restore ${petName}`);
+      }
     };
 
     if (Platform.OS === 'web') {
@@ -33,7 +38,11 @@ export function MemorialScreen({ navigation }: Props) {
 
   const handleDelete = async (petId: string, petName: string) => {
     const performDelete = async () => {
-      await deletePet(petId);
+      try {
+        await deletePet(petId);
+      } catch (error: any) {
+        showAlert('Error', error.message || `Failed to delete ${petName}`);
+      }
     };
 
     if (Platform.OS === 'web') {

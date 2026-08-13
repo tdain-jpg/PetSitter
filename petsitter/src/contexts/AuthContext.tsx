@@ -39,12 +39,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Restore session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setUser(sessionToUser(session));
-      setIsLoading(false);
-    });
+    // Restore session on mount. A failed restore (e.g. corrupted AsyncStorage)
+    // must still land on the signed-out UI — without the catch, isLoading
+    // would stay true forever and the app would hang on the splash spinner.
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        setUser(sessionToUser(session));
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to restore session:', err);
+        if (!mounted) return;
+        setUser(null);
+        setIsLoading(false);
+      });
 
     // Subscribe to auth state changes (sign-in, sign-out, token refresh, OAuth callback)
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -75,23 +85,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    if (Platform.OS !== 'web') {
+      // On native, signInWithOAuth resolves without error but performs no
+      // redirect (it would require expo-auth-session), silently doing nothing.
+      // Throw so callers surface the limitation instead of hanging.
+      throw new Error('Google sign-in is not available in the mobile app yet. Please sign in with email and password.');
+    }
     const redirectTo =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.location.origin
-        : undefined;
+      typeof window !== 'undefined' ? window.location.origin : undefined;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },
     });
     if (error) throw new Error(error.message);
-    // On web, this triggers a redirect. On native, would require expo-auth-session.
+    // On web, this triggers a redirect.
   };
 
   const signInWithMagicLink = async (email: string) => {
+    if (Platform.OS !== 'web') {
+      // On native, the emailed link would open the web site in the phone's
+      // browser and never sign the app itself in (no deep-link redirect +
+      // session exchange exists yet). Throw so callers surface it.
+      throw new Error('Magic link sign-in is not available in the mobile app yet. Please sign in with email and password.');
+    }
     const emailRedirectTo =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.location.origin
-        : undefined;
+      typeof window !== 'undefined' ? window.location.origin : undefined;
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo },

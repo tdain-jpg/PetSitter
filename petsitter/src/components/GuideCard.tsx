@@ -39,7 +39,7 @@ export function GuideCard({ guide, pets, onPress }: GuideCardProps) {
           </Text>
           <Text className="text-tan-500">{petNames}</Text>
           {dateRange && (
-            <Text className="text-tan-400 text-sm mt-1">📅 {dateRange}</Text>
+            <Text className="text-tan-500 text-sm mt-1">📅 {dateRange}</Text>
           )}
         </View>
 

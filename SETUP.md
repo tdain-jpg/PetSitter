@@ -1,8 +1,9 @@
-# Pet Sitter Pro — production setup
+# Pawstructions — production setup
 
 This guide walks through creating the Supabase backend, configuring auth
 providers, and deploying the web build to Cloudflare Pages at
-`petsitter.timdain.work`.
+`pawstructions.com`. (The app previously deployed at `petsitter.timdain.work`,
+which remains as the legacy domain.)
 
 Estimated time: ~30 minutes the first time.
 
@@ -75,7 +76,7 @@ In **Authentication → Providers**:
 ### Google OAuth
 1. Go to <https://console.cloud.google.com/apis/credentials>.
 2. **Create credentials → OAuth client ID → Web application**.
-3. **Authorized JavaScript origins**: `https://petsitter.timdain.work`
+3. **Authorized JavaScript origins**: `https://pawstructions.com`
 4. **Authorized redirect URIs**: `https://<your-project-ref>.supabase.co/auth/v1/callback`
    (Supabase shows this URL in its Google provider config — copy from there.)
 5. Save → copy the **Client ID** and **Client secret**.
@@ -86,11 +87,11 @@ Uses the same email provider. No extra config needed.
 
 ### Redirect URLs (important!)
 **Authentication → URL Configuration → Redirect URLs**: add
-- `https://petsitter.timdain.work`
-- `https://petsitter.timdain.work/*`
+- `https://pawstructions.com`
+- `https://pawstructions.com/*`
 - `http://localhost:8081` (for local dev)
 
-Set **Site URL** to `https://petsitter.timdain.work`.
+Set **Site URL** to `https://pawstructions.com`.
 
 ---
 
@@ -137,9 +138,9 @@ which Cloudflare Pages copies into the deploy automatically.
 
 ### Custom domain
 
-In Pages → **Custom domains → Set up a domain**: enter `petsitter.timdain.work`.
-Cloudflare auto-creates the CNAME if `timdain.work` is on Cloudflare DNS. SSL
-provisions in a minute or two.
+In Pages → **Custom domains → Set up a domain**: enter `pawstructions.com`.
+Cloudflare auto-creates the CNAME if `pawstructions.com` is on Cloudflare DNS.
+SSL provisions in a minute or two.
 
 Once live, update **Site URL** in Supabase Auth settings to match.
 
@@ -164,7 +165,7 @@ disable email confirmation in dashboard or check the inbox for the verification
 link.
 
 **OAuth redirects to `localhost` in production** — You forgot to add the
-production URL to Supabase **Redirect URLs**. Add `https://petsitter.timdain.work/*`.
+production URL to Supabase **Redirect URLs**. Add `https://pawstructions.com/*`.
 
 **"new row violates row-level security policy"** — The user isn't authenticated,
 or there's a column mismatch. Check the browser console for the failing query

@@ -48,7 +48,10 @@ export function ScreenHeader({
           </Pressable>
         )}
       </View>
-      <Text className="text-lg font-semibold text-brown-800 flex-1 text-center">
+      <Text
+        accessibilityRole="header"
+        className="text-lg font-semibold text-brown-800 flex-1 text-center"
+      >
         {title}
       </Text>
       <View style={{ width: 80, alignItems: 'flex-end' }}>
