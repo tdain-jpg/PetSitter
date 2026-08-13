@@ -62,7 +62,7 @@ export function HomeScreen({ navigation }: Props) {
             <View>
               <Image
                 source={wordmark}
-                style={{ width: 190, height: 28 }}
+                style={{ width: 190, height: 39 }}
                 resizeMode="contain"
                 accessibilityLabel="Pawstructions"
               />

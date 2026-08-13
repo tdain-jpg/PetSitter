@@ -97,7 +97,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
         ) : (
           <Image
             source={wordmark}
-            style={{ width: 170, height: 25 }}
+            style={{ width: 170, height: 35 }}
             resizeMode="contain"
             accessibilityLabel="Pawstructions"
           />
@@ -130,7 +130,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
           ) : (
             <Image
               source={wordmark}
-              style={{ width: 170, height: 25 }}
+              style={{ width: 170, height: 35 }}
               resizeMode="contain"
               accessibilityLabel="Pawstructions"
             />

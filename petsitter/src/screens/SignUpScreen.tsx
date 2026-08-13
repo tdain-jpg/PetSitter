@@ -118,7 +118,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
           <View className="mb-8 items-center">
             <Image
               source={wordmark}
-              style={{ width: 250, height: 37 }}
+              style={{ width: 250, height: 51 }}
               resizeMode="contain"
               accessibilityLabel="Pawstructions"
             />
