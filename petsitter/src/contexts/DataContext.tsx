@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  ReactNode,
+} from 'react';
 import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
 import type {
@@ -106,9 +115,11 @@ export function DataProvider({ children }: DataProviderProps) {
   // Onboarding state
   const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
 
-  // Derived state
-  const activePets = pets.filter((p) => p.status === 'active');
-  const deceasedPets = pets.filter((p) => p.status === 'deceased');
+  // Derived state — memoized so the array identities only change when `pets`
+  // does. Screens use these in effect/memo deps, so fresh identities on every
+  // render would re-run those effects (and any auto-save they trigger) forever.
+  const activePets = useMemo(() => pets.filter((p) => p.status === 'active'), [pets]);
+  const deceasedPets = useMemo(() => pets.filter((p) => p.status === 'deceased'), [pets]);
 
   // ============================================
   // Load Initial Data
@@ -385,63 +396,109 @@ export function DataProvider({ children }: DataProviderProps) {
     await loadSettings();
   }, [userId, loadSettings]);
 
-  const value: DataContextType = {
-    // Pets
-    pets,
-    activePets,
-    deceasedPets,
-    loadingPets,
-    petsError,
-    refreshPets,
-    createPet,
-    updatePet,
-    deletePet,
-    markPetDeceased,
-    restorePet,
+  // Memoized so consumers only re-render when something they can actually see
+  // changes. Every value referenced below is listed in the dep array.
+  const value = useMemo<DataContextType>(
+    () => ({
+      // Pets
+      pets,
+      activePets,
+      deceasedPets,
+      loadingPets,
+      petsError,
+      refreshPets,
+      createPet,
+      updatePet,
+      deletePet,
+      markPetDeceased,
+      restorePet,
 
-    // Guides
-    guides,
-    loadingGuides,
-    guidesError,
-    refreshGuides,
-    getGuide,
-    createGuide,
-    updateGuide,
-    deleteGuide,
-    duplicateGuide,
+      // Guides
+      guides,
+      loadingGuides,
+      guidesError,
+      refreshGuides,
+      getGuide,
+      createGuide,
+      updateGuide,
+      deleteGuide,
+      duplicateGuide,
 
-    // Task Completions
-    getTaskCompletions,
-    markTaskComplete,
-    markTaskIncomplete,
+      // Task Completions
+      getTaskCompletions,
+      markTaskComplete,
+      markTaskIncomplete,
 
-    // Share Links
-    createShareLink,
-    getShareLinks,
-    deactivateShareLink,
-    getSharedGuideBundle,
-    getSharedGuide,
-    getSharedGuidePets,
+      // Share Links
+      createShareLink,
+      getShareLinks,
+      deactivateShareLink,
+      getSharedGuideBundle,
+      getSharedGuide,
+      getSharedGuidePets,
 
-    // AI Cheat Sheets
-    getCheatSheet,
-    saveCheatSheet,
+      // AI Cheat Sheets
+      getCheatSheet,
+      saveCheatSheet,
 
-    // Settings
-    settings,
-    loadingSettings,
-    updateSettings,
+      // Settings
+      settings,
+      loadingSettings,
+      updateSettings,
 
-    // Onboarding
-    onboardingState,
-    updateOnboardingState: updateOnboardingStateCallback,
-    completeOnboarding,
+      // Onboarding
+      onboardingState,
+      updateOnboardingState: updateOnboardingStateCallback,
+      completeOnboarding,
 
-    // Data Management
-    exportAllData,
-    importData,
-    clearAllData,
-  };
+      // Data Management
+      exportAllData,
+      importData,
+      clearAllData,
+    }),
+    [
+      pets,
+      activePets,
+      deceasedPets,
+      loadingPets,
+      petsError,
+      refreshPets,
+      createPet,
+      updatePet,
+      deletePet,
+      markPetDeceased,
+      restorePet,
+      guides,
+      loadingGuides,
+      guidesError,
+      refreshGuides,
+      getGuide,
+      createGuide,
+      updateGuide,
+      deleteGuide,
+      duplicateGuide,
+      getTaskCompletions,
+      markTaskComplete,
+      markTaskIncomplete,
+      createShareLink,
+      getShareLinks,
+      deactivateShareLink,
+      getSharedGuideBundle,
+      getSharedGuide,
+      getSharedGuidePets,
+      getCheatSheet,
+      saveCheatSheet,
+      settings,
+      loadingSettings,
+      updateSettings,
+      onboardingState,
+      updateOnboardingStateCallback,
+      completeOnboarding,
+      exportAllData,
+      importData,
+      clearAllData,
+    ]
+  );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert } from '../lib/showAlert';
+import { todayLocal } from '../lib/dates';
 import { Button, Card } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
@@ -68,7 +69,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
 
   const handleMemorial = () => {
     const confirmMemorial = async () => {
-      const today = new Date().toISOString().split('T')[0];
+      // Local calendar day — toISOString() would stamp tomorrow's date for a
+      // user behind UTC late in the evening.
+      const today = todayLocal();
       try {
         await markPetDeceased(petId, today);
       } catch (error: any) {

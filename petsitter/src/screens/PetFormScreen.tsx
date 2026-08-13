@@ -28,7 +28,7 @@ import { useData, useAuth } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Pet, PetSpecies, PetSex, EnergyLevel, SociabilityLevel, PetPersonality, FeedingSchedule, Medication, VetInfo, Insurance, HealthProtocol } from '../types';
+import type { PetSpecies, PetSex, EnergyLevel, SociabilityLevel, PetPersonality, FeedingSchedule, Medication, VetInfo, Insurance, HealthProtocol } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PetForm'>;
 
@@ -168,6 +168,10 @@ export function PetFormScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(!!isEditing);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  // Mirror of isDirty that the unload/navigation guards can read synchronously.
+  // A setState from the success path lands too late for a listener that fires
+  // in the same tick, so the guards always consult the ref.
+  const isDirtyRef = useRef(false);
   // Tracks which pet has been hydrated into the form, so context updates
   // (e.g. auto-save round-trips) never re-hydrate and clobber typing
   const loadedPetIdRef = useRef<string | null>(null);
@@ -334,9 +338,68 @@ export function PetFormScreen({ navigation, route }: Props) {
     }
   }, [isEditing, petId, activePets, deceasedPets]);
 
+  // Create mode throws the form away on leave, so every exit needs a confirm.
+  // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
+  const guardUnsavedChanges = !isEditing;
+
+  const markDirty = useCallback(() => {
+    isDirtyRef.current = true;
+    setIsDirty(true);
+  }, []);
+
+  const clearDirty = useCallback(() => {
+    isDirtyRef.current = false;
+    setIsDirty(false);
+  }, []);
+
+  // Web: warn before a refresh or tab close discards the form.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !guardUnsavedChanges || !isDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Re-check the ref so a successful submit silences the prompt at once,
+      // before React has re-rendered and torn this listener down.
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [guardUnsavedChanges, isDirty]);
+
+  // Browser back, Android hardware back, the header Cancel button and any
+  // programmatic goBack() all funnel through beforeRemove, so the discard
+  // confirm lives here only — no caller adds its own, so it can never
+  // double-prompt. The success path clears the dirty ref first, so saving
+  // and leaving stays silent.
+  useEffect(() => {
+    if (!guardUnsavedChanges) return;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      const discard = () => {
+        clearDirty();
+        navigation.dispatch(e.data.action);
+      };
+      if (Platform.OS === 'web') {
+        if (window.confirm('Discard this pet? Your unsaved changes will be lost.')) {
+          discard();
+        }
+      } else {
+        Alert.alert(
+          'Discard Pet',
+          'Your unsaved changes will be lost.',
+          [
+            { text: 'Keep Editing', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: discard },
+          ]
+        );
+      }
+    });
+  }, [navigation, guardUnsavedChanges, clearDirty]);
+
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setIsDirty(true);
+    markDirty();
     // Clear error when field is updated
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -367,25 +430,8 @@ export function PetFormScreen({ navigation, route }: Props) {
   };
 
   const handleBack = () => {
-    // In create mode, confirm before discarding unsaved input.
-    // Edit mode is protected by auto-save, so leaving is always safe.
-    if (!isEditing && isDirty) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Discard this pet? Your unsaved changes will be lost.')) {
-          navigation.goBack();
-        }
-      } else {
-        Alert.alert(
-          'Discard Pet',
-          'Your unsaved changes will be lost.',
-          [
-            { text: 'Keep Editing', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
-          ]
-        );
-      }
-      return;
-    }
+    // No confirm here: the beforeRemove listener above intercepts this goBack()
+    // and prompts once, exactly as it does for browser/hardware back.
     navigation.goBack();
   };
 
@@ -405,6 +451,9 @@ export function PetFormScreen({ navigation, route }: Props) {
         await createPet(petData);
       }
 
+      // Saved — drop the guard (ref first, so the listeners see it in this
+      // same tick) before navigating, or leaving would prompt to discard.
+      clearDirty();
       navigation.goBack();
     } catch (error: any) {
       const message = error.message || 'Failed to save pet';

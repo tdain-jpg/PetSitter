@@ -12,6 +12,7 @@ import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue } fro
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { formatDate } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -107,17 +108,6 @@ export function GuideDetailScreen({ navigation, route }: Props) {
       </View>
     );
   }
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
 
   return (
     <View className="flex-1 bg-cream-200">

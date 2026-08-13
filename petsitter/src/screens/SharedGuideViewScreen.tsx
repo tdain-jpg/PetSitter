@@ -13,6 +13,7 @@ import { Button, Card, SectionHeader, ContactCard, SensitiveValue } from '../com
 const wordmark = require('../../assets/wordmark.png');
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { formatDate } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -56,17 +57,6 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
   };
 
   if (loading) {

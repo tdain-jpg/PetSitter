@@ -16,6 +16,7 @@ import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import { escapeHtml } from '../lib/escapeHtml';
+import { formatDate, todayLocal } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -29,6 +30,112 @@ interface PDFSections {
   travelItinerary: boolean;
   aiCheatSheet: boolean;
   additionalNotes: boolean;
+}
+
+/** Posted by the exported document as soon as its embedded script runs. */
+const PRINT_READY = 'pawstructions:print-ready';
+/** Posted by the exported document once the browser's print dialog closes. */
+const PRINT_DONE = 'pawstructions:print-done';
+
+/** How long to wait for PRINT_READY before assuming the sandboxed frame failed. */
+const PRINT_READY_TIMEOUT_MS = 4000;
+/** Backstop teardown for browsers that never fire `afterprint` (e.g. iOS Safari). */
+const PRINT_CLEANUP_TIMEOUT_MS = 120000;
+/** Grace period before revoking a Blob URL handed off to a new browser tab. */
+const BLOB_HANDOFF_REVOKE_MS = 60000;
+
+/**
+ * Script embedded in the exported HTML on web only.
+ *
+ * It runs inside a sandboxed, opaque-origin iframe (no `allow-same-origin`), so
+ * it cannot reach the app's DOM, storage or Supabase session — it can only print
+ * its own document and postMessage progress back to us.
+ */
+const PRINT_SCRIPT = `
+<script>
+  (function () {
+    var post = function (msg) { try { parent.postMessage(msg, '*'); } catch (e) {} };
+    window.addEventListener('afterprint', function () { post('${PRINT_DONE}'); });
+    post('${PRINT_READY}');
+    setTimeout(function () { window.print(); }, 0);
+  })();
+</script>`;
+
+/**
+ * Print the exported guide on web without ever handing it a same-origin window.
+ *
+ * The HTML goes into a Blob, and the Blob URL is loaded in a hidden iframe whose
+ * `sandbox` grants only `allow-scripts allow-modals` — enough for the embedded
+ * script to open the print dialog, and deliberately NOT `allow-same-origin`, so
+ * the document lands in an opaque origin with no access to the app. (The old
+ * path did `document.write` into a same-origin popup; escaping made that safe,
+ * this makes it structurally unreachable.)
+ *
+ * If the frame never reports back — blocked scripts, a browser that refuses the
+ * Blob URL — we fall back to opening the Blob in a new tab and let the user
+ * print from there.
+ */
+function printExportedGuideOnWeb(html: string) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-modals');
+  iframe.setAttribute('title', 'Guide print preview');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.setAttribute('tabindex', '-1');
+  // Positioned off-screen rather than display:none — hidden frames are not
+  // painted, and some browsers then refuse to print them.
+  iframe.style.cssText =
+    'position:fixed;top:0;left:-10000px;width:1px;height:1px;opacity:0;border:0;';
+
+  let readyTimer: ReturnType<typeof setTimeout>;
+  let cleanupTimer: ReturnType<typeof setTimeout>;
+
+  const teardownFrame = () => {
+    window.removeEventListener('message', onMessage);
+    clearTimeout(readyTimer);
+    clearTimeout(cleanupTimer);
+    iframe.remove();
+  };
+
+  const onMessage = (event: MessageEvent) => {
+    if (event.source !== iframe.contentWindow) return;
+    if (event.data === PRINT_READY) {
+      clearTimeout(readyTimer);
+    } else if (event.data === PRINT_DONE) {
+      teardownFrame();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const fallbackToNewTab = () => {
+    teardownFrame();
+    const tab = window.open(url, '_blank');
+    if (tab) {
+      showAlert(
+        'Ready to Print',
+        "Your guide opened in a new tab. Use your browser's Print command to save it as a PDF."
+      );
+      // The new tab owns the Blob URL now; give it time to load before revoking.
+      setTimeout(() => URL.revokeObjectURL(url), BLOB_HANDOFF_REVOKE_MS);
+    } else {
+      URL.revokeObjectURL(url);
+      showAlert(
+        'Popup Blocked',
+        'Your browser blocked the print window. Allow popups for this site, then tap Export again.'
+      );
+    }
+  };
+
+  window.addEventListener('message', onMessage);
+  readyTimer = setTimeout(fallbackToNewTab, PRINT_READY_TIMEOUT_MS);
+  cleanupTimer = setTimeout(() => {
+    teardownFrame();
+    URL.revokeObjectURL(url);
+  }, PRINT_CLEANUP_TIMEOUT_MS);
+
+  iframe.src = url;
+  document.body.appendChild(iframe);
 }
 
 export function PDFPreviewScreen({ navigation, route }: Props) {
@@ -90,11 +197,12 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const selectAllPets = () => setSelectedPetIds(guidePets.map((p) => p.id));
   const deselectAllPets = () => setSelectedPetIds([]);
 
-  const generateHTML = (): string => {
+  const generateHTML = ({ autoPrint = false }: { autoPrint?: boolean } = {}): string => {
     if (!guide) return '';
 
-    // Every user/AI-supplied value MUST pass through esc() — on web this HTML
-    // is written into a same-origin print window (XSS surface).
+    // Every user/AI-supplied value MUST pass through esc(). On web this HTML is
+    // rendered in a sandboxed, opaque-origin iframe, but escaping stays the
+    // first line of defence (and the native PDF path has no sandbox at all).
     const esc = escapeHtml;
 
     const selectedPets = guidePets.filter((p) => selectedPetIds.includes(p.id));
@@ -270,8 +378,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           <h1>🐾 ${esc(guide.title)}</h1>
           ${guide.start_date || guide.end_date ? `
             <p class="dates">
-              ${guide.start_date ? new Date(guide.start_date).toLocaleDateString() : ''}
-              ${guide.end_date ? `→ ${new Date(guide.end_date).toLocaleDateString()}` : ''}
+              ${esc(formatDate(guide.start_date))}
+              ${guide.end_date ? `→ ${esc(formatDate(guide.end_date))}` : ''}
             </p>
           ` : ''}
         </div>
@@ -328,8 +436,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         ` : ''}
 
         <div class="footer">
-          Generated by Pawstructions • ${new Date().toLocaleDateString()}
+          Generated by Pawstructions • ${esc(formatDate(todayLocal()))}
         </div>
+        ${autoPrint ? PRINT_SCRIPT : ''}
       </body>
       </html>
     `;
@@ -340,24 +449,12 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     setExporting(true);
 
     try {
-      const html = generateHTML();
-
       if (Platform.OS === 'web') {
-        // For web, open print dialog
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          printWindow.print();
-        } else {
-          showAlert(
-            'Popup Blocked',
-            'Your browser blocked the print window. Allow popups for this site, then tap Export again.'
-          );
-        }
+        // For web, print from a sandboxed iframe (never a same-origin window)
+        printExportedGuideOnWeb(generateHTML({ autoPrint: true }));
       } else {
         // For native, generate PDF
-        const { uri } = await Print.printToFileAsync({ html });
+        const { uri } = await Print.printToFileAsync({ html: generateHTML() });
 
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, {

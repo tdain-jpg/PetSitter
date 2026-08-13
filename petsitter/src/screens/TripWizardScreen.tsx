@@ -9,9 +9,10 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenHeader } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
+import { formatDate, isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Pet } from '../types';
+
 
 type Props = NativeStackScreenProps<MainStackParamList, 'TripWizard'>;
 
@@ -22,29 +23,6 @@ interface SitterSchedule {
   departure_time: string;
   overnight: boolean;
   special_instructions: string;
-}
-
-/**
- * Parses a YYYY-MM-DD string as a LOCAL calendar date. `new Date('2026-03-15')`
- * parses as UTC midnight, which displays as the previous day in timezones west
- * of UTC; building the Date from its parts keeps it local. Returns null unless
- * the string is a real calendar date (rejects rollovers like 2026-02-30).
- */
-function parseLocalDate(dateStr: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(year, month - 1, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  return date;
 }
 
 export function TripWizardScreen({ navigation }: Props) {
@@ -63,6 +41,9 @@ export function TripWizardScreen({ navigation }: Props) {
     special_instructions: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set once the user tries to leave the dates step, so the "required" errors
+  // only appear after an attempt rather than on a pristine form.
+  const [datesSubmitAttempted, setDatesSubmitAttempted] = useState(false);
 
   const steps: { key: WizardStep; label: string; number: number }[] = [
     { key: 'pets', label: 'Select Pets', number: 1 },
@@ -89,20 +70,32 @@ export function TripWizardScreen({ navigation }: Props) {
     setSelectedPetIds([]);
   };
 
-  // Inline date validation — errors show once the user has typed something,
-  // and Next stays disabled until both dates are real and in order.
-  const parsedStartDate = parseLocalDate(startDate);
-  const parsedEndDate = parseLocalDate(endDate);
-  const startDateError =
-    startDate.trim() !== '' && !parsedStartDate
+  // Inline date validation. Both dates are required, so garbage like
+  // "next Tuesday" can never reach the guide and render as "Invalid Date".
+  const trimmedStartDate = startDate.trim();
+  const trimmedEndDate = endDate.trim();
+  const startDateValid = isValidDateString(trimmedStartDate);
+  const endDateValid = isValidDateString(trimmedEndDate);
+  // Both strings are validated 'YYYY-MM-DD', so lexicographic order matches
+  // chronological order — no Date objects needed to compare them.
+  const datesInOrder =
+    !startDateValid || !endDateValid || trimmedEndDate >= trimmedStartDate;
+  const datesStepValid = startDateValid && endDateValid && datesInOrder;
+
+  const startDateError = !trimmedStartDate
+    ? datesSubmitAttempted
+      ? 'Enter a start date'
+      : undefined
+    : !startDateValid
       ? 'Enter a real date in YYYY-MM-DD format'
       : undefined;
-  const endDateError =
-    endDate.trim() !== '' && !parsedEndDate
+  const endDateError = !trimmedEndDate
+    ? datesSubmitAttempted
+      ? 'Enter an end date'
+      : undefined
+    : !endDateValid
       ? 'Enter a real date in YYYY-MM-DD format'
-      : parsedStartDate &&
-          parsedEndDate &&
-          parsedEndDate.getTime() < parsedStartDate.getTime()
+      : !datesInOrder
         ? 'End date must be on or after the start date'
         : undefined;
 
@@ -110,12 +103,10 @@ export function TripWizardScreen({ navigation }: Props) {
     switch (step) {
       case 'pets':
         return selectedPetIds.length > 0;
+      // The dates step keeps Next enabled so pressing it can surface the
+      // inline errors, rather than leaving a silently disabled button.
       case 'dates':
-        return (
-          !!parsedStartDate &&
-          !!parsedEndDate &&
-          parsedEndDate.getTime() >= parsedStartDate.getTime()
-        );
+        return true;
       case 'schedule':
         return true;
       case 'confirm':
@@ -126,6 +117,10 @@ export function TripWizardScreen({ navigation }: Props) {
   };
 
   const goNext = () => {
+    if (step === 'dates') {
+      setDatesSubmitAttempted(true);
+      if (!datesStepValid) return;
+    }
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < steps.length) {
       setStep(steps[nextIndex].key);
@@ -144,11 +139,19 @@ export function TripWizardScreen({ navigation }: Props) {
   const handleCreateGuide = async () => {
     if (!user) return;
 
+    // Belt-and-braces: the dates step gates on the same check, but never let
+    // an unparseable date reach the guide record from the confirm action.
+    if (!datesStepValid) {
+      setDatesSubmitAttempted(true);
+      setStep('dates');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Generate a default title if not provided
-      const start = startDate.trim();
-      const end = endDate.trim();
+      const start = trimmedStartDate;
+      const end = trimmedEndDate;
       const title = tripTitle.trim() || `Trip: ${start} - ${end}`;
 
       // The Guide schema has no dedicated sitter-schedule field, so fold the
@@ -199,18 +202,6 @@ export function TripWizardScreen({ navigation }: Props) {
   };
 
   const selectedPets = activePets.filter((p) => selectedPetIds.includes(p.id));
-
-  const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = parseLocalDate(dateStr);
-    if (!date) return dateStr;
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
 
   const renderStepIndicator = () => (
     <View className="flex-row justify-center items-center py-4 px-4 bg-cream-50 border-b border-tan-200">
@@ -444,13 +435,15 @@ export function TripWizardScreen({ navigation }: Props) {
           <View className="flex-row">
             <Text className="text-tan-500 w-24">Title:</Text>
             <Text className="text-brown-800 flex-1">
-              {tripTitle || `Trip: ${startDate} - ${endDate}`}
+              {/* Mirror handleCreateGuide's trimmed inputs so the preview
+                  matches the title that actually gets saved. */}
+              {tripTitle.trim() || `Trip: ${trimmedStartDate} - ${trimmedEndDate}`}
             </Text>
           </View>
           <View className="flex-row">
             <Text className="text-tan-500 w-24">Dates:</Text>
             <Text className="text-brown-800 flex-1">
-              {formatDateForDisplay(startDate)} - {formatDateForDisplay(endDate)}
+              {formatDate(trimmedStartDate)} - {formatDate(trimmedEndDate)}
             </Text>
           </View>
           <View className="flex-row">

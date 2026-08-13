@@ -1,0 +1,68 @@
+name: Brevo keep-warm
+
+# Brevo SMTP keys expire after 90 days of INACTIVITY, regardless of their set
+# expiry date. A quiet stretch with no signups would silently kill auth email —
+# the next real user to register would just see "Error sending confirmation
+# email" with nothing in the app to explain it.
+#
+# This sends one throwaway message a month, which both keeps the key alive and
+# acts as a canary: if Brevo ever stops accepting our credentials, this job goes
+# red instead of a stranger discovering it at signup.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   BREVO_SMTP_USER  the SMTP login, e.g. b56431001@smtp-brevo.com
+#   BREVO_SMTP_KEY   a Brevo SMTP key (starts xsmtpsib-, ~90 chars)
+#   KEEPWARM_TO      inbox to receive the monthly message
+# Kept as secrets rather than literals because this repository is public.
+#
+# Note: GitHub disables scheduled workflows after 60 days with no repo activity.
+# Any commit re-enables them, or re-enable from the Actions tab.
+
+on:
+  schedule:
+    - cron: '0 9 1 * *' # 09:00 UTC on the 1st of each month
+  workflow_dispatch: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send keep-warm message via Brevo SMTP
+        env:
+          SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
+          SMTP_KEY: ${{ secrets.BREVO_SMTP_KEY }}
+          TO: ${{ secrets.KEEPWARM_TO }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SMTP_USER:-}" ] || [ -z "${SMTP_KEY:-}" ] || [ -z "${TO:-}" ]; then
+            echo "::error::Missing one of BREVO_SMTP_USER / BREVO_SMTP_KEY / KEEPWARM_TO"
+            exit 1
+          fi
+
+          # Guard against the exact failure that cost a day of debugging: a
+          # truncated key still "looks" set but fails SMTP AUTH with 535.
+          key_len=${#SMTP_KEY}
+          if [ "$key_len" -lt 80 ]; then
+            echo "::error::BREVO_SMTP_KEY looks truncated ($key_len chars; expected ~90)"
+            exit 1
+          fi
+
+          cat > message.txt <<EOF
+          From: Pawstructions <noreply@pawstructions.com>
+          To: $TO
+          Subject: Pawstructions keep-warm $(date -u +%Y-%m)
+
+          Automated monthly message so the Brevo SMTP key does not expire from
+          inactivity. If this stops arriving, auth email is probably broken.
+          EOF
+
+          curl --fail --silent --show-error \
+            --url 'smtp://smtp-relay.brevo.com:587' \
+            --ssl-reqd \
+            --user "$SMTP_USER:$SMTP_KEY" \
+            --mail-from 'noreply@pawstructions.com' \
+            --mail-rcpt "$TO" \
+            --upload-file message.txt
+
+          echo "Keep-warm message sent."

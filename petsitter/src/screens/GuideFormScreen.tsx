@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Pressable,
   Switch,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Input, Card, ContactCard, ScreenHeader, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
@@ -16,9 +17,10 @@ import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Guide, EmergencyContact, HomeInfo, Pet, TravelItinerary, ContactType } from '../types';
+import type { EmergencyContact, HomeInfo, TravelItinerary, ContactType } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
 
@@ -69,6 +71,11 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const [contactForm, setContactForm] = useState<Partial<EmergencyContact>>({});
   const [contactErrors, setContactErrors] = useState<{ name?: string; phone?: string }>({});
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  // Mirror of isDirty that the unload/navigation guards can read synchronously.
+  // A setState from the success path lands too late for a listener that fires
+  // in the same tick, so the guards always consult the ref.
+  const isDirtyRef = useRef(false);
 
   // Build guide data from form data object (accepts data as parameter to avoid stale closures)
   const buildGuideDataFromForm = useCallback((data: FormData) => {
@@ -140,8 +147,68 @@ export function GuideFormScreen({ navigation, route }: Props) {
     }
   }, [isEditing, guideId, guides]);
 
+  // Create mode throws the form away on leave, so every exit needs a confirm.
+  // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
+  const guardUnsavedChanges = !isEditing;
+
+  const markDirty = useCallback(() => {
+    isDirtyRef.current = true;
+    setIsDirty(true);
+  }, []);
+
+  const clearDirty = useCallback(() => {
+    isDirtyRef.current = false;
+    setIsDirty(false);
+  }, []);
+
+  // Web: warn before a refresh or tab close discards the form.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !guardUnsavedChanges || !isDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Re-check the ref so a successful submit silences the prompt at once,
+      // before React has re-rendered and torn this listener down.
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [guardUnsavedChanges, isDirty]);
+
+  // Browser back, Android hardware back, the header Cancel button and any
+  // programmatic goBack() all funnel through beforeRemove, so the discard
+  // confirm lives here only — no caller adds its own, so it can never
+  // double-prompt. The success path clears the dirty ref first, so saving
+  // and leaving stays silent.
+  useEffect(() => {
+    if (!guardUnsavedChanges) return;
+    return navigation.addListener('beforeRemove', (e) => {
+      if (!isDirtyRef.current) return;
+      e.preventDefault();
+      const discard = () => {
+        clearDirty();
+        navigation.dispatch(e.data.action);
+      };
+      if (Platform.OS === 'web') {
+        if (window.confirm('Discard this guide? Your unsaved changes will be lost.')) {
+          discard();
+        }
+      } else {
+        Alert.alert(
+          'Discard Guide',
+          'Your unsaved changes will be lost.',
+          [
+            { text: 'Keep Editing', style: 'cancel' },
+            { text: 'Discard', style: 'destructive', onPress: discard },
+          ]
+        );
+      }
+    });
+  }, [navigation, guardUnsavedChanges, clearDirty]);
+
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    markDirty();
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
@@ -152,6 +219,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       ...prev,
       home_info: { ...prev.home_info, [field]: value || undefined },
     }));
+    markDirty();
   };
 
   const togglePet = (petId: string) => {
@@ -161,6 +229,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
         ? prev.pet_ids.filter((id) => id !== petId)
         : [...prev.pet_ids, petId],
     }));
+    markDirty();
   };
 
   const validate = (): boolean => {
@@ -168,6 +237,21 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
+    }
+
+    // Dates are optional here, but anything typed must be a real YYYY-MM-DD:
+    // free text persists verbatim and later renders as an empty date on the
+    // guide, in the PDF export and in the shared sitter view.
+    const start = formData.start_date.trim();
+    const end = formData.end_date.trim();
+    if (start && !isValidDateString(start)) {
+      newErrors.start_date = 'Enter a real date in YYYY-MM-DD format';
+    }
+    if (end && !isValidDateString(end)) {
+      newErrors.end_date = 'Enter a real date in YYYY-MM-DD format';
+    } else if (start && end && !newErrors.start_date && end < start) {
+      // Both are validated 'YYYY-MM-DD', so string order is date order.
+      newErrors.end_date = 'End date must be on or after the start date';
     }
 
     setErrors(newErrors);
@@ -190,6 +274,9 @@ export function GuideFormScreen({ navigation, route }: Props) {
         await createGuide(guideData);
       }
 
+      // Saved — drop the guard (ref first, so the listeners see it in this
+      // same tick) before navigating, or leaving would prompt to discard.
+      clearDirty();
       navigation.goBack();
     } catch (error: any) {
       const message = error.message || 'Failed to save guide';
@@ -259,6 +346,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       }));
     }
 
+    markDirty();
     setShowContactForm(false);
     setContactForm({});
     setEditingContactId(null);
@@ -269,6 +357,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       ...prev,
       emergency_contacts: prev.emergency_contacts.filter((c) => c.id !== contactId),
     }));
+    markDirty();
   };
 
   if (loading) {
@@ -329,12 +418,14 @@ export function GuideFormScreen({ navigation, route }: Props) {
               placeholder="YYYY-MM-DD"
               value={formData.start_date}
               onChangeText={(v) => updateField('start_date', v)}
+              error={errors.start_date}
             />
             <Input
               label="End Date"
               placeholder="YYYY-MM-DD"
               value={formData.end_date}
               onChangeText={(v) => updateField('end_date', v)}
+              error={errors.end_date}
             />
           </Card>
 

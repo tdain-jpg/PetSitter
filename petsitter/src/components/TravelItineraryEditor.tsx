@@ -17,6 +17,7 @@ export function TravelItineraryEditor({
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [flightForm, setFlightForm] = useState<Partial<FlightInfo>>({});
+  const [flightErrors, setFlightErrors] = useState<{ airline?: string; flight_number?: string }>({});
 
   // Initialize with defaults if no value
   const itinerary: TravelItinerary = value || {
@@ -45,18 +46,29 @@ export function TravelItineraryEditor({
       departure_time: '',
       arrival_time: '',
     });
+    setFlightErrors({});
     setEditingFlightId(null);
     setShowFlightForm(true);
   };
 
   const handleEditFlight = (flight: FlightInfo) => {
     setFlightForm({ ...flight });
+    setFlightErrors({});
     setEditingFlightId(flight.id);
     setShowFlightForm(true);
   };
 
   const handleSaveFlight = () => {
-    if (!flightForm.airline || !flightForm.flight_number) return;
+    const airline = flightForm.airline;
+    const flightNumber = flightForm.flight_number;
+    if (!airline || !flightNumber) {
+      setFlightErrors({
+        airline: airline ? undefined : 'Airline is required',
+        flight_number: flightNumber ? undefined : 'Flight number is required',
+      });
+      return;
+    }
+    setFlightErrors({});
 
     if (editingFlightId) {
       updateItinerary({
@@ -68,8 +80,8 @@ export function TravelItineraryEditor({
       const newFlight: FlightInfo = {
         id: generateId(),
         type: flightForm.type || 'departure',
-        airline: flightForm.airline || '',
-        flight_number: flightForm.flight_number || '',
+        airline,
+        flight_number: flightNumber,
         departure_airport: flightForm.departure_airport || '',
         arrival_airport: flightForm.arrival_airport || '',
         departure_time: flightForm.departure_time || '',
@@ -212,13 +224,25 @@ export function TravelItineraryEditor({
             label="Airline *"
             placeholder="e.g., United"
             value={flightForm.airline || ''}
-            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, airline: v }))}
+            onChangeText={(v) => {
+              setFlightForm((prev) => ({ ...prev, airline: v }));
+              if (flightErrors.airline) {
+                setFlightErrors((prev) => ({ ...prev, airline: undefined }));
+              }
+            }}
+            error={flightErrors.airline}
           />
           <Input
             label="Flight Number *"
             placeholder="e.g., UA123"
             value={flightForm.flight_number || ''}
-            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, flight_number: v }))}
+            onChangeText={(v) => {
+              setFlightForm((prev) => ({ ...prev, flight_number: v }));
+              if (flightErrors.flight_number) {
+                setFlightErrors((prev) => ({ ...prev, flight_number: undefined }));
+              }
+            }}
+            error={flightErrors.flight_number}
           />
           <Input
             label="Departure Airport"
@@ -252,6 +276,7 @@ export function TravelItineraryEditor({
               onPress={() => {
                 setShowFlightForm(false);
                 setFlightForm({});
+                setFlightErrors({});
                 setEditingFlightId(null);
               }}
               variant="outline"
