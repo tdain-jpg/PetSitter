@@ -23,7 +23,15 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <DataProvider>
-          <NavigationContainer linking={linking}>
+          <NavigationContainer
+            linking={linking}
+            documentTitle={{
+              // Without a formatter, web tab titles fall back to route names
+              // (or "undefined" before the first route resolves).
+              formatter: (options) =>
+                options?.title ? `${options.title} — Pawstructions` : 'Pawstructions',
+            }}
+          >
             <RootNavigator />
           </NavigationContainer>
         </DataProvider>

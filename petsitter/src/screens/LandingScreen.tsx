@@ -7,6 +7,8 @@ import type { AuthStackParamList } from '../navigation/types';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
+// @ts-ignore
+const wordmarkWhite = require('../../assets/wordmark-white.png');
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Landing'>;
 
@@ -119,9 +121,12 @@ export function LandingScreen({ navigation }: Props) {
                 resizeMode="contain"
               />
             </View>
-            <Text style={{ color: COLORS.cream }} className="text-3xl font-bold text-center mb-2">
-              Pawstructions
-            </Text>
+            <Image
+              source={wordmarkWhite}
+              style={{ width: 260, height: 38, marginBottom: 8 }}
+              resizeMode="contain"
+              accessibilityLabel="Pawstructions"
+            />
             {/* White on primary-500 — the only body-size pairing that clears 4.5:1 */}
             <Text style={{ color: COLORS.white }} className="text-lg text-center mb-6 italic">
               Where Pets Rule the Kingdom!

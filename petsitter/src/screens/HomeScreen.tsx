@@ -7,6 +7,8 @@ import { COLORS } from '../constants';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
+// @ts-ignore
+const wordmark = require('../../assets/wordmark.png');
 import { useAuth, useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -58,10 +60,13 @@ export function HomeScreen({ navigation }: Props) {
               resizeMode="contain"
             />
             <View>
-              <Text style={{ fontSize: 22, fontWeight: '800', color: COLORS.brown, letterSpacing: 0.5 }}>
-                Pawstructions
-              </Text>
-              <Text style={{ fontSize: 12, color: COLORS.primary, fontStyle: 'italic' }}>
+              <Image
+                source={wordmark}
+                style={{ width: 190, height: 28 }}
+                resizeMode="contain"
+                accessibilityLabel="Pawstructions"
+              />
+              <Text style={{ fontSize: 12, color: COLORS.primary, fontStyle: 'italic', marginTop: 4 }}>
                 Where Pets Rule the Kingdom!
               </Text>
             </View>

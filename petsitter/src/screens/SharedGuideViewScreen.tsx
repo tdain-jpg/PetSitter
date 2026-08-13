@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, SensitiveValue } from '../components';
+
+// @ts-ignore
+const wordmark = require('../../assets/wordmark.png');
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -92,7 +95,12 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
             variant="outline"
           />
         ) : (
-          <Text className="text-tan-400 font-semibold">🐾 Pawstructions</Text>
+          <Image
+            source={wordmark}
+            style={{ width: 170, height: 25 }}
+            resizeMode="contain"
+            accessibilityLabel="Pawstructions"
+          />
         )}
       </View>
     );
@@ -120,7 +128,12 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
           {canGoBack ? (
             <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           ) : (
-            <Text className="text-lg font-bold text-brown-800">🐾 Pawstructions</Text>
+            <Image
+              source={wordmark}
+              style={{ width: 170, height: 25 }}
+              resizeMode="contain"
+              accessibilityLabel="Pawstructions"
+            />
           )}
         </View>
 

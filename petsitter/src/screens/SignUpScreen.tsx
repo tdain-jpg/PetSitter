@@ -11,6 +11,8 @@ import type { SignUpScreenProps } from '../navigation/types';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
+// @ts-ignore
+const wordmark = require('../../assets/wordmark.png');
 
 export function SignUpScreen({ navigation }: SignUpScreenProps) {
   const [email, setEmail] = useState('');
@@ -114,10 +116,13 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
 
           {/* Header */}
           <View className="mb-8 items-center">
-            <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.brown, letterSpacing: 1, textAlign: 'center' }}>
-              Pawstructions
-            </Text>
-            <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
+            <Image
+              source={wordmark}
+              style={{ width: 250, height: 37 }}
+              resizeMode="contain"
+              accessibilityLabel="Pawstructions"
+            />
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
               Where Pets Rule the Kingdom!
             </Text>
             <Text style={{ fontSize: 14, color: COLORS.tan, marginTop: 16, textAlign: 'center' }}>
