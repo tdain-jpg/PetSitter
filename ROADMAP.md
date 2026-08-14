@@ -44,31 +44,32 @@ Either finish it or hide the button.
 
 ## 2. Product features
 
-### [ ] Shared / linked accounts
-A couple or family should both be able to edit the same pets and guides. Options, roughly in
-order of effort:
-1. **Household model** — a `households` table, membership rows, and RLS keyed on household
-   rather than `user_id`. The clean long-term answer; touches every policy and every query.
-2. **Guide-level collaborators** — share individual guides with another account, read/write.
-   Narrower blast radius, but pets stay single-owner, which is probably the wrong seam.
-3. **Shared login** — no code, but no audit trail and bad security hygiene. Not recommended.
-Decision needed before building: is the unit of sharing the *household* or the *guide*?
+### [ ] Households (DECIDED: household is the unit of sharing)
+A couple or family share one set of pets and guides; everyone in the household can edit.
+Distinct from the existing share links, which stay exactly as they are — those are for handing
+a read-only guide to a sitter or friend who has no account, and that flow is already built.
 
-### [ ] Pro tier + system-wide AI
-Today each user pastes their own Gemini key into Settings (stored unencrypted). Replace with
-a single server-side key in a Supabase Edge Function, and gate cheat-sheet generation behind a
-paid tier. Remove the per-user AI settings entirely.
+Shape: a `households` table, a `household_members` join table, and `household_id` on `pets`
+and `guides` in place of (or alongside) `user_id`. Every RLS policy moves from
+`auth.uid() = user_id` to "caller is a member of the owning household". Every existing row
+needs backfilling into a household of one.
 
-**Naming** (tagline is "Where Pets Rule the Kingdom", brand is castle/coastal):
-- **Crown** — "Pawstructions Crown", members are "Crown members". Short, regal, fits.
-- **Royal Treatment** — warmer, more descriptive, longer.
-- **Keeper** / **Castle Keeper** — evokes stewardship over showing off.
-- **Concierge** — accurate to the value (done-for-you), but off-theme.
+This is the largest single change on the list — it touches all eight tables' policies, the
+adapter, and the contexts. Worth doing before there are many users, since the migration only
+gets harder with real data.
 
-**⚠️ App Store constraint:** Apple requires In-App Purchase for digital subscriptions, taking
-15–30%. A Stripe-based web subscription that unlocks features inside the iOS app violates
-guideline 3.1.1. Options: IAP on iOS (with Stripe on web), or web-only paid signup with no
-in-app purchase path. Decide before building the billing flow, not after.
+### [ ] Crown (Pro tier) + system-wide AI — DECIDED
+Paid tier is named **Crown**; members are "Crown members". Annual fee, disclosed as covering
+the cost of the AI features.
+
+Today each user pastes their own Gemini key into Settings (stored unencrypted). Replace with a
+single server-side key in a Supabase Edge Function, gate cheat-sheet generation behind Crown,
+and remove the per-user AI settings entirely.
+
+**Billing: Stripe on the web.** With the PWA-first decision below there is no App Store
+binary, so Apple's IAP rules do not apply and Stripe is unconstrained. If native apps ship
+later, iOS would need In-App Purchase alongside Stripe — a reason to keep the entitlement
+check server-side and payment-provider-agnostic from day one.
 
 ### [ ] Amazon affiliate store
 A small in-app "recommended gear" section framed around peace of mind while away. Suggested
@@ -93,16 +94,40 @@ Staff page with in-universe titles:
 Needs photos and a short bio each.
 
 ### [ ] Notifications
-Settings has a `notifications_enabled` toggle that currently controls nothing — no
-notifications are delivered anywhere.
+Settings has a `notifications_enabled` toggle that currently controls nothing.
 
-**Recommendation: push, not SMS.** Since native apps are planned, Expo push notifications are
-free and unlimited; SMS costs ~$0.008/message (Twilio) or ~$0.006 (Amazon SNS) and needs
-10DLC registration in the US for application traffic — real setup cost and ongoing per-message
-spend for something push does better. Email (already working via Brevo) covers web users.
-Suggested plan: push for native, email for web, revisit SMS only if users ask for it.
-Worth defining *what* notifications exist first — reminders before a trip? A nudge when a
-sitter opens a shared guide? Daily checklist reminders while a sitter is active?
+**Channel: email first.** Brevo already works, costs nothing at this volume, and reaches
+people who never install anything — including sitters, who by design have no account. Web push
+is a later addition (see PWA section); SMS is not recommended (~$0.008/message plus US 10DLC
+registration, for events that are not urgent enough to justify interrupting someone).
+
+**Proposed events**, ordered by how clearly they earn their interruption:
+
+*To the owner — high value:*
+1. **Sitter opened your guide for the first time** — confirms the link worked and the sitter is
+   engaged. This is the "did they get it?" anxiety the whole product exists to solve.
+2. **Trip starts tomorrow, and your guide looks incomplete** — no emergency contact, no vet,
+   no feeding schedule. Actionable, time-bound, prevents the actual failure case.
+3. **Share link expires in 2 days while your trip is still running** — the guide is about to go
+   dark on the sitter mid-stay.
+
+*To the owner — medium:*
+4. **Daily checklist summary while a sitter is active** — "3 of 5 tasks done today." Reassuring,
+   but only if checklists are actually being used; opt-in, daily digest, never per-task.
+5. **Medication was due and is unchecked** — genuinely useful for pets on meds, but risks
+   nagging. Gate on the pet actually having medications.
+
+*To the sitter (email only — they have no account):*
+6. **Guide updated while you're sitting** — the owner changed the feeding amount after handing
+   over the link. Currently there is no way for the sitter to know.
+7. **Daily checklist reminder each morning** — opt-in when the link is shared.
+
+*Deliberately not notifying:* account changes, new pet added, guide created, anything the user
+just did themselves. Nothing that says "we miss you."
+
+**Recommended first slice:** #1 and #2 only. Both are single scheduled jobs, both map to
+anxieties the product already names, and neither needs push. Prove they land before building
+a preference matrix — the current single on/off toggle is enough for two events.
 
 ---
 
@@ -129,11 +154,40 @@ synthetic pointer events do not reach it — so real click targets, hover states
 are unverified. Playwright would give genuine pointer input, plus repeatable regression runs
 in CI.
 
-### [ ] iOS / Android simulator testing
-Nothing has ever run on a real device or simulator — the app has only been exercised as web.
-Before store submission: build with EAS, test on the iOS simulator and an Android emulator,
-and check the native-only paths (expo-print, expo-sharing, expo-image-picker, deep links via
-the `pawstructions://` scheme).
+### [ ] iOS / Android simulator testing — deferred with the native builds
+Nothing has ever run on a device or simulator; the app has only been exercised as web. Not
+needed while PWA-first (below), but the native paths still exist in the codebase
+(expo-print, expo-sharing, expo-image-picker, the `pawstructions://` scheme) and would need
+testing before any store submission.
+
+---
+
+## 4a. Distribution: PWA-first — DECIDED
+
+Ship as an installable web app. No App Store or Play Store binary for now, so Stripe handles
+billing with no platform cut, and releases stay `git push`.
+
+**What's already done:** `public/site.webmanifest` with correct name, colors and start_url,
+plus all six icon sizes in `public/icons/` (192, 512, maskable 512, apple-touch 180, favicons).
+
+**What's missing** — none of it is referenced by the built page:
+- [ ] `<link rel="manifest">`, `<link rel="apple-touch-icon">`, `<meta name="theme-color">`
+  and `apple-mobile-web-app-*` tags in `index.html`. Expo's Metro web build generates this
+  file, so the reliable approach is a small post-build inject script wired into `build:web`.
+- [ ] A service worker. Required for Android's install prompt and for any offline behavior.
+  A hand-written cache-first worker for static assets and network-first for navigation is
+  enough; no Workbox dependency needed.
+- [ ] An **Install** page explaining Add to Home Screen — iOS requires Safari → Share → Add
+  to Home Screen, which nobody discovers unaided. Android shows an install prompt.
+- [ ] Verify with Lighthouse's installability audit.
+
+**Web push** becomes possible once the service worker exists — iOS 16.4+ supports it, but only
+for PWAs the user has installed to the Home Screen and then granted permission. That is enough
+friction that email should stay the primary channel.
+
+**Revisiting native:** the Expo codebase still builds for iOS and Android, so this is
+reversible. The trigger to reconsider is App Store discovery mattering more than the 15% cut
+and the two review pipelines — realistically once there is an audience, not before.
 
 ### [x] Automated QA agent
 `.claude/agents/qa-tester.md` — drives the live site and reports defects with repro steps.
