@@ -60,12 +60,22 @@ jobs:
             exit 1
           fi
 
-          response=$(curl -s --fail --max-time 120 -X POST \
+          # 503 means the function's secrets (CRON_SECRET / BREVO_API_KEY)
+          # aren't pasted into Supabase yet — expected pre-activation, not a
+          # failure. A red run every 15 minutes would spam failure emails.
+          http=$(curl -s --max-time 120 -o /tmp/notify.json -w '%{http_code}' -X POST \
             'https://hitivpxzlajymxwtzmam.supabase.co/functions/v1/notify' \
             -H "x-cron-secret: ${CRON_SECRET}" \
             -H 'Content-Type: application/json' \
-            -d '{"mode":"drain"}')
-          echo "notify drain: $response"
+            -d '{"mode":"drain"}') || http=000
+          echo "notify drain: HTTP ${http} $(cat /tmp/notify.json 2>/dev/null)"
+          if [ "${http}" = "200" ]; then exit 0; fi
+          if [ "${http}" = "503" ]; then
+            echo "::notice::notify is not activated yet (Supabase secrets pending) — nothing to drain"
+            exit 0
+          fi
+          echo "::error::notify drain failed with HTTP ${http}"
+          exit 1
 
   daily:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '7 11 * * *'
@@ -83,9 +93,17 @@ jobs:
             exit 1
           fi
 
-          response=$(curl -s --fail --max-time 300 -X POST \
+          # Same 503-is-not-a-failure rule as the drain job (see comment there).
+          http=$(curl -s --max-time 300 -o /tmp/notify.json -w '%{http_code}' -X POST \
             'https://hitivpxzlajymxwtzmam.supabase.co/functions/v1/notify' \
             -H "x-cron-secret: ${CRON_SECRET}" \
             -H 'Content-Type: application/json' \
-            -d '{"mode":"daily"}')
-          echo "notify daily: $response"
+            -d '{"mode":"daily"}') || http=000
+          echo "notify daily: HTTP ${http} $(cat /tmp/notify.json 2>/dev/null)"
+          if [ "${http}" = "200" ]; then exit 0; fi
+          if [ "${http}" = "503" ]; then
+            echo "::notice::notify is not activated yet (Supabase secrets pending) — daily scan skipped"
+            exit 0
+          fi
+          echo "::error::notify daily failed with HTTP ${http}"
+          exit 1
