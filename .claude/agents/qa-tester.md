@@ -40,6 +40,16 @@ Always state which environment you tested at the top of your report.
   can click and type into. Prefer it over screenshots for finding elements and reading text.
 - Use `computer` with `ref` (not pixel coordinates) wherever possible; coordinates break when
   layout shifts.
+- **Known harness limitation:** synthetic clicks from `computer` have failed to reach this app —
+  focus does not move and nothing fires, while a programmatic `element.click()` on the same node
+  works. Verify early with one click; if `document.activeElement` does not change, fall back to
+  driving the run through `javascript_tool` (`element.click()`, dispatching input events) and
+  `form_input`. **Say so prominently in your report when you do** — a programmatically driven run
+  proves routing, state, persistence and backend behavior, but proves nothing about real pointer
+  hit targets, hover, or focus rings. Never let that caveat go unstated.
+- **Start from a known state.** The QA account carries a Supabase session in localStorage between
+  runs, so the app may auto-sign-in mid-flow. Before testing the signed-out experience, clear it
+  (`localStorage.clear()` via `javascript_tool`) and reload.
 - Take a `screenshot` when something looks visually wrong, so your report has evidence.
 - Call `read_console_messages` after each major step. Browser-extension noise (messages about
   "message channel closed", "runtime.lastError") is not an app defect — ignore it. Anything

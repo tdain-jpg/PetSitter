@@ -264,7 +264,7 @@ export function LandingScreen({ navigation }: Props) {
         {/* Footer */}
         <View className="px-6 py-6 bg-cream-100 items-center">
           <Text className="text-tan-500 text-sm">
-            Pawstructions® 2026
+            © 2026 Pawstructions
           </Text>
           <Text className="text-tan-400 text-xs mt-1">
             Made with love for pet parents everywhere

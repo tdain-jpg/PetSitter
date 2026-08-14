@@ -19,6 +19,19 @@ export function HomeScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
   const { activePets, guides, loadingPets, loadingGuides, settings, loadingSettings } = useData();
 
+  // Prefer a real name; otherwise derive something human from the address.
+  // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
+  // ("tcdain+qapaws", "first.last"), which reads like a bug to the user.
+  const displayName = (() => {
+    const fullName = user?.full_name?.trim();
+    if (fullName) return fullName.split(' ')[0];
+    const local = user?.email?.split('@')[0];
+    if (!local) return '';
+    const base = local.split('+')[0].replace(/[._-]+/g, ' ').trim();
+    if (!base) return '';
+    return base.charAt(0).toUpperCase() + base.slice(1);
+  })();
+
   // Check if onboarding is needed
   useEffect(() => {
     if (!loadingSettings && settings && !settings.onboarding_completed) {
@@ -78,7 +91,7 @@ export function HomeScreen({ navigation }: Props) {
               variant="secondary"
             />
             <Text style={{ fontSize: 12, color: COLORS.tan, marginTop: 4 }}>
-              Welcome{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+              Welcome{displayName ? `, ${displayName}` : ''}!
             </Text>
           </View>
         </View>
