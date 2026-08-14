@@ -277,6 +277,35 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
 "Go back" buttons live in the DOM), so keyboard order can reach invisible screens. Needs
 `aria-hidden`/inert on non-focused routes or detachInactiveScreens tuning on web.
 
+## Loop 3 — in flight (no human dependencies)
+
+- [ ] **Crown full build** (minus billing): `households.crown_until` entitlement, server-side
+  cheat-sheet generation in an Edge Function with a server Gemini key, AI Settings card
+  removed, Crown upsell for non-members. Activation needs two human pastes (below).
+- [ ] **Invite emails** — outbox table + trigger on invite creation; `notify` Edge Function
+  drains it through the Brevo API on a GitHub Actions cron.
+- [ ] **Notifications #1 + #2** — "sitter opened your guide" (trigger on first share view) and
+  "trip starts tomorrow, guide incomplete" (daily scan), same outbox + cron.
+- [ ] **Pet photo storage** — `pet-photos` bucket, owner-scoped write policies, PhotoPicker
+  uploads and stores permanent URLs (closes the blob-URL bug for good).
+- [ ] **Deep links survive reload** (web) — restore the intended /Main/* route after session
+  restore.
+- [ ] **Polish**: Done button + bottom save indicator on edit forms; household error copy;
+  emoji spacing.
+
+## Round 4 — gated on Tim
+
+- [ ] **Three secret pastes** to activate Loop 3's server features (Supabase → Edge Functions →
+  Secrets): `GEMINI_API_KEY`, `BREVO_API_KEY`, `CRON_SECRET` (value provided when Loop 3 lands).
+- [ ] **Stripe** — account + product setup, then the Crown billing flow (webhook →
+  `crown_until`).
+- [ ] **Amazon store** — needs the Associates account first.
+- [ ] **About Us** — needs photos + a line each for Clark, Lillee, Dana, Tim.
+- [ ] **Custom icon set** — being commissioned; spec in `brand/icon-inventory.md`. Engineering
+  follow-up: Icon component + incremental emoji replacement.
+- [ ] **Google OAuth** — Cloud Console client (SETUP.md §3), or remove the button.
+- [ ] **Social/n8n** — Tim's n8n instance; plan in §3.
+
 ## 5. Deferred / minor
 
 - **Household polish (from the 2026-08-15 QA pass):** map raw RPC error strings to
