@@ -19,16 +19,20 @@ type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
 export function ShareGuideScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, getShareLinksForGuide, createShareLink, deactivateShareLink } = useData();
+  const { guides, loadingGuides, getShareLinksForGuide, createShareLink, deactivateShareLink } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [links, setLinks] = useState<ShareableLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
+  // `guides` is a dependency because a deep-link restore (hard reload of
+  // /Main/ShareGuide?guideId=...) mounts this screen before DataContext's
+  // initial fetch resolves — the lookup must retry once guides arrive.
+  // The share-links re-fetch this triggers is an idempotent read.
   useEffect(() => {
     loadData();
-  }, [guideId]);
+  }, [guideId, guides]);
 
   const loadData = async () => {
     setLoading(true);
@@ -107,7 +111,9 @@ export function ShareGuideScreen({ navigation, route }: Props) {
   const activeLinks = links.filter((l) => l.is_active);
   const inactiveLinks = links.filter((l) => !l.is_active);
 
-  if (loading) {
+  // Keep spinning while the household guides are still loading — declaring
+  // "not found" before the initial fetch resolves would be a false negative.
+  if (loading || (!guide && loadingGuides)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

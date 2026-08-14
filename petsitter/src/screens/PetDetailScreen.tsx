@@ -58,7 +58,8 @@ function titleCase(value: string): string {
 
 export function PetDetailScreen({ navigation, route }: Props) {
   const { petId } = route.params;
-  const { activePets, deceasedPets, deletePet, markPetDeceased, restorePet } = useData();
+  const { activePets, deceasedPets, loadingPets, deletePet, markPetDeceased, restorePet } =
+    useData();
 
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +118,10 @@ export function PetDetailScreen({ navigation, route }: Props) {
     }
   };
 
-  if (loading) {
+  // Hold the spinner on a deep-link hard reload: the effect runs against
+  // empty pet arrays before DataContext's initial fetch resolves, and the
+  // not-found state must wait for real data.
+  if (loading || (!pet && loadingPets)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

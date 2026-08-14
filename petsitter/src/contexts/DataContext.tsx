@@ -92,9 +92,9 @@ interface DataContextType {
   getSharedGuide: (code: string) => Promise<Guide | null>;
   getSharedGuidePets: (code: string) => Promise<Pet[]>;
 
-  // AI Cheat Sheets
+  // AI Cheat Sheets (writes happen server-side in the generate-cheat-sheet
+  // Edge Function; the client only reads)
   getCheatSheet: (guideId: string) => Promise<CheatSheet | null>;
-  saveCheatSheet: (cheatSheet: Omit<CheatSheet, 'id'>) => Promise<CheatSheet>;
 
   // Settings
   settings: AppSettings | null;
@@ -451,13 +451,6 @@ export function DataProvider({ children }: DataProviderProps) {
     return dataService.getCheatSheet(guideId);
   }, []);
 
-  const saveCheatSheet = useCallback(
-    async (cheatSheet: Omit<CheatSheet, 'id'>) => {
-      return dataService.saveCheatSheet(cheatSheet);
-    },
-    []
-  );
-
   // ============================================
   // Settings Operations
   // ============================================
@@ -604,7 +597,6 @@ export function DataProvider({ children }: DataProviderProps) {
 
       // AI Cheat Sheets
       getCheatSheet,
-      saveCheatSheet,
 
       // Settings
       settings,
@@ -666,7 +658,6 @@ export function DataProvider({ children }: DataProviderProps) {
       getSharedGuide,
       getSharedGuidePets,
       getCheatSheet,
-      saveCheatSheet,
       settings,
       loadingSettings,
       updateSettings,

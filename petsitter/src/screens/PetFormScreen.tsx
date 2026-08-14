@@ -161,7 +161,7 @@ export function PetFormScreen({ navigation, route }: Props) {
   const isEditing = mode === 'edit' && petId;
 
   const { user } = useAuth();
-  const { activePets, deceasedPets, createPet, updatePet } = useData();
+  const { activePets, deceasedPets, loadingPets, createPet, updatePet } = useData();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -244,7 +244,11 @@ export function PetFormScreen({ navigation, route }: Props) {
       color_markings: data.color_markings.trim() || undefined,
       microchip_id: data.microchip_id.trim() || undefined,
       license_tag: data.license_tag.trim() || undefined,
-      photo_url: data.photo_url,
+      // null, not undefined: after "Remove photo" this must actually CLEAR
+      // the column. supabase-js drops undefined keys from update payloads
+      // (see SupabaseAdapter.updatePet), which would silently resurrect the
+      // old URL on every edit-mode save.
+      photo_url: data.photo_url ?? null,
       personality,
       medical_notes: data.medical_notes.trim() || undefined,
       behavioral_notes: data.behavioral_notes.trim() || undefined,
@@ -276,7 +280,7 @@ export function PetFormScreen({ navigation, route }: Props) {
   const autoSaveData = useMemo(() => ({ ...formData }), [formData]);
 
   // Auto-save hook - only enabled when editing and data is loaded
-  const { status: saveStatus, lastSaved, error: saveError } = useAutoSave({
+  const { status: saveStatus, lastSaved, error: saveError, saveNow } = useAutoSave({
     data: autoSaveData,
     onSave: handleAutoSave,
     debounceMs: 1000,
@@ -289,6 +293,10 @@ export function PetFormScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (isEditing && petId) {
       if (loadedPetIdRef.current === petId) return;
+      // Deep-link restore can mount this screen before the pets fetch
+      // resolves; hold the spinner rather than showing an empty edit form
+      // whose contents would be clobbered when hydration finally runs.
+      if (loadingPets) return;
       const allPets = [...activePets, ...deceasedPets];
       const pet = allPets.find((p) => p.id === petId);
       if (pet) {
@@ -306,7 +314,7 @@ export function PetFormScreen({ navigation, route }: Props) {
           color_markings: pet.color_markings || '',
           microchip_id: pet.microchip_id || '',
           license_tag: pet.license_tag || '',
-          photo_url: pet.photo_url,
+          photo_url: pet.photo_url ?? undefined,
           // Personality
           energy_level: pet.personality?.energy_level || '',
           sociability_people: pet.personality?.sociability_people || '',
@@ -340,7 +348,7 @@ export function PetFormScreen({ navigation, route }: Props) {
       }
       setLoading(false);
     }
-  }, [isEditing, petId, activePets, deceasedPets]);
+  }, [isEditing, petId, activePets, deceasedPets, loadingPets]);
 
   // Create mode throws the form away on leave, so every exit needs a confirm.
   // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
@@ -846,8 +854,30 @@ export function PetFormScreen({ navigation, route }: Props) {
             </View>
           )}
 
-          {/* Spacer for edit mode */}
-          {isEditing && <View className="mb-8" />}
+          {/* Edit-mode closure: after a long scroll the header status is out
+              of sight, so mirror it here, and give the user a Done button.
+              Done is closure, not save semantics — auto-save has been writing
+              all along; saveNow() just flushes any pending debounce before
+              leaving. Edit mode is unguarded (see guardUnsavedChanges), so
+              goBack() will not prompt. */}
+          {isEditing && (
+            <View className="mb-8">
+              <View className="mb-4 items-center">
+                <SaveStatusIndicator
+                  status={saveStatus}
+                  lastSaved={lastSaved}
+                  error={saveError}
+                />
+              </View>
+              <Button
+                title="Done"
+                onPress={() => {
+                  saveNow();
+                  navigation.goBack();
+                }}
+              />
+            </View>
+          )}
           </ScreenContainer>
         </ScrollView>
       </View>

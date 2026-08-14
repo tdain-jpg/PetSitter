@@ -64,7 +64,7 @@ const SUPPLY_CATEGORIES: { label: string; value: SupplyCategory }[] = [
 
 export function HomeCareScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, updateGuide } = useData();
+  const { guides, loadingGuides, updateGuide } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [homeCare, setHomeCare] = useState<HomeCare | null>(null);
@@ -80,9 +80,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  // `guides` is a dependency because a deep-link restore (hard reload of
+  // /Main/HomeCare?guideId=...) mounts this screen before DataContext's
+  // initial fetch resolves — the lookup must retry once guides arrive.
   useEffect(() => {
     loadData();
-  }, [guideId]);
+  }, [guideId, guides]);
 
   const loadData = async () => {
     setLoading(true);
@@ -215,7 +218,9 @@ export function HomeCareScreen({ navigation, route }: Props) {
     saveHomeCare(updated);
   };
 
-  if (loading) {
+  // Keep spinning while the household guides are still loading — declaring
+  // "not found" before the initial fetch resolves would be a false negative.
+  if (loading || (!guide && loadingGuides)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

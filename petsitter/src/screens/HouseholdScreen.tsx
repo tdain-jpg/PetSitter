@@ -8,6 +8,26 @@ import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
 import type { Household, HouseholdInviteRow, HouseholdMember } from '../types';
 
+// The household RPCs raise bare lowercase strings (e.g. 'invalid email').
+// Map the known ones to friendly copy; anything unexpected passes through
+// sentence-cased with a trailing period. Empty/missing falls back.
+function friendlyRpcError(raw: unknown, fallback: string): string {
+  const message = typeof raw === 'string' ? raw.trim() : '';
+  if (!message) return fallback;
+  switch (message.toLowerCase()) {
+    case 'invalid email':
+      return "That doesn't look like an email address.";
+    case 'that email already belongs to a household member':
+      return 'That person is already in your household.';
+    case 'not a member of this household':
+      return 'You are no longer a member of this household.';
+    default: {
+      const sentence = message.charAt(0).toUpperCase() + message.slice(1);
+      return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
+    }
+  }
+}
+
 /**
  * HouseholdScreen — manage the household(s) the signed-in user belongs to.
  *
@@ -122,7 +142,10 @@ export function HouseholdScreen() {
       await renameHousehold(household.id, trimmed);
       setEditingHouseholdId(null);
     } catch (error: any) {
-      showAlert('Could not rename', error?.message || 'Something went wrong. Please try again.');
+      showAlert(
+        'Could not rename',
+        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+      );
     } finally {
       setSavingName(false);
     }
@@ -141,7 +164,10 @@ export function HouseholdScreen() {
       await reloadInvites(household.id);
       showAlert('Invite sent', `${email} will see the invitation when they sign in.`);
     } catch (error: any) {
-      showAlert('Could not invite', error?.message || 'Something went wrong. Please try again.');
+      showAlert(
+        'Could not invite',
+        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+      );
     } finally {
       setInvitingHouseholdId(null);
     }
@@ -160,7 +186,7 @@ export function HouseholdScreen() {
       await revokeInvite(invite.id);
       await reloadInvites(invite.household_id);
     } catch (error: any) {
-      showAlert('Error', error?.message || 'Could not revoke the invite.');
+      showAlert('Error', friendlyRpcError(error?.message, 'Could not revoke the invite.'));
     }
   };
 
@@ -177,7 +203,7 @@ export function HouseholdScreen() {
       await removeHouseholdMember(household.id, member.user_id);
       await reloadMembers(household.id);
     } catch (error: any) {
-      showAlert('Error', error?.message || 'Could not remove this member.');
+      showAlert('Error', friendlyRpcError(error?.message, 'Could not remove this member.'));
     }
   };
 
@@ -194,7 +220,7 @@ export function HouseholdScreen() {
       // The context refreshes households, pets, and guides after leaving.
       await leaveHousehold(household.id);
     } catch (error: any) {
-      showAlert('Error', error?.message || 'Could not leave this household.');
+      showAlert('Error', friendlyRpcError(error?.message, 'Could not leave this household.'));
     }
   };
 
@@ -395,7 +421,8 @@ export function HouseholdScreen() {
         <ScreenContainer variant="content">
           {/* Explain box */}
           <Card className="bg-cream-100 mb-4">
-            <Text className="text-brown-800 font-medium mb-1">🏠 One home for your pets</Text>
+            {/* Explicit NBSP: a plain JSX space after the emoji rendered flush (QA). */}
+            <Text className="text-brown-800 font-medium mb-1">{'🏠\u00A0One home for your pets'}</Text>
             <Text className="text-brown-600 text-sm">
               Everyone in your household shares all pets and guides. Invite your partner or
               family so you can keep care instructions up to date together.

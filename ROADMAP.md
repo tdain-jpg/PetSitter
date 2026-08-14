@@ -68,6 +68,45 @@ This is the largest single change on the list — it touches all eight tables' p
 adapter, and the contexts. Worth doing before there are many users, since the migration only
 gets harder with real data.
 
+### [ ] Loop 4 slate — invite-first onboarding + welcome journeys (DESIGNED 2026-08-14)
+Born from Dana's real first-run: no invite email yet (fixed once Loop 3's notify pipeline is
+live), and `HomeScreen` replaces itself with the founder pet-wizard the moment
+`onboarding_completed` is false — before the pending-invite banner can render. A joiner got a
+founder's first run.
+
+**A. Invite-aware first run.** Before routing to the wizard, wait for `pendingInvites` too.
+- Pending invite exists → show an **invite gate** instead of the wizard: "«Inviter» invited
+  you to join «Household»" with Accept / Decline. Accept → mark onboarding complete (the
+  household already has pets; never ask a joiner to create their first pet), land on Home
+  showing shared content + the joiner journey. Decline → founder wizard as today.
+- Invites only match CONFIRMED emails, so the gate must re-evaluate after email confirmation,
+  and it adds no failure mode for normal founders (no invite → wizard exactly as today).
+- Existing-account invitees keep the Home banner; the invite email's CTA can deep-link home
+  (Loop 3's restore replays the URL after sign-in). HouseholdScreen should also list invites
+  you've RECEIVED, not just sent.
+- Inviter side: re-invites DO re-email (dedupe is per-invite-id), bounded by a per-recipient
+  cap of 5 invite emails/day across all households. The UI can offer an honest "Resend
+  invite" (revoke + re-invite) and should surface when the daily cap has been hit.
+
+**B. Journey framework (one system, many journeys).** Card banners rendered inline at the top
+of a host screen (same visual pattern as the pending-invite banner — never blocking modals).
+- State: `journeys jsonb not null default '{}'` on `settings` (migration 0009), shape
+  `{ "<key>": { status: done|skipped, version, at } }` — per-user and cross-device. Code
+  declares each journey with a `version`; show when there is no entry or the stored version
+  is older. Bumping the version re-shows a changed journey; skip records skipped+version and
+  never shows again (Tim's rule).
+- Cards are **state-aware checklists** where possible: "Add your first pet" completes itself
+  when `activePets.length > 0`, not when tapped.
+
+**Journeys to ship first:**
+1. `founder-welcome` (Home): Add a pet → Create a guide → Share it with a sitter (no account
+   needed) → Invite family. Auto-completes off real data.
+2. `joiner-welcome` (Home, after accepting an invite): "You're in «X»'s household — pets and
+   guides here are shared" / "Anything you edit updates for everyone" / "Sitters don't need
+   accounts — share links do that".
+Later candidates: `guide-editing` (first GuideForm open — explains autosave + Done),
+`crown-intro` (when Crown ships), a localStorage-only hint on the sitter share view.
+
 ### [ ] Sitter accounts (second persona)
 Sitters today are anonymous link-openers with no account and no history. Give them a real
 account that lists every client they sit for, keeps those clients on their profile, and lets

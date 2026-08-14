@@ -1,0 +1,91 @@
+name: Notification cron
+
+# Drives the 'notify' Edge Function, which sends Pawstructions email
+# notifications (household invites, "sitter opened your guide", "trip starts
+# tomorrow but the guide is incomplete") from the notifications_outbox table
+# via Brevo. Two beats:
+#   * drain — every 15 minutes, send whatever is queued (invites and
+#     share-opened rows land in the outbox as they happen; this is the only
+#     thing that actually emails them, so the cadence is the delivery latency)
+#   * daily — 11:07 UTC (deliberately off the */15 grid so it never fires in
+#     the same instant as a drain run), scan for guides starting tomorrow with
+#     missing emergency contacts / home info, queue reminders, then drain
+#
+# Both crons trigger this same workflow; each job filters on which schedule
+# fired via github.event.schedule. A manual workflow_dispatch runs only the
+# daily job — daily mode ends with its own drain pass, so a manual run still
+# exercises everything without racing a second, concurrent drain.
+#
+# Required repo secret (Settings -> Secrets and variables -> Actions):
+#   NOTIFY_CRON_SECRET  must equal the CRON_SECRET Edge Function secret in
+#                       Supabase (Edge Functions -> Secrets). The function
+#                       rejects any call without it; that header is the whole
+#                       auth story, so the function is deployed with JWT
+#                       verification off.
+#
+# Note: GitHub disables scheduled workflows after 60 days with no repo
+# activity — any commit re-enables them, or re-enable from the Actions tab.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # drain the outbox every 15 minutes
+    - cron: '7 11 * * *'   # daily incomplete-guide scan at 11:07 UTC
+  workflow_dispatch: {}
+
+# Two runs must never drain the outbox concurrently (both would see the same
+# pending rows). Queue them instead of overlapping. The atomic row claiming in
+# supabase/functions/notify/index.ts is the real double-send guard; this keeps
+# the race from arising in the first place.
+concurrency:
+  group: notify-cron
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    if: github.event.schedule == '*/15 * * * *'
+    runs-on: ubuntu-latest
+    # A wedged invocation must fail fast: the concurrency group keeps only one
+    # pending run, so a runner held for GitHub's 6-hour default would silently
+    # cancel every queued drain behind it.
+    timeout-minutes: 5
+    steps:
+      - name: Drain notification outbox
+        env:
+          CRON_SECRET: ${{ secrets.NOTIFY_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::NOTIFY_CRON_SECRET repo secret is not set"
+            exit 1
+          fi
+
+          response=$(curl -s --fail --max-time 120 -X POST \
+            'https://hitivpxzlajymxwtzmam.supabase.co/functions/v1/notify' \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{"mode":"drain"}')
+          echo "notify drain: $response"
+
+  daily:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '7 11 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Scan for incomplete guides starting tomorrow
+        env:
+          CRON_SECRET: ${{ secrets.NOTIFY_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::NOTIFY_CRON_SECRET repo secret is not set"
+            exit 1
+          fi
+
+          response=$(curl -s --fail --max-time 300 -X POST \
+            'https://hitivpxzlajymxwtzmam.supabase.co/functions/v1/notify' \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{"mode":"daily"}')
+          echo "notify daily: $response"

@@ -411,22 +411,9 @@ export class SupabaseAdapter implements DataService {
     return (data as CheatSheet | null) ?? null;
   }
 
-  async saveCheatSheet(cheatSheet: Omit<CheatSheet, 'id'>): Promise<CheatSheet> {
-    const { data, error } = await supabase
-      .from('cheat_sheets')
-      .upsert(cheatSheet, { onConflict: 'guide_id' })
-      .select('*')
-      .single();
-    return unwrap(data as CheatSheet | null, error);
-  }
-
-  async deleteCheatSheet(guideId: string): Promise<void> {
-    const { error } = await supabase
-      .from('cheat_sheets')
-      .delete()
-      .eq('guide_id', guideId);
-    if (error) throw new Error(error.message);
-  }
+  // Cheat-sheet WRITES live server-side in the generate-cheat-sheet Edge
+  // Function (Crown-gated); deletion rides the guides FK cascade. The client
+  // deliberately has no write path that could bypass the Crown gate.
 
   // ============================================
   // Settings Operations

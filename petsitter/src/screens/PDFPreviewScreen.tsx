@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -140,7 +140,8 @@ function printExportedGuideOnWeb(html: string) {
 
 export function PDFPreviewScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, getCheatSheet } = useData();
+  const { guides, activePets, deceasedPets, loadingGuides, loadingPets, getCheatSheet } =
+    useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
@@ -159,9 +160,18 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   });
   const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
 
+  // Tracks which guide the "select all pets" default has been applied for, so
+  // re-runs of loadData (guides/pets refreshing) never clobber the user's
+  // manual pet selection.
+  const selectionSeededForGuide = useRef<string | null>(null);
+
+  // `guides`/pets are dependencies because a deep-link restore (hard reload of
+  // /Main/PDFPreview?guideId=...) mounts this screen before DataContext's
+  // initial fetch resolves — the lookup must retry once the data arrives.
+  // The getCheatSheet re-fetch this triggers is an idempotent read.
   useEffect(() => {
     loadData();
-  }, [guideId]);
+  }, [guideId, guides, activePets, deceasedPets]);
 
   const loadData = async () => {
     setLoading(true);
@@ -172,7 +182,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         const allPets = [...activePets, ...deceasedPets];
         const pets = allPets.filter((p) => foundGuide.pet_ids.includes(p.id));
         setGuidePets(pets);
-        setSelectedPetIds(pets.map((p) => p.id)); // Select all pets by default
+        // Don't consume the one-shot seed while pets are still loading: on a
+        // deep-link restore the guides fetch can win the race, and seeding
+        // against an empty pets array would leave every pet unchecked.
+        if (selectionSeededForGuide.current !== guideId && !loadingPets) {
+          setSelectedPetIds(pets.map((p) => p.id)); // Select all pets by default
+          selectionSeededForGuide.current = guideId;
+        }
       }
 
       const cheatSheet = await getCheatSheet(guideId);
@@ -472,7 +488,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     }
   };
 
-  if (loading) {
+  // Keep spinning while household guides/pets are still loading — declaring
+  // "not found" before the initial fetch resolves would be a false negative.
+  if (loading || (!guide && (loadingGuides || loadingPets))) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

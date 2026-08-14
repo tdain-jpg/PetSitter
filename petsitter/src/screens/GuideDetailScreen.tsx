@@ -19,7 +19,8 @@ type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
 export function GuideDetailScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, deleteGuide, duplicateGuide } = useData();
+  const { guides, activePets, deceasedPets, loadingGuides, deleteGuide, duplicateGuide } =
+    useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
@@ -80,7 +81,10 @@ export function GuideDetailScreen({ navigation, route }: Props) {
     (navigation as any).navigate('HomeCare', { guideId });
   };
 
-  if (loading) {
+  // Hold the spinner on a deep-link hard reload: the effect runs against an
+  // empty guides array before DataContext's initial fetch resolves, and the
+  // not-found state must wait for real data.
+  if (loading || (!guide && loadingGuides)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

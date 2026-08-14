@@ -8,7 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ScreenContainer } from '../components';
+import { Button, Card, ScreenContainer } from '../components';
 import { useAuth, useData } from '../contexts';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
@@ -22,8 +22,6 @@ export function SettingsScreen({ navigation }: Props) {
   const { settings, updateSettings, exportAllData, importData, clearAllData, deceasedPets } =
     useData();
 
-  const [geminiKey, setGeminiKey] = useState(settings?.gemini_api_key || '');
-  const [isSaving, setIsSaving] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   const handleSignOut = async () => {
@@ -31,24 +29,6 @@ export function SettingsScreen({ navigation }: Props) {
       await signOut();
     } catch (error: any) {
       showAlert('Error', error.message || 'Failed to sign out');
-    }
-  };
-
-  const handleSaveApiKey = async () => {
-    setIsSaving(true);
-    try {
-      const trimmed = geminiKey.trim();
-      // Send null (not undefined) when the field is empty: undefined keys are
-      // dropped from the UPDATE payload entirely, so the stored key would
-      // never actually be cleared.
-      await updateSettings({
-        gemini_api_key: (trimmed || null) as unknown as string | undefined,
-      });
-      showAlert('Success', trimmed ? 'API key saved successfully!' : 'API key removed.');
-    } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to save API key');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -176,30 +156,14 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* AI Settings */}
-        <Card className="mb-4">
-          <Text className="text-lg font-semibold text-brown-800 mb-4">
-            AI Settings (Google Gemini)
+        {/* Crown teaser */}
+        <Card className="mb-4 bg-warm-50 border-warm-300">
+          <Text className="text-lg font-semibold text-brown-800 mb-1">
+            👑 Crown — coming soon
           </Text>
-          <Text className="text-tan-500 text-sm mb-4">
-            Enter your Google Gemini API key to enable AI-powered features like the Cheat Sheet generator.
+          <Text className="text-brown-600 text-sm">
+            AI-written cheat sheets for your sitters, while supporting Pawstructions.
           </Text>
-
-          {/* Input's built-in secureTextEntry eye toggle is the single show/hide control */}
-          <Input
-            label="API Key"
-            placeholder="Enter your Gemini API key"
-            value={geminiKey}
-            onChangeText={setGeminiKey}
-            secureTextEntry
-          />
-
-          <Button
-            title="Save API Key"
-            onPress={handleSaveApiKey}
-            loading={isSaving}
-            disabled={isSaving}
-          />
         </Card>
 
         {/* Preferences */}

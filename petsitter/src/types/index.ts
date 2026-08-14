@@ -102,7 +102,10 @@ export interface Pet {
   color_markings?: string;
   microchip_id?: string;
   license_tag?: string;
-  photo_url?: string;
+  // null explicitly clears the column on update (photo removal); undefined
+  // keys are DROPPED from the JSON body by supabase-js and would leave the
+  // old URL in place (same contract as deceased_date below).
+  photo_url?: string | null;
   personality?: PetPersonality;
   medical_notes?: string;
   vet_info?: VetInfo;
@@ -432,6 +435,12 @@ export interface CheatSheet {
 export interface AppSettings {
   user_id: string;
   theme: 'light' | 'dark' | 'system';
+  /**
+   * @deprecated No longer read or written by the client. AI cheat-sheet
+   * generation moved server-side (Crown / 'generate-cheat-sheet' Edge
+   * Function); the user_settings column still exists, so the field stays
+   * in the type until the column is dropped.
+   */
   gemini_api_key?: string;
   notifications_enabled: boolean;
   auto_save_enabled: boolean;

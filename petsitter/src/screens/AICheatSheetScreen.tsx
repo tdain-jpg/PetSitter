@@ -9,10 +9,10 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
-import { generateCheatSheet } from '../services/AIService';
+import { supabase } from '../lib/supabase';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
-import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, CheatSheet } from '../types';
@@ -21,17 +21,22 @@ type Props = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
 
 export function AICheatSheetScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, settings, getCheatSheet, saveCheatSheet } = useData();
+  const { guides, loadingGuides, getCheatSheet } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [cheatSheet, setCheatSheet] = useState<CheatSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [crownRequired, setCrownRequired] = useState(false);
 
+  // `guides` is a dependency because a deep-link restore (hard reload of
+  // /Main/AICheatSheet?guideId=...) mounts this screen before DataContext's
+  // initial fetch resolves — the lookup must retry once guides arrive.
+  // The getCheatSheet re-fetch this triggers is an idempotent read.
   useEffect(() => {
     loadData();
-  }, [guideId]);
+  }, [guideId, guides]);
 
   const loadData = async () => {
     setLoading(true);
@@ -51,45 +56,74 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   };
 
   const handleGenerate = async () => {
-    // Resolve the guide and its pets from live context state at generate time —
-    // the mount-time snapshot in local state goes stale if the guide or pets
-    // are edited while this screen sits in the navigation stack.
-    const liveGuide = guides.find((g) => g.id === guideId);
-    if (!liveGuide) return;
-    const livePets = [...activePets, ...deceasedPets].filter((p) =>
-      liveGuide.pet_ids.includes(p.id)
-    );
-
-    if (!settings?.gemini_api_key) {
-      const goToSettings = await showConfirm({
-        title: 'API Key Required',
-        message: 'Please add your Gemini API key in Settings first.',
-        confirmLabel: 'Go to Settings',
-      });
-      if (goToSettings) {
-        (navigation as any).navigate('Settings');
-      }
-      return;
-    }
-
     setGenerating(true);
     setError(null);
 
     try {
-      const content = await generateCheatSheet(
-        liveGuide,
-        livePets,
-        settings.gemini_api_key
+      // The Edge Function reads the guide + pets server-side, calls the AI,
+      // and upserts the cheat_sheets row itself before returning.
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        'generate-cheat-sheet',
+        { body: { guideId } }
       );
 
-      const newSheet = await saveCheatSheet({
-        guide_id: guideId,
-        content,
-        generated_at: new Date().toISOString(),
-        model_used: 'gemini-1.5-flash',
-      });
+      if (invokeError) {
+        // Non-2xx responses surface as a FunctionsHttpError whose `context`
+        // is the raw Response; the JSON body carries the contract error code.
+        let code: string | undefined;
+        if (invokeError instanceof FunctionsHttpError) {
+          try {
+            const body = await invokeError.context.json();
+            code = body?.error;
+          } catch {
+            // Body wasn't JSON — fall through to the generic message.
+          }
+        }
 
-      setCheatSheet(newSheet);
+        if (code === 'crown_required') {
+          setCrownRequired(true);
+          return;
+        }
+        if (code === 'ai_not_configured') {
+          setError('The AI helper is warming up — check back soon.');
+          return;
+        }
+        const message =
+          code === 'guide_not_found'
+            ? 'This guide could not be found. It may have been deleted.'
+            : code === 'ai_failed'
+              ? 'The AI helper had trouble writing this cheat sheet. Please try again in a moment.'
+              : invokeError.message || 'Something went wrong generating the cheat sheet.';
+        setError(message);
+        showAlert('Generation Failed', message);
+        return;
+      }
+
+      // Success: the sheet is already persisted server-side. Re-fetch the
+      // stored row so we render exactly what was saved (id, timestamps, model).
+      // The re-fetch gets its own try/catch: a transient failure here must not
+      // surface as "Generation Failed" — the paid generation already succeeded
+      // and was saved, so falling into the outer catch would re-show the
+      // Generate card and invite a second paid run for a sheet that exists.
+      let savedSheet: CheatSheet | null = null;
+      try {
+        savedSheet = await getCheatSheet(guideId);
+      } catch {
+        // Ignore — fall back to the content the Edge Function returned.
+      }
+      if (savedSheet) {
+        setCheatSheet(savedSheet);
+      } else if (data?.content) {
+        // Fallback (re-fetch threw or returned null, e.g. a transient network
+        // blip or a read racing the upsert): render the returned content
+        // directly so the user still sees their cheat sheet.
+        setCheatSheet({
+          id: guideId,
+          guide_id: guideId,
+          content: data.content,
+          generated_at: new Date().toISOString(),
+        });
+      }
     } catch (err: any) {
       setError(err.message);
       showAlert('Generation Failed', err.message);
@@ -165,7 +199,9 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     });
   };
 
-  if (loading) {
+  // Keep spinning while the household guides are still loading — declaring
+  // "not found" before the initial fetch resolves would be a false negative.
+  if (loading || (!guide && loadingGuides)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />
@@ -205,30 +241,42 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
         {!cheatSheet ? (
-          <Card className="items-center py-8">
-            <Text className="text-5xl mb-4">🤖</Text>
-            <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
-              Generate AI Cheat Sheet
-            </Text>
-            <Text className="text-tan-500 text-center mb-6">
-              Use AI to create a quick reference summary of this guide for your pet sitter.
-            </Text>
+          crownRequired ? (
+            <Card className="items-center py-8 bg-warm-50 border-warm-300">
+              <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
+                👑 Pawstructions Crown
+              </Text>
+              <Text className="text-brown-600 text-center">
+                AI cheat sheets are a Crown member feature. Crown covers the cost
+                of the AI that writes them — coming soon.
+              </Text>
+            </Card>
+          ) : (
+            <Card className="items-center py-8">
+              <Text className="text-5xl mb-4">🤖</Text>
+              <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
+                Generate AI Cheat Sheet
+              </Text>
+              <Text className="text-tan-500 text-center mb-6">
+                Use AI to create a quick reference summary of this guide for your pet sitter.
+              </Text>
 
-            {error && (
-              <Text className="text-accent-500 mb-4 text-center">{error}</Text>
-            )}
+              {error && (
+                <Text className="text-accent-500 mb-4 text-center">{error}</Text>
+              )}
 
-            <Button
-              title={generating ? 'Generating...' : '✨ Generate Cheat Sheet'}
-              onPress={handleGenerate}
-              loading={generating}
-              disabled={generating}
-            />
+              <Button
+                title={generating ? 'Generating...' : '✨ Generate Cheat Sheet'}
+                onPress={handleGenerate}
+                loading={generating}
+                disabled={generating}
+              />
 
-            <Text className="text-tan-500 text-sm mt-4 text-center">
-              Guide contents are sent to Google Gemini to create the summary.
-            </Text>
-          </Card>
+              <Text className="text-tan-500 text-sm mt-4 text-center">
+                Guide contents are summarized by Pawstructions&apos; AI helper.
+              </Text>
+            </Card>
+          )
         ) : (
           <>
             <Card className="mb-4">
@@ -248,18 +296,33 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               </View>
             </Card>
 
-            <View className="gap-3 mb-8">
-              <Button
-                title="🔄 Regenerate"
-                onPress={handleGenerate}
-                loading={generating}
-                disabled={generating}
-                variant="outline"
-              />
-              <Text className="text-tan-500 text-sm text-center">
-                Guide contents are sent to Google Gemini to create the summary.
-              </Text>
-            </View>
+            {crownRequired ? (
+              <Card className="items-center py-8 mb-8 bg-warm-50 border-warm-300">
+                <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
+                  👑 Pawstructions Crown
+                </Text>
+                <Text className="text-brown-600 text-center">
+                  AI cheat sheets are a Crown member feature. Crown covers the cost
+                  of the AI that writes them — coming soon.
+                </Text>
+              </Card>
+            ) : (
+              <View className="gap-3 mb-8">
+                {error && (
+                  <Text className="text-accent-500 text-center">{error}</Text>
+                )}
+                <Button
+                  title="🔄 Regenerate"
+                  onPress={handleGenerate}
+                  loading={generating}
+                  disabled={generating}
+                  variant="outline"
+                />
+                <Text className="text-tan-500 text-sm text-center">
+                  Guide contents are summarized by Pawstructions&apos; AI helper.
+                </Text>
+              </View>
+            )}
           </>
         )}
         </ScreenContainer>

@@ -91,8 +91,6 @@ export interface DataService {
   // AI Cheat Sheet Operations
   // ============================================
   getCheatSheet(guideId: string): Promise<CheatSheet | null>;
-  saveCheatSheet(cheatSheet: Omit<CheatSheet, 'id'>): Promise<CheatSheet>;
-  deleteCheatSheet(guideId: string): Promise<void>;
 
   // ============================================
   // Settings Operations

@@ -1,0 +1,20 @@
+# Per-function deployment config. The two Edge Functions have OPPOSITE JWT
+# requirements, and deploying either one with the wrong setting bricks it:
+#
+#   notify              verify_jwt = false  The GitHub Actions cron sends only
+#                                           the x-cron-secret header (no
+#                                           Supabase JWT); platform JWT
+#                                           verification would 401 every call
+#                                           before the function's own auth
+#                                           check runs.
+#   generate-cheat-sheet verify_jwt = true  Browser-invoked with the user's
+#                                           JWT; all queries run under the
+#                                           caller's RLS.
+#
+# Any deploy path (CLI, MCP deploy_edge_function, dashboard) must honor these.
+
+[functions.notify]
+verify_jwt = false
+
+[functions.generate-cheat-sheet]
+verify_jwt = true

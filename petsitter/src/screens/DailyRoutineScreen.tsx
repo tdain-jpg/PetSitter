@@ -59,6 +59,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     guides,
     activePets,
     deceasedPets,
+    loadingGuides,
     getTaskCompletions,
     markTaskComplete,
     markTaskIncomplete,
@@ -90,9 +91,11 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     is_recurring: true,
   });
 
+  // Pet arrays are deps too: loadData builds guidePets from them, and on a
+  // deep-link hard reload the guides fetch can resolve before the pets fetch.
   useEffect(() => {
     loadData();
-  }, [guideId, guides]);
+  }, [guideId, guides, activePets, deceasedPets]);
 
   useEffect(() => {
     if (guide) {
@@ -460,7 +463,10 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   const totalCount = allTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  if (loading) {
+  // Hold the spinner on a deep-link hard reload: the effect runs against an
+  // empty guides array before DataContext's initial fetch resolves, and the
+  // not-found state must wait for real data.
+  if (loading || (!guide && loadingGuides)) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.primary} />

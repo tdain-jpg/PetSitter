@@ -59,7 +59,8 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const isEditing = mode === 'edit' && guideId;
 
   const { user } = useAuth();
-  const { guides, pets, activePets, loadingPets, petsError, createGuide, updateGuide } = useData();
+  const { guides, pets, activePets, loadingPets, loadingGuides, petsError, createGuide, updateGuide } =
+    useData();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -134,7 +135,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const autoSaveData = useMemo(() => ({ ...formData }), [formData]);
 
   // Auto-save hook - only enabled when editing and data is loaded
-  const { status: saveStatus, lastSaved, error: saveError } = useAutoSave({
+  const { status: saveStatus, lastSaved, error: saveError, saveNow } = useAutoSave({
     data: autoSaveData,
     onSave: handleAutoSave,
     debounceMs: 1000,
@@ -153,6 +154,10 @@ export function GuideFormScreen({ navigation, route }: Props) {
       // the merged pets list below, and pruning against an empty in-flight
       // array would wipe the guide's pet list (auto-save would persist it).
       if (loadingPets) return;
+      // Same for guides: a deep-link restore can mount this screen before the
+      // guides fetch resolves; without this, an empty edit form renders and is
+      // clobbered when hydration finally runs.
+      if (loadingGuides) return;
       const guide = guides.find((g) => g.id === guideId);
       if (guide) {
         hydratedGuideIdRef.current = guideId;
@@ -183,7 +188,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       }
       setLoading(false);
     }
-  }, [isEditing, guideId, guides, pets, loadingPets, petsError]);
+  }, [isEditing, guideId, guides, pets, loadingPets, loadingGuides, petsError]);
 
   // Create mode throws the form away on leave, so every exit needs a confirm.
   // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
@@ -788,8 +793,27 @@ export function GuideFormScreen({ navigation, route }: Props) {
               </View>
             )}
 
-            {/* Spacer for edit mode */}
-            {isEditing && <View className="mb-8" />}
+            {/* Edit mode: repeat the save status at the bottom of the long form
+                and offer an explicit Done that flushes any pending auto-save. */}
+            {isEditing && (
+              <View className="mb-8">
+                <View className="mb-3">
+                  <SaveStatusIndicator
+                    status={saveStatus}
+                    lastSaved={lastSaved}
+                    error={saveError}
+                  />
+                </View>
+                <Button
+                  title="Done"
+                  variant="primary"
+                  onPress={() => {
+                    saveNow();
+                    navigation.goBack();
+                  }}
+                />
+              </View>
+            )}
           </ScreenContainer>
         </ScrollView>
       </View>
