@@ -226,6 +226,14 @@ export function HomeScreen({ navigation }: Props) {
               onPress={navigateToGuides}
               variant="outline"
             />
+            {/* Discoverable household invite: families who can't find this
+                create a SECOND account and re-type the same pets. Settings →
+                Household still exists for management; this is the front door. */}
+            <Button
+              title="💌 Invite Family"
+              onPress={() => navigation.navigate('Household')}
+              variant="outline"
+            />
           </View>
         </Card>
 
