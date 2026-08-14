@@ -229,6 +229,23 @@ First run found five real defects, two already fixed.
 
 ## 4b. Known issues (from the 2026-08-14 full QA pass)
 
+### [ ] Pet photos were never persisted — needs Supabase Storage
+PhotoPicker stores the picker's transient URI verbatim in `pets.photo_url`. On web that is a
+`blob:` object URL that dies with the browser session (Clark's was
+`blob:http://localhost:8081/...` — it only ever rendered in the session that picked it); on
+native it would be a device-local `file://` path. So photos have never survived to any other
+device or session. The dangling URL also made the UI lie: cards reserved blank image space and
+PhotoPicker showed "Remove" for an unrenderable photo. Broken rows have been nulled in prod
+(2026-08-14) so the paw-print placeholder shows.
+
+Fix design:
+1. Supabase Storage bucket `pet-photos`; path `{user_id}/{pet_id}.jpg`.
+2. Storage RLS: owner write/delete; public read (photos surface in anonymous shared guides —
+   pet photos are low-sensitivity, but note the tradeoff vs signed URLs).
+3. PhotoPicker: on pick, fetch the blob → upload → store the permanent public URL; on remove,
+   delete the storage object too. Resize client-side (~800px) before upload.
+4. Applies to both the web blob path and native file path.
+
 ### [ ] Browser back bypasses the unsaved-changes guard on web
 React Navigation's `beforeRemove` does not intercept browser history navigation on web —
 popstate moves the stack before the listener can block it, so a dirty create-form discards
