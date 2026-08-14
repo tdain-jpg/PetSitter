@@ -279,6 +279,11 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
 
 ## 5. Deferred / minor
 
+- **Household polish (from the 2026-08-15 QA pass):** map raw RPC error strings to
+  sentence-case copy in HouseholdScreen alerts ("invalid email" → "That doesn't look like an
+  email address."); add a space after the emoji in the info-card header; "Joined" dates for
+  migration-backfilled members show the migration date — accepted semantics (it is when the
+  household was created), revisit only if users find it confusing.
 - **Edit-form closure (polish):** duplicate the SaveStatusIndicator at the BOTTOM of
   PetForm/GuideForm edit modes and add a single "Done" button that flushes any pending
   autosave (the hook's unused `saveNow()`) and navigates back. Deliberately NO "Save"
