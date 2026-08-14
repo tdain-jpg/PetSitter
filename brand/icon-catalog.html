@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #F5EDD6; font-family: 'Nunito', sans-serif; color: #263544; }
+    a { color: #4A7D90; } a:hover { color: #1E3A5F; }
+  </style>
+</helmet>
+<section style="padding:72px; display:flex; flex-direction:column; gap:56px; max-width:1560px;">
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="font-weight:800; font-size:44px; color:#1E3A5F;">Pawstructions icon set</div>
+    <div style="font-weight:600; font-size:19px; color:#62758B;">53 icons · every icon is a pet · SVG masters on a 24×24 grid, assets/icons/ · PNG at 24/48/96</div>
+  </div>
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="6">
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div style="font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:#62758B;">{{ g.label }}</div>
+      <div style="display:flex; flex-wrap:wrap; gap:14px;">
+        <sc-for list="{{ g.icons }}" as="ic" hint-placeholder-count="8">
+          <div style="width:150px; background:#FEFDF9; border:1px solid #DCE3EB; border-radius:12px; padding:18px 14px 14px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <img src="assets/icons/icon-{{ ic.n }}.svg" style="width:48px; height:48px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img src="assets/icons/icon-{{ ic.n }}.svg" style="width:24px; height:24px;">
+              <img src="assets/icons/icon-{{ ic.n }}.svg" style="width:16px; height:16px;">
+            </div>
+            <div style="font-weight:700; font-size:13px; color:#1E3A5F; text-align:center;">{{ ic.n }}</div>
+            <div style="font-weight:600; font-size:11.5px; color:#62758B; text-align:center; line-height:1.3;">{{ ic.d }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const g=(label,arr)=>({label,icons:arr.map(a=>({n:a[0],d:a[1]}))});
+    return { groups: [
+      g('Core / high-frequency',[['paw','brand paw'],['home','turtle, house shell'],['travel','rabbit + suitcase'],['guide','dog + clipboard'],['crown-ai','gold crown (non-pet)'],['check','paw checkmark']]),
+      g('Species avatars',[['avatar-dog','dog'],['avatar-cat','cat'],['avatar-bird','bird'],['avatar-fish','fish'],['avatar-rabbit','rabbit'],['avatar-hamster','hamster'],['avatar-gecko','gecko / reptile'],['avatar-hedgehog','hedgehog = “Other”']]),
+      g('Guide sections',[['emergency','hedgehog, spikes up'],['notes','hamster + pencil'],['share-link','snake chain link'],['calendar','page + paw'],['arrival','bird landing'],['document','dog + newspaper'],['feeding','cat at bowl'],['medication','bottle, paw label'],['vet','tag + medical cross'],['insurance','turtle in shell'],['id-tag','tag + paw'],['toys','dog + tennis ball']]),
+      g('Daily routine',[['morning','rooster at sunrise'],['midday','dog mid-fetch, sun'],['evening','cat on windowsill'],['bedtime','pup + crescent moon']]),
+      g('Actions & UI',[['reveal','cat eye'],['hide','cat, paws over eyes'],['delete','trash + paw (coral)'],['phone','bone handset'],['email','pigeon + envelope'],['invite','heart-sealed envelope'],['key','ferret + key'],['location','pin, paw center'],['print','printer + paw page'],['regenerate','hamster wheel'],['export','tray out + paw'],['import','tray in + paw'],['close','plain ✕'],['privacy','turtle + padlock']]),
+      g('Moments & marketing',[['celebration','dog, party hat'],['ai-flourish','crown sparkles'],['tip','parrot + lightbulb'],['feature-check','paw checkmark'],['testimonial','parrot, speech bubble'],['mobile-install','phone + paw'],['desktop-install','laptop + paw'],['memorial-rainbow','plain rainbow (non-pet)'],['memorial-dove','dove ascending']]),
+    ]};
+  }
+}
+</script>
+</body>
+</html>
