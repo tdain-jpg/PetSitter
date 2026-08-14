@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { formatDate as formatLocalDate } from '../lib/dates';
 import type { Guide, Pet } from '../types';
 
 interface GuideCardProps {
@@ -11,10 +12,11 @@ export function GuideCard({ guide, pets, onPress }: GuideCardProps) {
   const guidePets = pets.filter((p) => guide.pet_ids.includes(p.id));
   const petNames = guidePets.map((p) => p.name).join(', ') || 'No pets assigned';
 
+  // Shared local-date helper: new Date('YYYY-MM-DD') parses as UTC midnight
+  // and rendered the PREVIOUS day west of UTC (QA saw Aug 20 listed as Aug 19).
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return null;
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return formatLocalDate(dateStr, { month: 'short', day: 'numeric' }) || null;
   };
 
   const dateRange =

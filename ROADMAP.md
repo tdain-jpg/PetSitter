@@ -227,6 +227,29 @@ First run found five real defects, two already fixed.
 
 ---
 
+## 4b. Known issues (from the 2026-08-14 full QA pass)
+
+### [ ] Browser back bypasses the unsaved-changes guard on web
+React Navigation's `beforeRemove` does not intercept browser history navigation on web —
+popstate moves the stack before the listener can block it, so a dirty create-form discards
+silently on browser back (the in-app Cancel path confirms correctly, and refresh/close are
+covered by `beforeunload`). Hacking popstate directly conflicts with React Navigation's own
+history sync. **Planned fix: create-mode draft persistence** — save form drafts to
+localStorage as the user types and offer "Resume draft?" on next open, which makes any exit
+path harmless rather than fighting the router. QA repro: Add Pet → type name → browser back.
+
+### [ ] Authenticated deep links don't survive reload
+Hard-loading `/Main/PetForm?...` or `/Main/DailyRoutine?...` lands on Home after session
+restore — the navigator mounts before the session resolves, dropping the initial URL. Public
+routes (/share/:code, /install) are unaffected. Fix direction: defer NavigationContainer
+render until `isLoading` resolves AND feed it the initial URL, or persist/replay the intended
+route. Matters for a PWA where users bookmark and refresh.
+
+### [ ] Stacked screens stay focusable on web
+Previous screens in the native-stack remain mounted with tabbable controls (QA counted five
+"Go back" buttons live in the DOM), so keyboard order can reach invisible screens. Needs
+`aria-hidden`/inert on non-focused routes or detachInactiveScreens tuning on web.
+
 ## 5. Deferred / minor
 
 - **DailyRoutineScreen** keeps private copies of the date helpers now centralized in

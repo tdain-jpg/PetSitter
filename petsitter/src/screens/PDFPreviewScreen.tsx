@@ -526,6 +526,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Text className="text-brown-600">🚨 Emergency Contacts</Text>
               <Switch
                 value={sections.emergencyContacts}
+                accessibilityLabel="Include emergency contacts"
                 onValueChange={() => toggleSection('emergencyContacts')}
                 trackColor={{ true: COLORS.primary }}
               />
@@ -535,6 +536,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Text className="text-brown-600">🏠 Home Information</Text>
               <Switch
                 value={sections.homeInfo}
+                accessibilityLabel="Include home information"
                 onValueChange={() => toggleSection('homeInfo')}
                 trackColor={{ true: COLORS.primary }}
               />
@@ -544,6 +546,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               <Text className="text-brown-600">🐾 Pet Details</Text>
               <Switch
                 value={sections.pets}
+                accessibilityLabel="Include pet profiles"
                 onValueChange={() => toggleSection('pets')}
                 trackColor={{ true: COLORS.primary }}
               />
@@ -554,6 +557,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Text className="text-brown-600">✈️ Travel Itinerary</Text>
                 <Switch
                   value={sections.travelItinerary}
+                accessibilityLabel="Include travel itinerary"
                   onValueChange={() => toggleSection('travelItinerary')}
                   trackColor={{ true: COLORS.primary }}
                 />
@@ -565,6 +569,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Text className="text-brown-600">🤖 AI Cheat Sheet</Text>
                 <Switch
                   value={sections.aiCheatSheet}
+                accessibilityLabel="Include AI cheat sheet"
                   onValueChange={() => toggleSection('aiCheatSheet')}
                   trackColor={{ true: COLORS.primary }}
                 />
@@ -576,6 +581,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 <Text className="text-brown-600">📝 Additional Notes</Text>
                 <Switch
                   value={sections.additionalNotes}
+                accessibilityLabel="Include additional notes"
                   onValueChange={() => toggleSection('additionalNotes')}
                   trackColor={{ true: COLORS.primary }}
                 />

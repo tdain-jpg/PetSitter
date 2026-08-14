@@ -563,6 +563,7 @@ export function PetFormScreen({ navigation, route }: Props) {
               <Switch
                 value={formData.is_neutered}
                 onValueChange={(v) => updateField('is_neutered', v)}
+                accessibilityLabel="Spayed or neutered"
               />
               <Text className="ml-2 text-brown-600">Spayed/Neutered</Text>
             </View>

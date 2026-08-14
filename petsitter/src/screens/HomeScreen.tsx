@@ -66,26 +66,29 @@ export function HomeScreen({ navigation }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="wide">
-        <View className="flex-row justify-between items-center">
-          <View className="flex-row items-center">
+        {/* flex-wrap + shrinkable children: the fixed-size logo/wordmark row
+            previously forced ~437px of intrinsic width, so a 375px phone
+            rendered the header clipped with Settings off-screen. */}
+        <View className="flex-row justify-between items-center flex-wrap gap-y-2">
+          <View className="flex-row items-center shrink" style={{ minWidth: 0 }}>
             <Image
               source={logo}
-              style={{ width: 108, height: 108, marginRight: 12 }}
+              style={{ width: 72, height: 72, marginRight: 10 }}
               resizeMode="contain"
             />
-            <View>
+            <View className="shrink" style={{ minWidth: 0 }}>
               <Image
                 source={wordmark}
-                style={{ width: 190, height: 39 }}
+                style={{ width: 160, height: 33 }}
                 resizeMode="contain"
                 accessibilityLabel="Pawstructions"
               />
-              <Text style={{ fontSize: 12, color: COLORS.primary, fontStyle: 'italic', marginTop: 4 }}>
+              <Text style={{ fontSize: 11, color: COLORS.primary, fontStyle: 'italic', marginTop: 4 }}>
                 Where Pets Rule the Kingdom!
               </Text>
             </View>
           </View>
-          <View className="items-end">
+          <View className="items-end shrink">
             <Button
               title="Settings"
               onPress={navigateToSettings}

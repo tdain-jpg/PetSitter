@@ -265,6 +265,23 @@ export function GuideFormScreen({ navigation, route }: Props) {
     if (!validate()) return;
     if (!user) return;
 
+    // A half-filled contact sub-form has its own inner Save; submitting the
+    // guide while it holds text used to silently discard the draft (QA D4).
+    if (
+      showContactForm &&
+      ((contactForm.name?.trim() ?? '') !== '' || (contactForm.phone?.trim() ?? '') !== '')
+    ) {
+      const proceed = await showConfirm({
+        title: 'Unsaved contact',
+        message:
+          "You started adding an emergency contact but haven't saved it. Save the guide without this contact?",
+        confirmLabel: 'Save without contact',
+        cancelLabel: 'Go back',
+        destructive: true,
+      });
+      if (!proceed) return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -459,6 +476,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                       accessibilityRole="checkbox"
                       accessibilityLabel={pet.name}
                       accessibilityState={{ checked: formData.pet_ids.includes(pet.id) }}
+                      aria-checked={formData.pet_ids.includes(pet.id)}
                       className={`flex-row items-center p-3 rounded-lg border ${
                         formData.pet_ids.includes(pet.id)
                           ? 'bg-primary-50 border-primary-200'

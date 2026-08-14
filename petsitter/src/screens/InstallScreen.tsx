@@ -63,7 +63,7 @@ export function InstallScreen({ navigation }: InstallScreenProps) {
 
           <Card className="mb-4">
             <PlatformHeading icon="📱" title="iPhone & iPad" subtitle="Safari" />
-            <Step number={1}>Open pawstructions in Safari (installing only works from Safari).</Step>
+            <Step number={1}>Open Pawstructions in Safari (installing only works from Safari).</Step>
             <Step number={2}>Tap the Share button — the square with an arrow pointing up — at the bottom of the screen.</Step>
             <Step number={3}>Scroll down the share sheet and tap "Add to Home Screen".</Step>
             <Step number={4}>Tap "Add" in the top corner. Pawstructions now lives on your home screen.</Step>
@@ -71,7 +71,7 @@ export function InstallScreen({ navigation }: InstallScreenProps) {
 
           <Card className="mb-4">
             <PlatformHeading icon="🤖" title="Android" subtitle="Chrome" />
-            <Step number={1}>Open pawstructions in Chrome.</Step>
+            <Step number={1}>Open Pawstructions in Chrome.</Step>
             <Step number={2}>Tap the three-dot menu in the top corner.</Step>
             <Step number={3}>Tap "Install app" (on some phones it says "Add to Home screen").</Step>
             <Step number={4}>Confirm the prompt — or if Chrome shows an install banner on its own, just accept it.</Step>
@@ -79,7 +79,7 @@ export function InstallScreen({ navigation }: InstallScreenProps) {
 
           <Card className="mb-4">
             <PlatformHeading icon="💻" title="Desktop" subtitle="Chrome or Edge" />
-            <Step number={1}>Open pawstructions in Chrome or Edge.</Step>
+            <Step number={1}>Open Pawstructions in Chrome or Edge.</Step>
             <Step number={2}>Click the install icon at the right end of the address bar — a small screen with a down arrow.</Step>
             <Step number={3}>Click "Install" and Pawstructions opens in its own window.</Step>
           </Card>
