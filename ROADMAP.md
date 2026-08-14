@@ -58,6 +58,38 @@ This is the largest single change on the list — it touches all eight tables' p
 adapter, and the contexts. Worth doing before there are many users, since the migration only
 gets harder with real data.
 
+### [ ] Sitter accounts (second persona)
+Sitters today are anonymous link-openers with no account and no history. Give them a real
+account that lists every client they sit for, keeps those clients on their profile, and lets
+them invite clients into the app — or ask an existing owner to share a pet profile with them.
+
+**Three access levels, not two.** The anonymous share link must survive; plenty of sitters are
+a neighbour who will never sign up.
+1. **Anonymous link** — read-only, no account. Already built, unchanged.
+2. **Connected sitter** — has an account, sees all their clients in one place, can tick off
+   checklist tasks. Access granted by the household and revocable.
+3. **Household member** — full edit rights. See households above.
+
+**Data shape:** a role on `profiles` (owner / sitter — a user could be both), plus a
+`sitter_connections` table joining a sitter to a *household* with a status
+(invited / active / revoked) and optionally a date window. Attaching connections to the
+household rather than to individual pets is what makes "all my clients" a single query.
+
+**Why this is the best distribution idea on this list:** a professional sitter with twenty
+clients who invites them is twenty qualified signups, from someone with a direct financial
+interest in their clients being organised. That is a far stronger loop than social posting.
+The invite has to work in both directions — owner invites sitter, sitter invites owner.
+
+**Sequencing — do this after launch, but design for it now.** It is the largest item here:
+a second onboarding, a second home screen, a second navigation tree, and an invitation system
+with accept/decline/revoke. Building a two-sided network before validating that side one wants
+the product is the classic way to spend six months on nothing.
+
+What it *does* demand today: build **households first**, and make sure the ownership model is
+"pets and guides belong to a household" rather than "to a user". Sitter connections then
+attach to households later with no second migration. Getting that seam right now is cheap;
+retrofitting it after real data exists is not.
+
 ### [ ] Crown (Pro tier) + system-wide AI — DECIDED
 Paid tier is named **Crown**; members are "Crown members". Annual fee, disclosed as covering
 the cost of the AI features.
