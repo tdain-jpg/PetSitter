@@ -301,8 +301,11 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
   `crown_until`).
 - [ ] **Amazon store** — needs the Associates account first.
 - [ ] **About Us** — needs photos + a line each for Clark, Lillee, Dana, Tim.
-- [ ] **Custom icon set** — being commissioned; spec in `brand/icon-inventory.md`. Engineering
-  follow-up: Icon component + incremental emoji replacement.
+- [x] **Custom icon set — assets delivered 2026-08-14.** All 53 SVGs + PNG 24/48/96 verified
+  against `brand/icon-inventory.md`; committed to `brand/assets/icons/` (catalog page renders)
+  and staged in `petsitter/assets/icons/`. Remaining engineering (no human gate): Icon
+  component + incremental emoji replacement — runs after Loop 3 lands, since the loop's
+  agents own most screen files.
 - [ ] **Google OAuth** — Cloud Console client (SETUP.md §3), or remove the button.
 - [ ] **Social/n8n** — Tim's n8n instance; plan in §3.
 
