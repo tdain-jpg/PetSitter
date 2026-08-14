@@ -8,15 +8,14 @@ import {
   ActivityIndicator,
   Pressable,
   Switch,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ContactCard, ScreenHeader, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
+import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
-import { showAlert } from '../lib/showAlert';
+import { showAlert, showConfirm } from '../lib/dialogs';
 import { isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -76,6 +75,11 @@ export function GuideFormScreen({ navigation, route }: Props) {
   // A setState from the success path lands too late for a listener that fires
   // in the same tick, so the guards always consult the ref.
   const isDirtyRef = useRef(false);
+  // True while the discard confirm is open. Unlike the old blocking
+  // window.confirm, showConfirm is async — a second browser-back while the
+  // dialog is up would re-enter beforeRemove, queue a duplicate dialog, and
+  // double-dispatch the blocked action (popping one screen too far).
+  const promptingRef = useRef(false);
 
   // Build guide data from form data object (accepts data as parameter to avoid stale closures)
   const buildGuideDataFromForm = useCallback((data: FormData) => {
@@ -184,25 +188,24 @@ export function GuideFormScreen({ navigation, route }: Props) {
     if (!guardUnsavedChanges) return;
     return navigation.addListener('beforeRemove', (e) => {
       if (!isDirtyRef.current) return;
+      // The listener must stay synchronous: block the navigation first, then
+      // let the async confirm re-dispatch the blocked action on approval.
       e.preventDefault();
-      const discard = () => {
-        clearDirty();
-        navigation.dispatch(e.data.action);
-      };
-      if (Platform.OS === 'web') {
-        if (window.confirm('Discard this guide? Your unsaved changes will be lost.')) {
-          discard();
+      if (promptingRef.current) return; // a discard prompt is already open
+      promptingRef.current = true;
+      showConfirm({
+        title: 'Discard Guide',
+        message: 'Your unsaved changes will be lost.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep Editing',
+        destructive: true,
+      }).then((ok) => {
+        promptingRef.current = false;
+        if (ok) {
+          clearDirty();
+          navigation.dispatch(e.data.action);
         }
-      } else {
-        Alert.alert(
-          'Discard Guide',
-          'Your unsaved changes will be lost.',
-          [
-            { text: 'Keep Editing', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: discard },
-          ]
-        );
-      }
+      });
     });
   }, [navigation, guardUnsavedChanges, clearDirty]);
 
@@ -386,11 +389,13 @@ export function GuideFormScreen({ navigation, route }: Props) {
         {/* Auto-save status indicator for edit mode */}
         {isEditing && (
           <View className="px-4 py-2 bg-cream-50 border-b border-tan-200">
-            <SaveStatusIndicator
-              status={saveStatus}
-              lastSaved={lastSaved}
-              error={saveError}
-            />
+            <ScreenContainer variant="form">
+              <SaveStatusIndicator
+                status={saveStatus}
+                lastSaved={lastSaved}
+                error={saveError}
+              />
+            </ScreenContainer>
           </View>
         )}
 
@@ -399,319 +404,321 @@ export function GuideFormScreen({ navigation, route }: Props) {
           contentContainerStyle={{ padding: 16 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Basic Info */}
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-4">
-              Basic Information
-            </Text>
-
-            <Input
-              label="Guide Title *"
-              placeholder="e.g., Weekend Trip - January 2025"
-              value={formData.title}
-              onChangeText={(v) => updateField('title', v)}
-              error={errors.title}
-            />
-
-            <Input
-              label="Start Date"
-              placeholder="YYYY-MM-DD"
-              value={formData.start_date}
-              onChangeText={(v) => updateField('start_date', v)}
-              error={errors.start_date}
-            />
-            <Input
-              label="End Date"
-              placeholder="YYYY-MM-DD"
-              value={formData.end_date}
-              onChangeText={(v) => updateField('end_date', v)}
-              error={errors.end_date}
-            />
-          </Card>
-
-          {/* Pet Selection */}
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-4">
-              Select Pets
-            </Text>
-
-            {activePets.length === 0 ? (
-              <View className="items-center py-4">
-                <Text className="text-tan-500 mb-2">No pets available.</Text>
-                <Button
-                  title="Add a Pet First"
-                  onPress={() => (navigation as any).navigate('PetForm', { mode: 'create' })}
-                  variant="outline"
-                />
-              </View>
-            ) : (
-              <View className="gap-2">
-                {activePets.map((pet) => (
-                  <Pressable
-                    key={pet.id}
-                    onPress={() => togglePet(pet.id)}
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={pet.name}
-                    accessibilityState={{ checked: formData.pet_ids.includes(pet.id) }}
-                    className={`flex-row items-center p-3 rounded-lg border ${
-                      formData.pet_ids.includes(pet.id)
-                        ? 'bg-primary-50 border-primary-200'
-                        : 'bg-cream-200 border-tan-200'
-                    }`}
-                  >
-                    <View
-                      className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                        formData.pet_ids.includes(pet.id)
-                          ? 'bg-primary-500 border-primary-500'
-                          : 'border-tan-300'
-                      }`}
-                    >
-                      {formData.pet_ids.includes(pet.id) && (
-                        <Text className="text-white text-xs">✓</Text>
-                      )}
-                    </View>
-                    <Text className="text-brown-800 font-medium">{pet.name}</Text>
-                    <Text className="text-tan-500 ml-2 capitalize">
-                      ({pet.species})
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </Card>
-
-          {/* Emergency Contacts */}
-          <Card className="mb-4">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-semibold text-brown-800">
-                Emergency Contacts
+          <ScreenContainer variant="form">
+            {/* Basic Info */}
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
+                Basic Information
               </Text>
-              <Pressable
-                onPress={handleAddContact}
-                className="bg-secondary-50 px-3 py-1 rounded"
-                accessibilityRole="button"
-                accessibilityLabel="Add emergency contact"
-              >
-                <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
-              </Pressable>
-            </View>
 
-            {formData.emergency_contacts.length === 0 ? (
-              <Text className="text-tan-500">No emergency contacts added.</Text>
-            ) : (
-              formData.emergency_contacts.map((contact) => (
-                <ContactCard
-                  key={contact.id}
-                  contact={contact}
-                  onEdit={() => handleEditContact(contact)}
-                  onDelete={() => handleDeleteContact(contact.id)}
-                />
-              ))
-            )}
+              <Input
+                label="Guide Title *"
+                placeholder="e.g., Weekend Trip - January 2025"
+                value={formData.title}
+                onChangeText={(v) => updateField('title', v)}
+                error={errors.title}
+              />
 
-            {/* Contact Form */}
-            {showContactForm && (
-              <View className="mt-4 p-4 bg-tan-100 rounded-lg">
-                <Text className="font-semibold text-brown-800 mb-3">
-                  {editingContactId ? 'Edit Contact' : 'Add Contact'}
-                </Text>
-                <Input
-                  label="Name *"
-                  placeholder="Contact name"
-                  value={contactForm.name || ''}
-                  onChangeText={(v) => {
-                    setContactForm((prev) => ({ ...prev, name: v }));
-                    if (contactErrors.name) {
-                      setContactErrors((prev) => ({ ...prev, name: undefined }));
-                    }
-                  }}
-                  error={contactErrors.name}
-                />
-                <Input
-                  label="Phone *"
-                  placeholder="(555) 123-4567"
-                  value={contactForm.phone || ''}
-                  onChangeText={(v) => {
-                    setContactForm((prev) => ({ ...prev, phone: v }));
-                    if (contactErrors.phone) {
-                      setContactErrors((prev) => ({ ...prev, phone: undefined }));
-                    }
-                  }}
-                  formatAsPhone
-                  error={contactErrors.phone}
-                />
-                <Input
-                  label="Email"
-                  placeholder="email@example.com"
-                  value={contactForm.email || ''}
-                  onChangeText={(v) => setContactForm((prev) => ({ ...prev, email: v }))}
-                  keyboardType="email-address"
-                />
-                <Select
-                  label="Contact Type"
-                  value={contactForm.contact_type || 'personal'}
-                  options={contactTypeOptions}
-                  onValueChange={(v) => setContactForm((prev) => ({ ...prev, contact_type: v as ContactType }))}
-                />
-                <Input
-                  label="Relationship"
-                  placeholder="e.g., Neighbor, Friend, Vet"
-                  value={contactForm.relationship || ''}
-                  onChangeText={(v) => setContactForm((prev) => ({ ...prev, relationship: v }))}
-                />
-                <View className="flex-row items-center mb-4">
-                  <Switch
-                    value={contactForm.is_primary || false}
-                    onValueChange={(v) => setContactForm((prev) => ({ ...prev, is_primary: v }))}
-                  />
-                  <Text className="ml-2 text-brown-600">Primary Contact</Text>
-                </View>
-                {contactForm.contact_type === 'neighbor' && (
-                  <View className="flex-row items-center mb-4">
-                    <Switch
-                      value={contactForm.has_key || false}
-                      onValueChange={(v) => setContactForm((prev) => ({ ...prev, has_key: v }))}
-                    />
-                    <Text className="ml-2 text-brown-600">Has a key to the house</Text>
-                  </View>
-                )}
-                <View className="flex-row gap-2">
-                  <Button title="Save" onPress={handleSaveContact} variant="primary" />
+              <Input
+                label="Start Date"
+                placeholder="YYYY-MM-DD"
+                value={formData.start_date}
+                onChangeText={(v) => updateField('start_date', v)}
+                error={errors.start_date}
+              />
+              <Input
+                label="End Date"
+                placeholder="YYYY-MM-DD"
+                value={formData.end_date}
+                onChangeText={(v) => updateField('end_date', v)}
+                error={errors.end_date}
+              />
+            </Card>
+
+            {/* Pet Selection */}
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
+                Select Pets
+              </Text>
+
+              {activePets.length === 0 ? (
+                <View className="items-center py-4">
+                  <Text className="text-tan-500 mb-2">No pets available.</Text>
                   <Button
-                    title="Cancel"
-                    onPress={() => {
-                      setShowContactForm(false);
-                      setContactForm({});
-                      setContactErrors({});
-                      setEditingContactId(null);
-                    }}
+                    title="Add a Pet First"
+                    onPress={() => (navigation as any).navigate('PetForm', { mode: 'create' })}
                     variant="outline"
                   />
                 </View>
+              ) : (
+                <View className="gap-2">
+                  {activePets.map((pet) => (
+                    <Pressable
+                      key={pet.id}
+                      onPress={() => togglePet(pet.id)}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={pet.name}
+                      accessibilityState={{ checked: formData.pet_ids.includes(pet.id) }}
+                      className={`flex-row items-center p-3 rounded-lg border ${
+                        formData.pet_ids.includes(pet.id)
+                          ? 'bg-primary-50 border-primary-200'
+                          : 'bg-cream-200 border-tan-200'
+                      }`}
+                    >
+                      <View
+                        className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                          formData.pet_ids.includes(pet.id)
+                            ? 'bg-primary-500 border-primary-500'
+                            : 'border-tan-300'
+                        }`}
+                      >
+                        {formData.pet_ids.includes(pet.id) && (
+                          <Text className="text-white text-xs">✓</Text>
+                        )}
+                      </View>
+                      <Text className="text-brown-800 font-medium">{pet.name}</Text>
+                      <Text className="text-tan-500 ml-2 capitalize">
+                        ({pet.species})
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </Card>
+
+            {/* Emergency Contacts */}
+            <Card className="mb-4">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-semibold text-brown-800">
+                  Emergency Contacts
+                </Text>
+                <Pressable
+                  onPress={handleAddContact}
+                  className="bg-secondary-50 px-3 py-1 rounded"
+                  accessibilityRole="button"
+                  accessibilityLabel="Add emergency contact"
+                >
+                  <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
+                </Pressable>
+              </View>
+
+              {formData.emergency_contacts.length === 0 ? (
+                <Text className="text-tan-500">No emergency contacts added.</Text>
+              ) : (
+                formData.emergency_contacts.map((contact) => (
+                  <ContactCard
+                    key={contact.id}
+                    contact={contact}
+                    onEdit={() => handleEditContact(contact)}
+                    onDelete={() => handleDeleteContact(contact.id)}
+                  />
+                ))
+              )}
+
+              {/* Contact Form */}
+              {showContactForm && (
+                <View className="mt-4 p-4 bg-tan-100 rounded-lg">
+                  <Text className="font-semibold text-brown-800 mb-3">
+                    {editingContactId ? 'Edit Contact' : 'Add Contact'}
+                  </Text>
+                  <Input
+                    label="Name *"
+                    placeholder="Contact name"
+                    value={contactForm.name || ''}
+                    onChangeText={(v) => {
+                      setContactForm((prev) => ({ ...prev, name: v }));
+                      if (contactErrors.name) {
+                        setContactErrors((prev) => ({ ...prev, name: undefined }));
+                      }
+                    }}
+                    error={contactErrors.name}
+                  />
+                  <Input
+                    label="Phone *"
+                    placeholder="(555) 123-4567"
+                    value={contactForm.phone || ''}
+                    onChangeText={(v) => {
+                      setContactForm((prev) => ({ ...prev, phone: v }));
+                      if (contactErrors.phone) {
+                        setContactErrors((prev) => ({ ...prev, phone: undefined }));
+                      }
+                    }}
+                    formatAsPhone
+                    error={contactErrors.phone}
+                  />
+                  <Input
+                    label="Email"
+                    placeholder="email@example.com"
+                    value={contactForm.email || ''}
+                    onChangeText={(v) => setContactForm((prev) => ({ ...prev, email: v }))}
+                    keyboardType="email-address"
+                  />
+                  <Select
+                    label="Contact Type"
+                    value={contactForm.contact_type || 'personal'}
+                    options={contactTypeOptions}
+                    onValueChange={(v) => setContactForm((prev) => ({ ...prev, contact_type: v as ContactType }))}
+                  />
+                  <Input
+                    label="Relationship"
+                    placeholder="e.g., Neighbor, Friend, Vet"
+                    value={contactForm.relationship || ''}
+                    onChangeText={(v) => setContactForm((prev) => ({ ...prev, relationship: v }))}
+                  />
+                  <View className="flex-row items-center mb-4">
+                    <Switch
+                      value={contactForm.is_primary || false}
+                      onValueChange={(v) => setContactForm((prev) => ({ ...prev, is_primary: v }))}
+                    />
+                    <Text className="ml-2 text-brown-600">Primary Contact</Text>
+                  </View>
+                  {contactForm.contact_type === 'neighbor' && (
+                    <View className="flex-row items-center mb-4">
+                      <Switch
+                        value={contactForm.has_key || false}
+                        onValueChange={(v) => setContactForm((prev) => ({ ...prev, has_key: v }))}
+                      />
+                      <Text className="ml-2 text-brown-600">Has a key to the house</Text>
+                    </View>
+                  )}
+                  <View className="flex-row gap-2">
+                    <Button title="Save" onPress={handleSaveContact} variant="primary" />
+                    <Button
+                      title="Cancel"
+                      onPress={() => {
+                        setShowContactForm(false);
+                        setContactForm({});
+                        setContactErrors({});
+                        setEditingContactId(null);
+                      }}
+                      variant="outline"
+                    />
+                  </View>
+                </View>
+              )}
+            </Card>
+
+            {/* Home Info */}
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
+                Home Information
+              </Text>
+
+              <Input
+                label="Address"
+                placeholder="123 Main Street, City, State"
+                value={formData.home_info.address || ''}
+                onChangeText={(v) => updateHomeInfo('address', v)}
+              />
+
+              <Input
+                label="WiFi Network"
+                placeholder="Network name"
+                value={formData.home_info.wifi_name || ''}
+                onChangeText={(v) => updateHomeInfo('wifi_name', v)}
+              />
+              <Input
+                label="WiFi Password"
+                placeholder="Password"
+                value={formData.home_info.wifi_password || ''}
+                onChangeText={(v) => updateHomeInfo('wifi_password', v)}
+              />
+
+              <Input
+                label="Door Code"
+                placeholder="Entry code"
+                value={formData.home_info.door_code || ''}
+                onChangeText={(v) => updateHomeInfo('door_code', v)}
+              />
+
+              <Input
+                label="Alarm Code"
+                placeholder="Alarm disarm code"
+                value={formData.home_info.alarm_code || ''}
+                onChangeText={(v) => updateHomeInfo('alarm_code', v)}
+              />
+
+              <Input
+                label="Garage Code"
+                placeholder="Garage code"
+                value={formData.home_info.garage_code || ''}
+                onChangeText={(v) => updateHomeInfo('garage_code', v)}
+              />
+              <Input
+                label="Gate Code"
+                placeholder="Gate code"
+                value={formData.home_info.gate_code || ''}
+                onChangeText={(v) => updateHomeInfo('gate_code', v)}
+              />
+              <Input
+                label="Mailbox Code"
+                placeholder="Mailbox code"
+                value={formData.home_info.mailbox_code || ''}
+                onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
+              />
+
+              <Input
+                label="Spare Key Location"
+                placeholder="e.g., Under the mat, With neighbor"
+                value={formData.home_info.spare_key_location || ''}
+                onChangeText={(v) => updateHomeInfo('spare_key_location', v)}
+              />
+
+              <Input
+                label="Trash Day"
+                placeholder="e.g., Tuesday"
+                value={formData.home_info.trash_day || ''}
+                onChangeText={(v) => updateHomeInfo('trash_day', v)}
+              />
+
+              <Input
+                label="Additional Notes"
+                placeholder="Any other home information"
+                value={formData.home_info.notes || ''}
+                onChangeText={(v) => updateHomeInfo('notes', v)}
+                multiline
+                numberOfLines={3}
+              />
+            </Card>
+
+            {/* Travel Itinerary */}
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
+                Travel Itinerary
+              </Text>
+              <TravelItineraryEditor
+                value={formData.travel_itinerary}
+                onChange={(v) => updateField('travel_itinerary', v)}
+              />
+            </Card>
+
+            {/* Additional Notes */}
+            <Card className="mb-4">
+              <Input
+                label="Additional Notes"
+                placeholder="Any other instructions for the pet sitter"
+                value={formData.additional_notes}
+                onChangeText={(v) => updateField('additional_notes', v)}
+                multiline
+                numberOfLines={4}
+              />
+            </Card>
+
+            {/* Submit Button - only show for new guides, edit mode uses auto-save */}
+            {!isEditing && (
+              <View className="mb-8">
+                <Button
+                  title="Create Guide"
+                  onPress={handleSubmit}
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
+                />
               </View>
             )}
-          </Card>
 
-          {/* Home Info */}
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-4">
-              Home Information
-            </Text>
-
-            <Input
-              label="Address"
-              placeholder="123 Main Street, City, State"
-              value={formData.home_info.address || ''}
-              onChangeText={(v) => updateHomeInfo('address', v)}
-            />
-
-            <Input
-              label="WiFi Network"
-              placeholder="Network name"
-              value={formData.home_info.wifi_name || ''}
-              onChangeText={(v) => updateHomeInfo('wifi_name', v)}
-            />
-            <Input
-              label="WiFi Password"
-              placeholder="Password"
-              value={formData.home_info.wifi_password || ''}
-              onChangeText={(v) => updateHomeInfo('wifi_password', v)}
-            />
-
-            <Input
-              label="Door Code"
-              placeholder="Entry code"
-              value={formData.home_info.door_code || ''}
-              onChangeText={(v) => updateHomeInfo('door_code', v)}
-            />
-
-            <Input
-              label="Alarm Code"
-              placeholder="Alarm disarm code"
-              value={formData.home_info.alarm_code || ''}
-              onChangeText={(v) => updateHomeInfo('alarm_code', v)}
-            />
-
-            <Input
-              label="Garage Code"
-              placeholder="Garage code"
-              value={formData.home_info.garage_code || ''}
-              onChangeText={(v) => updateHomeInfo('garage_code', v)}
-            />
-            <Input
-              label="Gate Code"
-              placeholder="Gate code"
-              value={formData.home_info.gate_code || ''}
-              onChangeText={(v) => updateHomeInfo('gate_code', v)}
-            />
-            <Input
-              label="Mailbox Code"
-              placeholder="Mailbox code"
-              value={formData.home_info.mailbox_code || ''}
-              onChangeText={(v) => updateHomeInfo('mailbox_code', v)}
-            />
-
-            <Input
-              label="Spare Key Location"
-              placeholder="e.g., Under the mat, With neighbor"
-              value={formData.home_info.spare_key_location || ''}
-              onChangeText={(v) => updateHomeInfo('spare_key_location', v)}
-            />
-
-            <Input
-              label="Trash Day"
-              placeholder="e.g., Tuesday"
-              value={formData.home_info.trash_day || ''}
-              onChangeText={(v) => updateHomeInfo('trash_day', v)}
-            />
-
-            <Input
-              label="Additional Notes"
-              placeholder="Any other home information"
-              value={formData.home_info.notes || ''}
-              onChangeText={(v) => updateHomeInfo('notes', v)}
-              multiline
-              numberOfLines={3}
-            />
-          </Card>
-
-          {/* Travel Itinerary */}
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-4">
-              Travel Itinerary
-            </Text>
-            <TravelItineraryEditor
-              value={formData.travel_itinerary}
-              onChange={(v) => updateField('travel_itinerary', v)}
-            />
-          </Card>
-
-          {/* Additional Notes */}
-          <Card className="mb-4">
-            <Input
-              label="Additional Notes"
-              placeholder="Any other instructions for the pet sitter"
-              value={formData.additional_notes}
-              onChangeText={(v) => updateField('additional_notes', v)}
-              multiline
-              numberOfLines={4}
-            />
-          </Card>
-
-          {/* Submit Button - only show for new guides, edit mode uses auto-save */}
-          {!isEditing && (
-            <View className="mb-8">
-              <Button
-                title="Create Guide"
-                onPress={handleSubmit}
-                loading={isSubmitting}
-                disabled={isSubmitting}
-              />
-            </View>
-          )}
-
-          {/* Spacer for edit mode */}
-          {isEditing && <View className="mb-8" />}
+            {/* Spacer for edit mode */}
+            {isEditing && <View className="mb-8" />}
+          </ScreenContainer>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

@@ -9,10 +9,11 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, Select } from '../components';
+import { Button, Card, Input, Select, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
@@ -410,6 +411,17 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
   // Delete custom task
   const handleDeleteTask = async (taskId: string) => {
+    const task = customTasks.find((t) => t.id === taskId);
+    const confirmed = await showConfirm({
+      title: 'Delete Task',
+      message: task
+        ? `Delete "${task.title}"? This cannot be undone.`
+        : 'Delete this task? This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
     const updatedTasks = customTasks.filter((t) => t.id !== taskId);
     await saveCustomTasks(updatedTasks);
   };
@@ -471,6 +483,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
       {/* Header */}
       <View className="bg-cream-50 border-b border-tan-200">
+        <ScreenContainer variant="content">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-2">
           <View className="flex-row items-center">
             <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
@@ -516,9 +529,11 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
             />
           </View>
         </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="content">
         {TIME_BLOCKS.map((block) => {
           const blockTasks = allTasks.filter((t) => t.time_block === block.id);
           if (blockTasks.length === 0) return null;
@@ -651,6 +666,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
             <Button title="+ Add Custom Task" onPress={handleAddTask} variant="primary" />
           </Card>
         )}
+        </ScreenContainer>
       </ScrollView>
 
       {/* Add/Edit Task Modal */}
@@ -661,7 +677,12 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         onRequestClose={() => setShowTaskModal(false)}
       >
         <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-cream-50 rounded-t-3xl p-6 max-h-[85%]">
+          {/* Width-capped inline (not via ScreenContainer): max-h-[85%] must stay
+              relative to the flex-1 overlay for the sheet to scroll correctly. */}
+          <View
+            className="bg-cream-50 rounded-t-3xl p-6 max-h-[85%] w-full self-center"
+            style={{ maxWidth: 520 }}
+          >
             <ScrollView showsVerticalScrollIndicator={false}>
               <View className="flex-row justify-between items-center mb-6">
                 <Text className="text-xl font-bold text-brown-800">

@@ -4,14 +4,14 @@ import {
   Text,
   ScrollView,
   Switch,
-  Alert,
   Platform,
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card } from '../components';
+import { Button, Input, Card, ScreenContainer } from '../components';
 import { useAuth, useData } from '../contexts';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 
@@ -88,27 +88,26 @@ export function SettingsScreen({ navigation }: Props) {
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = () => {
-        const performImport = async () => {
-          setIsImporting(true);
-          try {
-            const data = JSON.parse(String(reader.result));
-            await importData(data);
-            showAlert('Success', 'Backup imported successfully!');
-          } catch (error: any) {
-            showAlert('Import Failed', error?.message || 'Could not import the backup file.');
-          } finally {
-            setIsImporting(false);
-          }
-        };
-
-        if (
-          window.confirm(
+      reader.onload = async () => {
+        const confirmed = await showConfirm({
+          title: 'Replace All Data?',
+          message:
             'Importing a backup REPLACES all of your current data (pets, guides, and share links). ' +
-              'Share links stored in the backup keep working after the import. Continue?'
-          )
-        ) {
-          performImport();
+            'Share links stored in the backup keep working after the import.',
+          confirmLabel: 'Import & Replace',
+          destructive: true,
+        });
+        if (!confirmed) return;
+
+        setIsImporting(true);
+        try {
+          const data = JSON.parse(String(reader.result));
+          await importData(data);
+          showAlert('Success', 'Backup imported successfully!');
+        } catch (error: any) {
+          showAlert('Import Failed', error?.message || 'Could not import the backup file.');
+        } finally {
+          setIsImporting(false);
         }
       };
       reader.onerror = () => showAlert('Import Failed', 'Could not read the selected file.');
@@ -117,29 +116,22 @@ export function SettingsScreen({ navigation }: Props) {
     input.click();
   };
 
-  const handleClearData = () => {
-    const performClear = async () => {
-      try {
-        await clearAllData();
-        showAlert('Success', 'All data has been cleared.');
-      } catch (error: any) {
-        showAlert('Error', error.message || 'Failed to clear data');
-      }
-    };
+  const handleClearData = async () => {
+    const confirmed = await showConfirm({
+      title: 'Delete ALL Your Data?',
+      message:
+        'This permanently deletes every pet, every guide, and every share link in your account. ' +
+        'There is no undo — once deleted, your data cannot be recovered.',
+      confirmLabel: 'Delete Everything',
+      destructive: true,
+    });
+    if (!confirmed) return;
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete ALL your data? This cannot be undone!')) {
-        performClear();
-      }
-    } else {
-      Alert.alert(
-        'Clear All Data',
-        'Are you sure you want to delete ALL your data? This cannot be undone!',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete Everything', style: 'destructive', onPress: performClear },
-        ]
-      );
+    try {
+      await clearAllData();
+      showAlert('Success', 'All data has been cleared.');
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to clear data');
     }
   };
 
@@ -157,13 +149,16 @@ export function SettingsScreen({ navigation }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          <Text className="text-xl font-bold text-brown-800 ml-4">Settings</Text>
-        </View>
+        <ScreenContainer variant="form">
+          <View className="flex-row items-center">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Text className="text-xl font-bold text-brown-800 ml-4">Settings</Text>
+          </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+        <ScreenContainer variant="form">
         {/* Account */}
         <Card className="mb-4">
           <Text className="text-lg font-semibold text-brown-800 mb-4">Account</Text>
@@ -277,6 +272,7 @@ export function SettingsScreen({ navigation }: Props) {
         <View className="mt-4 mb-8">
           <Button title="Sign Out" onPress={handleSignOut} variant="secondary" />
         </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

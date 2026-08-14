@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, Select, SectionHeader, SensitiveValue } from '../components';
+import { Button, Card, Input, Select, SectionHeader, SensitiveValue, ScreenContainer } from '../components';
 import { showAlert } from '../lib/showAlert';
 import { useData } from '../contexts';
 import { generateId } from '../services';
@@ -238,16 +238,19 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-        </View>
-        <View className="mt-4">
-          <Text className="text-2xl font-bold text-brown-800">🏠 Home Care</Text>
-          <Text className="text-tan-500">{guide.title}</Text>
-        </View>
+        <ScreenContainer variant="form">
+          <View className="flex-row items-center">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          </View>
+          <View className="mt-4">
+            <Text className="text-2xl font-bold text-brown-800">🏠 Home Care</Text>
+            <Text className="text-tan-500">{guide.title}</Text>
+          </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="form">
         {/* Each SectionHeader keys off its form's visibility: SectionHeader keeps
             its expanded state internally, so remounting it when "+ Add" opens the
             form re-applies defaultExpanded and guarantees the new form is visible
@@ -463,6 +466,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
             />
           )}
         </SectionHeader>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

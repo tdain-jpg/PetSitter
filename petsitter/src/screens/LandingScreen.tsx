@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Image, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card } from '../components';
+import { Button, Card, ScreenContainer } from '../components';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/types';
@@ -92,18 +92,20 @@ export function LandingScreen({ navigation }: Props) {
       {/* Top nav bar for returning users */}
       <View
         style={{ backgroundColor: COLORS.primary }}
-        className="px-6 pt-3 pb-2 flex-row justify-end"
+        className="px-6 pt-3 pb-2"
       >
-        <Pressable
-          onPress={navigateToLogin}
-          accessibilityRole="button"
-          accessibilityLabel="Sign in to existing account"
-          className="px-3 py-1.5"
-        >
-          <Text style={{ color: COLORS.white }} className="text-base font-semibold">
-            Sign In
-          </Text>
-        </Pressable>
+        <ScreenContainer variant="content" className="flex-row justify-end">
+          <Pressable
+            onPress={navigateToLogin}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to existing account"
+            className="px-3 py-1.5"
+          >
+            <Text style={{ color: COLORS.white }} className="text-base font-semibold">
+              Sign In
+            </Text>
+          </Pressable>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1">
@@ -112,6 +114,7 @@ export function LandingScreen({ navigation }: Props) {
           style={{ backgroundColor: COLORS.primary }}
           className="px-6 pt-6 pb-12"
         >
+          <ScreenContainer variant="content">
           <View className="items-center">
             {/* Logo lockup — the two-color wordmark needs a light surface to read */}
             <View className="bg-cream-50 rounded-2xl px-5 pt-2 pb-4 mb-4 shadow-lg items-center">
@@ -139,35 +142,41 @@ export function LandingScreen({ navigation }: Props) {
               />
             </View>
           </View>
+          </ScreenContainer>
         </View>
 
         {/* Problem Statement */}
         <View className="px-6 py-8 bg-cream-50 border-b border-tan-200">
-          <Text className="text-2xl font-bold text-brown-800 text-center mb-4">
-            Stop worrying about your pets when you travel
-          </Text>
-          <Text className="text-tan-600 text-center leading-6">
-            No more scattered notes, forgotten instructions, or anxious phone calls.
-            Create one comprehensive guide that answers every question your pet sitter might have.
-          </Text>
+          <ScreenContainer variant="content">
+            <Text className="text-2xl font-bold text-brown-800 text-center mb-4">
+              Stop worrying about your pets when you travel
+            </Text>
+            <Text className="text-tan-600 text-center leading-6">
+              No more scattered notes, forgotten instructions, or anxious phone calls.
+              Create one comprehensive guide that answers every question your pet sitter might have.
+            </Text>
+          </ScreenContainer>
         </View>
 
         {/* Features Section */}
         <View className="px-4 py-8 bg-cream-200">
-          <Text className="text-2xl font-bold text-brown-800 text-center mb-2">
-            Everything You Need
-          </Text>
-          <Text className="text-tan-500 text-center mb-6">
-            Powerful features to make pet care simple
-          </Text>
+          <ScreenContainer variant="content">
+            <Text className="text-2xl font-bold text-brown-800 text-center mb-2">
+              Everything You Need
+            </Text>
+            <Text className="text-tan-500 text-center mb-6">
+              Powerful features to make pet care simple
+            </Text>
 
-          {features.map((feature) => (
-            <FeatureCard key={feature.title} {...feature} />
-          ))}
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
+            ))}
+          </ScreenContainer>
         </View>
 
         {/* How It Works */}
         <View className="px-6 py-8 bg-cream-50 border-y border-tan-200">
+          <ScreenContainer variant="content">
           <Text className="text-2xl font-bold text-brown-800 text-center mb-6">
             How It Works
           </Text>
@@ -212,19 +221,22 @@ export function LandingScreen({ navigation }: Props) {
               </View>
             </View>
           </View>
+          </ScreenContainer>
         </View>
 
         {/* Testimonial / Trust Section */}
         <View className="px-6 py-8 bg-cream-200">
-          <Card>
-            <View className="items-center py-4">
-              <Text className="text-5xl mb-4">💬</Text>
-              <Text className="text-lg text-brown-700 text-center italic mb-4">
-                "Finally, a way to give my pet sitter all the info they need without writing a novel!"
-              </Text>
-              <Text className="text-tan-500">- Happy Pet Parent</Text>
-            </View>
-          </Card>
+          <ScreenContainer variant="content">
+            <Card>
+              <View className="items-center py-4">
+                <Text className="text-5xl mb-4">💬</Text>
+                <Text className="text-lg text-brown-700 text-center italic mb-4">
+                  "Finally, a way to give my pet sitter all the info they need without writing a novel!"
+                </Text>
+                <Text className="text-tan-500">- Happy Pet Parent</Text>
+              </View>
+            </Card>
+          </ScreenContainer>
         </View>
 
         {/* CTA Section */}
@@ -232,6 +244,7 @@ export function LandingScreen({ navigation }: Props) {
           style={{ backgroundColor: COLORS.primary }}
           className="px-6 py-8"
         >
+          <ScreenContainer variant="content">
           <View className="items-center">
             <Text style={{ color: COLORS.cream }} className="text-2xl font-bold text-center mb-2">
               Ready to Travel with Peace of Mind?
@@ -259,16 +272,32 @@ export function LandingScreen({ navigation }: Props) {
               </Pressable>
             </View>
           </View>
+          </ScreenContainer>
         </View>
 
         {/* Footer */}
-        <View className="px-6 py-6 bg-cream-100 items-center">
-          <Text className="text-tan-500 text-sm">
-            © 2026 Pawstructions
-          </Text>
-          <Text className="text-tan-400 text-xs mt-1">
-            Made with love for pet parents everywhere
-          </Text>
+        <View className="px-6 py-6 bg-cream-100">
+          <ScreenContainer variant="content" className="items-center">
+            <View className="flex-row items-center">
+              <Text className="text-tan-500 text-sm">
+                © 2026 Pawstructions
+              </Text>
+              <Text className="text-tan-400 text-sm mx-2">·</Text>
+              <Pressable
+                onPress={() => (navigation as any).navigate('Install')}
+                accessibilityRole="button"
+                accessibilityLabel="How to install the app"
+                hitSlop={8}
+              >
+                <Text className="text-primary-600 text-sm font-semibold">
+                  Install the app
+                </Text>
+              </Pressable>
+            </View>
+            <Text className="text-tan-400 text-xs mt-1">
+              Made with love for pet parents everywhere
+            </Text>
+          </ScreenContainer>
         </View>
       </ScrollView>
     </View>

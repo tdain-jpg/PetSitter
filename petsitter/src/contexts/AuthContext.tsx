@@ -8,11 +8,17 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  /** True after the user lands from a password-recovery email link.
+   * RootNavigator renders ResetPasswordScreen while this is set. */
+  isPasswordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -35,6 +41,7 @@ function sessionToUser(session: Session | null): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -57,9 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
     // Subscribe to auth state changes (sign-in, sign-out, token refresh, OAuth callback)
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       setUser(sessionToUser(session));
+      if (event === 'PASSWORD_RECOVERY') {
+        // The user arrived from a reset-password email link. Flag it so the
+        // navigator can show the reset screen instead of the normal app.
+        setIsPasswordRecovery(true);
+      } else if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+      }
     });
 
     return () => {
@@ -120,6 +134,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
+    setIsPasswordRecovery(false);
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
+    });
+    if (error) throw new Error(error.message);
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+  };
+
+  const clearPasswordRecovery = () => {
+    setIsPasswordRecovery(false);
   };
 
   return (
@@ -128,11 +159,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        isPasswordRecovery,
         signIn,
         signUp,
         signInWithGoogle,
         signInWithMagicLink,
         signOut,
+        requestPasswordReset,
+        updatePassword,
+        clearPasswordRecovery,
       }}
     >
       {children}

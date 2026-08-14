@@ -6,9 +6,10 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, ScreenHeader } from '../components';
+import { Button, Card, Input, ScreenHeader, ScreenContainer } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import { formatDate, isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -127,12 +128,35 @@ export function TripWizardScreen({ navigation }: Props) {
     }
   };
 
+  // True once the user has entered anything the exit confirm should protect.
+  const hasProgress =
+    step !== 'pets' ||
+    selectedPetIds.length > 0 ||
+    tripTitle.trim() !== '' ||
+    trimmedStartDate !== '' ||
+    trimmedEndDate !== '' ||
+    schedule.special_instructions.trim() !== '';
+
+  const handleExit = async () => {
+    if (hasProgress) {
+      const confirmed = await showConfirm({
+        title: 'Cancel Trip Setup?',
+        message: 'Your trip details will be discarded.',
+        confirmLabel: 'Discard Trip',
+        cancelLabel: 'Keep Editing',
+        destructive: true,
+      });
+      if (!confirmed) return;
+    }
+    navigation.goBack();
+  };
+
   const goBack = () => {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
       setStep(steps[prevIndex].key);
     } else {
-      navigation.goBack();
+      handleExit();
     }
   };
 
@@ -515,15 +539,18 @@ export function TripWizardScreen({ navigation }: Props) {
       <ScreenHeader
         title="Quick Trip Setup"
         backLabel="Cancel"
-        onBack={() => navigation.goBack()}
+        onBack={handleExit}
       />
 
       {renderStepIndicator()}
 
-      <ScrollView className="flex-1 p-4">{renderContent()}</ScrollView>
+      <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="form">{renderContent()}</ScreenContainer>
+      </ScrollView>
 
       {/* Navigation Buttons */}
       <View className="p-4 bg-cream-50 border-t border-tan-200">
+        <ScreenContainer variant="form">
         <View className="flex-row gap-3">
           <View className="flex-1">
             <Button
@@ -549,6 +576,7 @@ export function TripWizardScreen({ navigation }: Props) {
             )}
           </View>
         </View>
+        </ScreenContainer>
       </View>
     </View>
   );

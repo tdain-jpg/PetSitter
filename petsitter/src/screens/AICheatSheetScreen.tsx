@@ -5,14 +5,14 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card } from '../components';
+import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { generateCheatSheet } from '../services/AIService';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, CheatSheet } from '../types';
@@ -61,15 +61,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     );
 
     if (!settings?.gemini_api_key) {
-      const message = 'Please add your Gemini API key in Settings first.';
-      if (Platform.OS === 'web') {
-        window.alert(message);
+      const goToSettings = await showConfirm({
+        title: 'API Key Required',
+        message: 'Please add your Gemini API key in Settings first.',
+        confirmLabel: 'Go to Settings',
+      });
+      if (goToSettings) {
         (navigation as any).navigate('Settings');
-      } else {
-        Alert.alert('API Key Required', message, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Go to Settings', onPress: () => (navigation as any).navigate('Settings') },
-        ]);
       }
       return;
     }
@@ -190,19 +188,22 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center justify-between">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          {cheatSheet && (
-            <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
-          )}
-        </View>
-        <View className="mt-4">
-          <Text className="text-2xl font-bold text-brown-800">🤖 AI Cheat Sheet</Text>
-          <Text className="text-tan-500">{guide.title}</Text>
-        </View>
+        <ScreenContainer variant="content">
+          <View className="flex-row items-center justify-between">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            {cheatSheet && (
+              <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
+            )}
+          </View>
+          <View className="mt-4">
+            <Text className="text-2xl font-bold text-brown-800">🤖 AI Cheat Sheet</Text>
+            <Text className="text-tan-500">{guide.title}</Text>
+          </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="content">
         {!cheatSheet ? (
           <Card className="items-center py-8">
             <Text className="text-5xl mb-4">🤖</Text>
@@ -261,6 +262,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
             </View>
           </>
         )}
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

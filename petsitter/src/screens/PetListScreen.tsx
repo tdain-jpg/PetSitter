@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, PetCard, ScreenHeader } from '../components';
+import { Button, Card, PetCard, ScreenHeader, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -38,42 +38,48 @@ export function PetListScreen({ navigation }: Props) {
         showHome={false}
       />
 
-      <View className="flex-row justify-between items-center px-4 pt-4">
-        <Text className="text-tan-500">
-          {activePets.length} {activePets.length === 1 ? 'pet' : 'pets'}
-        </Text>
-        <Button
-          title="+ Add Pet"
-          onPress={handleAddPet}
-          variant="primary"
-        />
-      </View>
-
-      <ScrollView className="flex-1 p-4">
-        {activePets.length === 0 ? (
-          <Card className="items-center py-8">
-            <Text className="text-5xl mb-4">🐾</Text>
-            <Text className="text-xl font-semibold text-brown-800 mb-2">
-              No pets yet
-            </Text>
-            <Text className="text-tan-500 text-center mb-6">
-              Add your first pet to get started creating care guides.
+      <View className="px-4 pt-4">
+        <ScreenContainer variant="wide">
+          <View className="flex-row justify-between items-center">
+            <Text className="text-tan-500">
+              {activePets.length} {activePets.length === 1 ? 'pet' : 'pets'}
             </Text>
             <Button
-              title="Add Your First Pet"
+              title="+ Add Pet"
               onPress={handleAddPet}
               variant="primary"
             />
-          </Card>
-        ) : (
-          activePets.map((pet) => (
-            <PetCard
-              key={pet.id}
-              pet={pet}
-              onPress={() => handlePetPress(pet.id)}
-            />
-          ))
-        )}
+          </View>
+        </ScreenContainer>
+      </View>
+
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+        <ScreenContainer variant="wide">
+          {activePets.length === 0 ? (
+            <Card className="items-center py-8">
+              <Text className="text-5xl mb-4">🐾</Text>
+              <Text className="text-xl font-semibold text-brown-800 mb-2">
+                No pets yet
+              </Text>
+              <Text className="text-tan-500 text-center mb-6">
+                Add your first pet to get started creating care guides.
+              </Text>
+              <Button
+                title="Add Your First Pet"
+                onPress={handleAddPet}
+                variant="primary"
+              />
+            </Card>
+          ) : (
+            activePets.map((pet) => (
+              <PetCard
+                key={pet.id}
+                pet={pet}
+                onPress={() => handlePetPress(pet.id)}
+              />
+            ))
+          )}
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

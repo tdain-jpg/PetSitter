@@ -7,9 +7,9 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
-  Alert,
 } from 'react-native';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import { StatusBar } from 'expo-status-bar';
 import {
   Button,
@@ -21,6 +21,7 @@ import {
   SymptomCheckerEditor,
   Card,
   ScreenHeader,
+  ScreenContainer,
   SaveStatusIndicator,
 } from '../components';
 import { useAutoSave } from '../hooks';
@@ -172,6 +173,9 @@ export function PetFormScreen({ navigation, route }: Props) {
   // A setState from the success path lands too late for a listener that fires
   // in the same tick, so the guards always consult the ref.
   const isDirtyRef = useRef(false);
+  // Re-entry guard: showConfirm is async, so a second back press while the
+  // discard dialog is open would queue a duplicate and double-dispatch.
+  const promptingRef = useRef(false);
   // Tracks which pet has been hydrated into the form, so context updates
   // (e.g. auto-save round-trips) never re-hydrate and clobber typing
   const loadedPetIdRef = useRef<string | null>(null);
@@ -375,25 +379,24 @@ export function PetFormScreen({ navigation, route }: Props) {
     if (!guardUnsavedChanges) return;
     return navigation.addListener('beforeRemove', (e) => {
       if (!isDirtyRef.current) return;
+      // The listener must stay synchronous: block the navigation first, then
+      // let the async confirm re-dispatch the action if the user discards.
       e.preventDefault();
-      const discard = () => {
-        clearDirty();
-        navigation.dispatch(e.data.action);
-      };
-      if (Platform.OS === 'web') {
-        if (window.confirm('Discard this pet? Your unsaved changes will be lost.')) {
-          discard();
+      if (promptingRef.current) return; // a discard prompt is already open
+      promptingRef.current = true;
+      showConfirm({
+        title: 'Discard Pet?',
+        message: 'Your unsaved changes will be lost.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep Editing',
+        destructive: true,
+      }).then((ok) => {
+        promptingRef.current = false;
+        if (ok) {
+          clearDirty();
+          navigation.dispatch(e.data.action);
         }
-      } else {
-        Alert.alert(
-          'Discard Pet',
-          'Your unsaved changes will be lost.',
-          [
-            { text: 'Keep Editing', style: 'cancel' },
-            { text: 'Discard', style: 'destructive', onPress: discard },
-          ]
-        );
-      }
+      });
     });
   }, [navigation, guardUnsavedChanges, clearDirty]);
 
@@ -489,11 +492,13 @@ export function PetFormScreen({ navigation, route }: Props) {
         {/* Auto-save status indicator for edit mode */}
         {isEditing && (
           <View className="px-4 py-2 bg-cream-50 border-b border-tan-200">
-            <SaveStatusIndicator
-              status={saveStatus}
-              lastSaved={lastSaved}
-              error={saveError}
-            />
+            <ScreenContainer variant="form">
+              <SaveStatusIndicator
+                status={saveStatus}
+                lastSaved={lastSaved}
+                error={saveError}
+              />
+            </ScreenContainer>
           </View>
         )}
 
@@ -502,6 +507,7 @@ export function PetFormScreen({ navigation, route }: Props) {
           contentContainerStyle={{ padding: 16 }}
           keyboardShouldPersistTaps="handled"
         >
+          <ScreenContainer variant="form">
           {/* Photo */}
           <Card className="mb-4">
             <PhotoPicker
@@ -841,6 +847,7 @@ export function PetFormScreen({ navigation, route }: Props) {
 
           {/* Spacer for edit mode */}
           {isEditing && <View className="mb-8" />}
+          </ScreenContainer>
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

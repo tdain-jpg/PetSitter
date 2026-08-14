@@ -1,7 +1,8 @@
-import { View, Text, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert } from '../lib/showAlert';
-import { Button, Card } from '../components';
+import { showConfirm } from '../lib/dialogs';
+import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -12,52 +13,33 @@ export function MemorialScreen({ navigation }: Props) {
   const { deceasedPets, restorePet, deletePet } = useData();
 
   const handleRestore = async (petId: string, petName: string) => {
-    const performRestore = async () => {
-      try {
-        await restorePet(petId);
-      } catch (error: any) {
-        showAlert('Error', error.message || `Failed to restore ${petName}`);
-      }
-    };
+    const confirmed = await showConfirm({
+      title: 'Restore Pet',
+      message: `Restore ${petName} to active pets?`,
+      confirmLabel: 'Restore',
+    });
+    if (!confirmed) return;
 
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Restore ${petName} to active pets?`)) {
-        performRestore();
-      }
-    } else {
-      Alert.alert(
-        'Restore Pet',
-        `Restore ${petName} to active pets?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Restore', onPress: performRestore },
-        ]
-      );
+    try {
+      await restorePet(petId);
+    } catch (error: any) {
+      showAlert('Error', error.message || `Failed to restore ${petName}`);
     }
   };
 
   const handleDelete = async (petId: string, petName: string) => {
-    const performDelete = async () => {
-      try {
-        await deletePet(petId);
-      } catch (error: any) {
-        showAlert('Error', error.message || `Failed to delete ${petName}`);
-      }
-    };
+    const confirmed = await showConfirm({
+      title: 'Delete Pet',
+      message: `Permanently delete ${petName}? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) return;
 
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Permanently delete ${petName}? This cannot be undone.`)) {
-        performDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Pet',
-        `Permanently delete ${petName}? This cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: performDelete },
-        ]
-      );
+    try {
+      await deletePet(petId);
+    } catch (error: any) {
+      showAlert('Error', error.message || `Failed to delete ${petName}`);
     }
   };
 
@@ -67,18 +49,21 @@ export function MemorialScreen({ navigation }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-        </View>
-        <View className="mt-4">
-          <Text className="text-2xl font-bold text-brown-800">Pet Memorial</Text>
-          <Text className="text-tan-500">
-            Remembering our beloved companions
-          </Text>
-        </View>
+        <ScreenContainer variant="content">
+          <View className="flex-row items-center">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          </View>
+          <View className="mt-4">
+            <Text className="text-2xl font-bold text-brown-800">Pet Memorial</Text>
+            <Text className="text-tan-500">
+              Remembering our beloved companions
+            </Text>
+          </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="content">
         {deceasedPets.length === 0 ? (
           <Card className="items-center py-8">
             <Text className="text-5xl mb-4">🌈</Text>
@@ -134,6 +119,7 @@ export function MemorialScreen({ navigation }: Props) {
             </View>
           ))
         )}
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

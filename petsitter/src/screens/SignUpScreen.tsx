@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, Pressable, ScrollView, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input } from '../components';
+import { Button, Input, ScreenContainer } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { isValidEmail } from '../utils';
@@ -105,109 +105,111 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-1 px-6 pt-2 pb-8 bg-cream-200">
-          {/* Logo */}
-          <View className="items-center mb-2">
-            <Image
-              source={logo}
-              style={{ width: 270, height: 270 }}
-              resizeMode="contain"
-            />
-          </View>
+          <ScreenContainer variant="form">
+            {/* Logo */}
+            <View className="items-center mb-2">
+              <Image
+                source={logo}
+                style={{ width: 270, height: 270 }}
+                resizeMode="contain"
+              />
+            </View>
 
-          {/* Header */}
-          <View className="mb-8 items-center">
-            <Image
-              source={wordmark}
-              style={{ width: 250, height: 51 }}
-              resizeMode="contain"
-              accessibilityLabel="Pawstructions"
-            />
-            <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
-              Where Pets Rule the Kingdom!
-            </Text>
-            <Text style={{ fontSize: 14, color: COLORS.tan, marginTop: 16, textAlign: 'center' }}>
-              Create an account to get started
-            </Text>
-          </View>
-
-          {/* Form */}
-          <View className="mb-6">
-            <Input
-              label="Email"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              error={errors.email}
-            />
-
-            <Input
-              label="Password"
-              placeholder="Create a password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              error={errors.password}
-            />
-
-            <Input
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              error={errors.confirmPassword}
-            />
-          </View>
-
-          {/* Sign Up Button */}
-          <Button
-            title="Create Account"
-            onPress={handleSignUp}
-            loading={isSubmitting}
-            disabled={isSubmitting}
-          />
-
-          {/* Confirmation-pending state (no session yet — email verification required) */}
-          {confirmationSentTo && (
-            <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
-              <Text className="text-primary-700 text-sm text-center">
-                ✉️ Check your email to verify your account — then sign in.
+            {/* Header */}
+            <View className="mb-8 items-center">
+              <Image
+                source={wordmark}
+                style={{ width: 250, height: 51 }}
+                resizeMode="contain"
+                accessibilityLabel="Pawstructions"
+              />
+              <Text style={{ fontSize: 16, color: COLORS.primary, fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
+                Where Pets Rule the Kingdom!
               </Text>
-              <Text className="text-primary-700 text-sm text-center font-semibold mt-1">
-                {confirmationSentTo}
+              <Text style={{ fontSize: 14, color: COLORS.tan, marginTop: 16, textAlign: 'center' }}>
+                Create an account to get started
               </Text>
             </View>
-          )}
 
-          {/* Divider */}
-          <View className="flex-row items-center my-6">
-            <View className="flex-1 h-px bg-tan-300" />
-            <Text className="mx-3 text-tan-500 text-sm">or</Text>
-            <View className="flex-1 h-px bg-tan-300" />
-          </View>
+            {/* Form */}
+            <View className="mb-6">
+              <Input
+                label="Email"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={errors.email}
+              />
 
-          {/* Google Sign-Up */}
-          <Button
-            title="Continue with Google"
-            onPress={handleGoogle}
-            variant="outline"
-            disabled={isSubmitting}
-          />
+              <Input
+                label="Password"
+                placeholder="Create a password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                error={errors.password}
+              />
 
-          {/* Login Link */}
-          <View className="flex-row justify-center mt-6">
-            <Text className="text-tan-600">Already have an account? </Text>
-            <Pressable
-              onPress={() => navigation.navigate('Login')}
-              accessibilityRole="link"
-              accessibilityLabel="Sign in to your existing account"
-              hitSlop={12}
-            >
-              <Text className="text-primary-600 font-semibold">Sign In</Text>
-            </Pressable>
-          </View>
+              <Input
+                label="Confirm Password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                error={errors.confirmPassword}
+              />
+            </View>
+
+            {/* Sign Up Button */}
+            <Button
+              title="Create Account"
+              onPress={handleSignUp}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+            />
+
+            {/* Confirmation-pending state (no session yet — email verification required) */}
+            {confirmationSentTo && (
+              <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
+                <Text className="text-primary-700 text-sm text-center">
+                  ✉️ Check your email to verify your account — then sign in.
+                </Text>
+                <Text className="text-primary-700 text-sm text-center font-semibold mt-1">
+                  {confirmationSentTo}
+                </Text>
+              </View>
+            )}
+
+            {/* Divider */}
+            <View className="flex-row items-center my-6">
+              <View className="flex-1 h-px bg-tan-300" />
+              <Text className="mx-3 text-tan-500 text-sm">or</Text>
+              <View className="flex-1 h-px bg-tan-300" />
+            </View>
+
+            {/* Google Sign-Up */}
+            <Button
+              title="Continue with Google"
+              onPress={handleGoogle}
+              variant="outline"
+              disabled={isSubmitting}
+            />
+
+            {/* Login Link */}
+            <View className="flex-row justify-center mt-6">
+              <Text className="text-tan-600">Already have an account? </Text>
+              <Pressable
+                onPress={() => navigation.navigate('Login')}
+                accessibilityRole="link"
+                accessibilityLabel="Sign in to your existing account"
+                hitSlop={12}
+              >
+                <Text className="text-primary-600 font-semibold">Sign In</Text>
+              </Pressable>
+            </View>
+          </ScreenContainer>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

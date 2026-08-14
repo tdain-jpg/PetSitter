@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, DataProvider } from './src/contexts';
 import { RootNavigator } from './src/navigation';
+import { ModalHost } from './src/components/AppModal';
 
 const linking = {
   // Native deep links (pawstructions://) + web origin (https://your-domain)
@@ -14,6 +15,8 @@ const linking = {
     screens: {
       // Public share route — works whether the viewer is signed in or not
       SharedGuideView: 'share/:code',
+      // PWA install instructions — public, reachable signed in or out
+      Install: 'install',
     },
   },
 };
@@ -36,6 +39,7 @@ export default function App() {
           </NavigationContainer>
         </DataProvider>
       </AuthProvider>
+      <ModalHost />
     </SafeAreaProvider>
   );
 }

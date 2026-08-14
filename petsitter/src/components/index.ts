@@ -10,6 +10,7 @@ export { GuideCard } from './GuideCard';
 export { SectionHeader } from './SectionHeader';
 export { ContactCard } from './ContactCard';
 export { ScreenHeader } from './ScreenHeader';
+export { ScreenContainer } from './ScreenContainer';
 export { SaveStatusIndicator } from './SaveStatusIndicator';
 export { SymptomCheckerEditor } from './SymptomCheckerEditor';
 export { TravelItineraryEditor } from './TravelItineraryEditor';

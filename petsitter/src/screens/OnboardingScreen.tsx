@@ -5,12 +5,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Select, Card } from '../components';
+import { Button, Input, Select, Card, ScreenContainer } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PetSpecies, OnboardingStep } from '../types';
@@ -237,24 +237,18 @@ export function OnboardingScreen({ navigation }: Props) {
   };
 
   const handleSkip = async () => {
-    const confirmSkip = async () => {
+    const confirmed = await showConfirm({
+      title: 'Skip Onboarding?',
+      message: 'You can add pets and guides later from the main menu.',
+      confirmLabel: 'Skip',
+    });
+    if (!confirmed) return;
+
+    try {
       await completeOnboarding();
       navigation.replace('Home');
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Skip onboarding? You can add pets and guides later from the main menu.')) {
-        confirmSkip();
-      }
-    } else {
-      Alert.alert(
-        'Skip Onboarding?',
-        'You can add pets and guides later from the main menu.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Skip', onPress: confirmSkip },
-        ]
-      );
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to complete onboarding');
     }
   };
 
@@ -264,33 +258,36 @@ export function OnboardingScreen({ navigation }: Props) {
       case 'welcome':
         return (
           <View className="flex-1 justify-center items-center px-8">
-            <View className="w-24 h-24 bg-secondary-100 rounded-full items-center justify-center mb-6">
-              <Text className="text-5xl">🐾</Text>
-            </View>
-            <Text className="text-3xl font-bold text-brown-800 text-center mb-4">
-              Welcome to Pawstructions!
-            </Text>
-            <Text className="text-lg text-tan-600 text-center mb-8">
-              Create comprehensive pet care guides for your pet sitters. Let's get started by setting up your first pet and guide.
-            </Text>
-            <View className="w-full gap-3">
-              <Button
-                title="Get Started"
-                onPress={() => goToStep('create_pet')}
-                variant="primary"
-              />
-              <Button
-                title="Skip for Now"
-                onPress={handleSkip}
-                variant="outline"
-              />
-            </View>
+            <ScreenContainer variant="form" className="items-center">
+              <View className="w-24 h-24 bg-secondary-100 rounded-full items-center justify-center mb-6">
+                <Text className="text-5xl">🐾</Text>
+              </View>
+              <Text className="text-3xl font-bold text-brown-800 text-center mb-4">
+                Welcome to Pawstructions!
+              </Text>
+              <Text className="text-lg text-tan-600 text-center mb-8">
+                Create comprehensive pet care guides for your pet sitters. Let's get started by setting up your first pet and guide.
+              </Text>
+              <View className="w-full gap-3">
+                <Button
+                  title="Get Started"
+                  onPress={() => goToStep('create_pet')}
+                  variant="primary"
+                />
+                <Button
+                  title="Skip for Now"
+                  onPress={handleSkip}
+                  variant="outline"
+                />
+              </View>
+            </ScreenContainer>
           </View>
         );
 
       case 'create_pet':
         return (
           <ScrollView className="flex-1 p-4" keyboardShouldPersistTaps="handled">
+            <ScreenContainer variant="form">
             <View className="items-center mb-6">
               <View className="w-20 h-20 bg-primary-100 rounded-full items-center justify-center mb-4">
                 <Text className="text-4xl">🐕</Text>
@@ -356,14 +353,16 @@ export function OnboardingScreen({ navigation }: Props) {
                 disabled={isSubmitting}
               />
             </View>
+            </ScreenContainer>
           </ScrollView>
         );
 
       case 'create_guide':
         return (
           <ScrollView className="flex-1 p-4" keyboardShouldPersistTaps="handled">
+            <ScreenContainer variant="form">
             <View className="items-center mb-6">
-              <View className="w-20 h-20 bg-purple-100 rounded-full items-center justify-center mb-4">
+              <View className="w-20 h-20 bg-secondary-100 rounded-full items-center justify-center mb-4">
                 <Text className="text-4xl">📋</Text>
               </View>
               <Text className="text-2xl font-bold text-brown-800 text-center">
@@ -439,12 +438,14 @@ export function OnboardingScreen({ navigation }: Props) {
                 disabled={isSubmitting}
               />
             </View>
+            </ScreenContainer>
           </ScrollView>
         );
 
       case 'completion':
         return (
           <View className="flex-1 justify-center items-center px-8">
+            <ScreenContainer variant="form" className="items-center">
             <View className="w-24 h-24 bg-primary-100 rounded-full items-center justify-center mb-6">
               <Text className="text-5xl">🎉</Text>
             </View>
@@ -495,6 +496,7 @@ export function OnboardingScreen({ navigation }: Props) {
                 />
               )}
             </View>
+            </ScreenContainer>
           </View>
         );
 
@@ -513,6 +515,7 @@ export function OnboardingScreen({ navigation }: Props) {
 
         {/* Header with Progress */}
         <View className="bg-cream-50 border-b border-tan-200 pt-12 pb-4">
+          <ScreenContainer variant="form">
           <Text className="text-center text-lg font-semibold text-brown-800 mb-2">
             Setup Wizard
           </Text>
@@ -537,6 +540,7 @@ export function OnboardingScreen({ navigation }: Props) {
               Step {currentStepIndex + 1} of {STEPS.length}
             </Text>
           </View>
+          </ScreenContainer>
         </View>
 
         {/* Step Content */}

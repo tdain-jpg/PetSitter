@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { showAlert } from '../lib/showAlert';
+import { showAlert, showConfirm } from '../lib/dialogs';
 import { todayLocal } from '../lib/dates';
-import { Button, Card } from '../components';
+import { Button, SectionHeader, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,6 +23,39 @@ const speciesEmoji: Record<string, string> = {
   other: '🐾',
 };
 
+/** Label/value row matching the GuideDetail/SharedGuideView style. */
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-row">
+      <Text className="text-tan-500 w-28">{label}:</Text>
+      <Text className="text-brown-800 flex-1">{value}</Text>
+    </View>
+  );
+}
+
+/** Label row with a tappable phone number, dialing like ContactCard does. */
+function PhoneRow({ label, phone }: { label: string; phone: string }) {
+  return (
+    <View className="flex-row">
+      <Text className="text-tan-500 w-28">{label}:</Text>
+      <Pressable
+        onPress={() => Linking.openURL(`tel:${phone}`)}
+        accessibilityRole="button"
+        accessibilityLabel={`Call ${label} at ${phone}`}
+        className="flex-1"
+      >
+        <Text className="text-secondary-600">📞 {phone}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function titleCase(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function PetDetailScreen({ navigation, route }: Props) {
   const { petId } = route.params;
   const { activePets, deceasedPets, deletePet, markPetDeceased, restorePet } = useData();
@@ -41,57 +74,38 @@ export function PetDetailScreen({ navigation, route }: Props) {
     (navigation as any).navigate('PetForm', { mode: 'edit', petId });
   };
 
-  const handleDelete = () => {
-    const confirmDelete = async () => {
-      try {
-        await deletePet(petId);
-        navigation.goBack();
-      } catch (error: any) {
-        showAlert('Error', error.message || 'Failed to delete pet');
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete ${pet?.name}? This cannot be undone.`)) {
-        confirmDelete();
-      }
-    } else {
-      Alert.alert(
-        'Delete Pet',
-        `Are you sure you want to delete ${pet?.name}? This cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: confirmDelete },
-        ]
-      );
+  const handleDelete = async () => {
+    if (!pet) return;
+    const ok = await showConfirm({
+      title: `Delete ${pet.name}?`,
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await deletePet(petId);
+      navigation.goBack();
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to delete pet');
     }
   };
 
-  const handleMemorial = () => {
-    const confirmMemorial = async () => {
-      // Local calendar day — toISOString() would stamp tomorrow's date for a
-      // user behind UTC late in the evening.
-      const today = todayLocal();
-      try {
-        await markPetDeceased(petId, today);
-      } catch (error: any) {
-        showAlert('Error', error.message || 'Failed to move pet to memorial');
-      }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Move ${pet?.name} to memorial? You can restore them later.`)) {
-        confirmMemorial();
-      }
-    } else {
-      Alert.alert(
-        'Move to Memorial',
-        `Move ${pet?.name} to memorial? You can restore them later.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Move', onPress: confirmMemorial },
-        ]
-      );
+  const handleMemorial = async () => {
+    if (!pet) return;
+    const ok = await showConfirm({
+      title: 'Move to Memorial',
+      message: `Move ${pet.name} to memorial? You can restore them later.`,
+      confirmLabel: 'Move',
+    });
+    if (!ok) return;
+    // Local calendar day — toISOString() would stamp tomorrow's date for a
+    // user behind UTC late in the evening.
+    const today = todayLocal();
+    try {
+      await markPetDeceased(petId, today);
+    } catch (error: any) {
+      showAlert('Error', error.message || 'Failed to move pet to memorial');
     }
   };
 
@@ -114,7 +128,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
   if (!pet) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
-        <Text className="text-xl text-tan-500">Pet not found</Text>
+        <Text className="text-xl text-tan-500 mb-4">Pet not found</Text>
         <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
       </View>
     );
@@ -122,337 +136,327 @@ export function PetDetailScreen({ navigation, route }: Props) {
 
   const emoji = speciesEmoji[pet.species] || '🐾';
 
+  // Section gating — only render sections that actually have content.
+  const hasBasics = !!(
+    (pet.sex && pet.sex !== 'unknown') ||
+    pet.is_neutered ||
+    pet.weight ||
+    pet.color_markings ||
+    pet.nicknames
+  );
+  const hasIdentification = !!(pet.microchip_id || pet.license_tag);
+  const personality = pet.personality;
+  const hasPersonality =
+    !!personality && Object.values(personality).some((v) => !!v);
+  const hasHealthVet = !!(pet.vet_info || pet.medical_notes);
+  const enabledSymptoms =
+    pet.health_protocol?.symptoms.filter((s) => s.is_enabled) ?? [];
+  const hasHealthProtocol = !!(
+    pet.health_protocol &&
+    (enabledSymptoms.length > 0 ||
+      pet.health_protocol.general_notes ||
+      pet.health_protocol.vet_call_threshold)
+  );
+  const hasNotes = !!(pet.behavioral_notes || pet.special_instructions);
+
   return (
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
       {/* Header */}
       <View className="bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
-        </View>
+        <ScreenContainer variant="content">
+          <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
+          </View>
 
-        {/* Pet Header */}
-        <View className="items-center pb-6">
-          {pet.photo_url ? (
-            <Image
-              source={{ uri: pet.photo_url }}
-              className="w-28 h-28 rounded-full"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-28 h-28 rounded-full bg-tan-100 items-center justify-center">
-              <Text className="text-5xl">{emoji}</Text>
-            </View>
-          )}
-          <Text className="text-2xl font-bold text-brown-800 mt-4">{pet.name}</Text>
-          {pet.nicknames && (
-            <Text className="text-tan-400 text-sm">"{pet.nicknames}"</Text>
-          )}
-          <Text className="text-tan-500 capitalize">
-            {pet.breed || pet.species}
-            {pet.sex && pet.sex !== 'unknown' && ` • ${pet.sex === 'male' ? 'Male' : 'Female'}`}
-            {pet.is_neutered && ' (Fixed)'}
-            {pet.age && ` • ${pet.age} ${pet.age === 1 ? 'year' : 'years'} old`}
-          </Text>
-          {pet.status === 'deceased' && (
-            <View className="bg-tan-100 px-3 py-1 rounded-full mt-2">
-              <Text className="text-tan-500 text-sm">In Memorial</Text>
-            </View>
-          )}
-        </View>
+          {/* Pet identity */}
+          <View className="items-center pb-6">
+            {pet.photo_url ? (
+              <Image
+                source={{ uri: pet.photo_url }}
+                className="w-28 h-28 rounded-full"
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-28 h-28 rounded-full bg-tan-100 items-center justify-center">
+                <Text className="text-5xl">{emoji}</Text>
+              </View>
+            )}
+            <Text className="text-2xl font-bold text-brown-800 mt-4">{pet.name}</Text>
+            {pet.nicknames && (
+              <Text className="text-tan-400 text-sm">"{pet.nicknames}"</Text>
+            )}
+            <Text className="text-tan-500 capitalize">
+              {pet.breed || pet.species}
+              {pet.age != null && ` • ${pet.age} ${pet.age === 1 ? 'year' : 'years'} old`}
+            </Text>
+            {pet.status === 'deceased' && (
+              <View className="bg-tan-100 px-3 py-1 rounded-full mt-2">
+                <Text className="text-tan-500 text-sm">In Memorial</Text>
+              </View>
+            )}
+          </View>
+        </ScreenContainer>
       </View>
 
-      <ScrollView className="flex-1 p-4">
-        {/* Basic Info */}
-        {(pet.weight || pet.color_markings || pet.vet_info) && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">Basic Info</Text>
-            {pet.weight && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-24">Weight:</Text>
-                <Text className="text-brown-800">
-                  {pet.weight} {pet.weight_unit || 'lbs'}
-                </Text>
-              </View>
-            )}
-            {pet.color_markings && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-24">Color:</Text>
-                <Text className="text-brown-800">{pet.color_markings}</Text>
-              </View>
-            )}
-            {pet.vet_info && (
-              <>
-                <View className="flex-row mb-2">
-                  <Text className="text-tan-500 w-24">Vet:</Text>
-                  <Text className="text-brown-800">{pet.vet_info.name}</Text>
-                </View>
-                <View className="flex-row mb-2">
-                  <Text className="text-tan-500 w-24">Clinic:</Text>
-                  <Text className="text-brown-800">{pet.vet_info.clinic}</Text>
-                </View>
-                <View className="flex-row">
-                  <Text className="text-tan-500 w-24">Phone:</Text>
-                  <Text className="text-primary-600">{pet.vet_info.phone}</Text>
-                </View>
-              </>
-            )}
-          </Card>
-        )}
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+        <ScreenContainer variant="content">
+          {/* Primary action */}
+          <View className="mb-4">
+            <Button title="Edit Pet" onPress={handleEdit} variant="primary" />
+          </View>
 
-        {/* Identification */}
-        {(pet.microchip_id || pet.license_tag) && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">Identification</Text>
-            {pet.microchip_id && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-24">Microchip:</Text>
-                <Text className="text-brown-800">{pet.microchip_id}</Text>
+          {/* Basics */}
+          {hasBasics && (
+            <SectionHeader title="Basics" icon="🐾">
+              <View className="gap-2">
+                {pet.sex && pet.sex !== 'unknown' && (
+                  <InfoRow label="Sex" value={pet.sex === 'male' ? 'Male' : 'Female'} />
+                )}
+                {pet.is_neutered && <InfoRow label="Fixed" value="Spayed/Neutered" />}
+                {pet.weight != null && (
+                  <InfoRow label="Weight" value={`${pet.weight} ${pet.weight_unit || 'lbs'}`} />
+                )}
+                {pet.color_markings && <InfoRow label="Color" value={pet.color_markings} />}
+                {pet.nicknames && <InfoRow label="Nicknames" value={pet.nicknames} />}
               </View>
-            )}
-            {pet.license_tag && (
-              <View className="flex-row">
-                <Text className="text-tan-500 w-24">License:</Text>
-                <Text className="text-brown-800">{pet.license_tag}</Text>
-              </View>
-            )}
-          </Card>
-        )}
+            </SectionHeader>
+          )}
 
-        {/* Personality */}
-        {pet.personality && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">Personality</Text>
-            {pet.personality.energy_level && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-28">Energy:</Text>
-                <Text className="text-brown-800 capitalize">{pet.personality.energy_level.replace('_', ' ')}</Text>
+          {/* Identification */}
+          {hasIdentification && (
+            <SectionHeader title="Identification" icon="🪪">
+              <View className="gap-2">
+                {pet.microchip_id && <InfoRow label="Microchip" value={pet.microchip_id} />}
+                {pet.license_tag && <InfoRow label="License" value={pet.license_tag} />}
               </View>
-            )}
-            {pet.personality.sociability_people && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-28">With People:</Text>
-                <Text className="text-brown-800 capitalize">{pet.personality.sociability_people.replace('_', ' ')}</Text>
-              </View>
-            )}
-            {pet.personality.sociability_pets && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-28">With Pets:</Text>
-                <Text className="text-brown-800 capitalize">{pet.personality.sociability_pets.replace('_', ' ')}</Text>
-              </View>
-            )}
-            {pet.personality.fears && (
-              <View className="mb-2">
-                <Text className="text-tan-500">Fears:</Text>
-                <Text className="text-brown-800">{pet.personality.fears}</Text>
-              </View>
-            )}
-            {pet.personality.bad_habits && (
-              <View className="mb-2">
-                <Text className="text-tan-500">Bad Habits:</Text>
-                <Text className="text-brown-800">{pet.personality.bad_habits}</Text>
-              </View>
-            )}
-            {pet.personality.comfort_items && (
-              <View className="mb-2">
-                <Text className="text-tan-500">Comfort Items:</Text>
-                <Text className="text-brown-800">{pet.personality.comfort_items}</Text>
-              </View>
-            )}
-            {pet.personality.favorite_toys && (
-              <View className="mb-2">
-                <Text className="text-tan-500">Favorite Toys:</Text>
-                <Text className="text-brown-800">{pet.personality.favorite_toys}</Text>
-              </View>
-            )}
-            {pet.personality.known_commands && (
-              <View>
-                <Text className="text-tan-500">Known Commands:</Text>
-                <Text className="text-brown-800">{pet.personality.known_commands}</Text>
-              </View>
-            )}
-          </Card>
-        )}
+            </SectionHeader>
+          )}
 
-        {/* Feeding Schedule */}
-        {pet.feeding_schedule.length > 0 && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">
-              Feeding Schedule
-            </Text>
-            {pet.feeding_schedule.map((schedule, index) => (
-              <View
-                key={schedule.id}
-                className={`pb-3 ${
-                  index < pet.feeding_schedule.length - 1
-                    ? 'border-b border-tan-200 mb-3'
-                    : ''
-                }`}
-              >
-                <View className="flex-row justify-between">
-                  <Text className="font-medium text-brown-800">{schedule.time}</Text>
-                  <Text className="text-tan-500">{schedule.amount}</Text>
-                </View>
-                <Text className="text-tan-600">{schedule.food_type}</Text>
-                {schedule.notes && (
-                  <Text className="text-tan-400 text-sm mt-1">{schedule.notes}</Text>
+          {/* Personality */}
+          {hasPersonality && personality && (
+            <SectionHeader title="Personality" icon="🎾">
+              <View className="gap-2">
+                {personality.energy_level && (
+                  <InfoRow label="Energy" value={titleCase(personality.energy_level)} />
+                )}
+                {personality.sociability_people && (
+                  <InfoRow label="With People" value={titleCase(personality.sociability_people)} />
+                )}
+                {personality.sociability_pets && (
+                  <InfoRow label="With Pets" value={titleCase(personality.sociability_pets)} />
+                )}
+                {personality.fears && <InfoRow label="Fears" value={personality.fears} />}
+                {personality.bad_habits && (
+                  <InfoRow label="Bad Habits" value={personality.bad_habits} />
+                )}
+                {personality.comfort_items && (
+                  <InfoRow label="Comforts" value={personality.comfort_items} />
+                )}
+                {personality.favorite_toys && (
+                  <InfoRow label="Toys" value={personality.favorite_toys} />
+                )}
+                {personality.known_commands && (
+                  <InfoRow label="Commands" value={personality.known_commands} />
                 )}
               </View>
-            ))}
-          </Card>
-        )}
+            </SectionHeader>
+          )}
 
-        {/* Medications */}
-        {pet.medications.length > 0 && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">
-              Medications
-            </Text>
-            {pet.medications.map((med, index) => (
-              <View
-                key={med.id}
-                className={`pb-3 ${
-                  index < pet.medications.length - 1
-                    ? 'border-b border-tan-200 mb-3'
-                    : ''
-                }`}
-              >
-                <Text className="font-medium text-brown-800">{med.name}</Text>
-                <Text className="text-tan-600">
-                  {med.dosage} - {med.frequency}
-                </Text>
-                {med.times && med.times.filter(t => t).length > 0 && (
-                  <Text className="text-tan-400 text-sm">
-                    {med.times.filter(t => t).length === 1 ? 'Time' : 'Times'}: {med.times.filter(t => t).join(', ')}
-                  </Text>
-                )}
-                {med.with_food && (
-                  <Text className="text-tan-400 text-sm">Give with food</Text>
-                )}
-                {med.notes && (
-                  <Text className="text-tan-400 text-sm mt-1">{med.notes}</Text>
-                )}
-              </View>
-            ))}
-          </Card>
-        )}
-
-        {/* Insurance */}
-        {pet.insurance && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">
-              Pet Insurance
-            </Text>
-            <View className="flex-row mb-2">
-              <Text className="text-tan-500 w-24">Provider:</Text>
-              <Text className="text-brown-800">{pet.insurance.provider}</Text>
-            </View>
-            <View className="flex-row mb-2">
-              <Text className="text-tan-500 w-24">Policy #:</Text>
-              <Text className="text-brown-800">{pet.insurance.policy_number}</Text>
-            </View>
-            {pet.insurance.claims_phone && (
-              <View className="flex-row mb-2">
-                <Text className="text-tan-500 w-24">Claims:</Text>
-                <Text className="text-primary-600">{pet.insurance.claims_phone}</Text>
-              </View>
-            )}
-            {pet.insurance.coverage_notes && (
-              <View>
-                <Text className="text-tan-500">Coverage:</Text>
-                <Text className="text-tan-600">{pet.insurance.coverage_notes}</Text>
-              </View>
-            )}
-          </Card>
-        )}
-
-        {/* Health Alerts / Symptom Checker */}
-        {pet.health_protocol && pet.health_protocol.symptoms.some(s => s.is_enabled) && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-3">
-              Health Alerts
-            </Text>
-            <View className="bg-amber-50 p-3 rounded-lg mb-3 border border-amber-200">
-              <Text className="text-amber-800 text-sm font-medium">
-                Call the vet if you notice any of these symptoms:
-              </Text>
-            </View>
-            {pet.health_protocol.symptoms
-              .filter(s => s.is_enabled)
-              .map((symptom, index) => (
+          {/* Feeding Schedule */}
+          {pet.feeding_schedule.length > 0 && (
+            <SectionHeader title="Feeding Schedule" icon="🍽️">
+              {pet.feeding_schedule.map((schedule, index) => (
                 <View
-                  key={symptom.id}
-                  className={`py-2 ${
-                    index < pet.health_protocol!.symptoms.filter(s => s.is_enabled).length - 1
-                      ? 'border-b border-tan-200'
+                  key={schedule.id}
+                  className={`pb-3 ${
+                    index < pet.feeding_schedule.length - 1
+                      ? 'border-b border-tan-200 mb-3'
                       : ''
                   }`}
                 >
-                  <Text className="text-brown-800 font-medium">{symptom.name}</Text>
-                  {symptom.notes && (
-                    <Text className="text-tan-500 text-sm mt-1">{symptom.notes}</Text>
+                  <View className="flex-row justify-between">
+                    <Text className="font-medium text-brown-800">{schedule.time}</Text>
+                    <Text className="text-tan-500">{schedule.amount}</Text>
+                  </View>
+                  <Text className="text-tan-600">{schedule.food_type}</Text>
+                  {schedule.notes && (
+                    <Text className="text-tan-400 text-sm mt-1">{schedule.notes}</Text>
                   )}
                 </View>
               ))}
-            {pet.health_protocol.general_notes && (
-              <View className="mt-3 pt-3 border-t border-tan-200">
-                <Text className="text-tan-500 text-sm">Additional Notes:</Text>
-                <Text className="text-brown-600">{pet.health_protocol.general_notes}</Text>
-              </View>
-            )}
-          </Card>
-        )}
-
-        {/* Medical Notes */}
-        {pet.medical_notes && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-2">
-              Medical Notes
-            </Text>
-            <Text className="text-tan-600">{pet.medical_notes}</Text>
-          </Card>
-        )}
-
-        {/* Behavioral Notes */}
-        {pet.behavioral_notes && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-2">
-              Behavioral Notes
-            </Text>
-            <Text className="text-tan-600">{pet.behavioral_notes}</Text>
-          </Card>
-        )}
-
-        {/* Special Instructions */}
-        {pet.special_instructions && (
-          <Card className="mb-4">
-            <Text className="text-lg font-semibold text-brown-800 mb-2">
-              Special Instructions
-            </Text>
-            <Text className="text-tan-600">{pet.special_instructions}</Text>
-          </Card>
-        )}
-
-        {/* Action Buttons */}
-        <View className="gap-3 mb-8">
-          <Button title="Edit Pet" onPress={handleEdit} variant="primary" />
-          {pet.status === 'active' ? (
-            <Button
-              title="Move to Memorial"
-              onPress={handleMemorial}
-              variant="secondary"
-            />
-          ) : (
-            <Button
-              title="Restore from Memorial"
-              onPress={handleRestore}
-              variant="secondary"
-            />
+            </SectionHeader>
           )}
-          <Button title="Delete Pet" onPress={handleDelete} variant="outline" />
-        </View>
+
+          {/* Medications */}
+          {pet.medications.length > 0 && (
+            <SectionHeader title="Medications" icon="💊">
+              {pet.medications.map((med, index) => (
+                <View
+                  key={med.id}
+                  className={`pb-3 ${
+                    index < pet.medications.length - 1
+                      ? 'border-b border-tan-200 mb-3'
+                      : ''
+                  }`}
+                >
+                  <Text className="font-medium text-brown-800">{med.name}</Text>
+                  <Text className="text-tan-600">
+                    {med.dosage} - {med.frequency}
+                  </Text>
+                  {med.times && med.times.filter((t) => t).length > 0 && (
+                    <Text className="text-tan-400 text-sm">
+                      {med.times.filter((t) => t).length === 1 ? 'Time' : 'Times'}:{' '}
+                      {med.times.filter((t) => t).join(', ')}
+                    </Text>
+                  )}
+                  {med.with_food && (
+                    <Text className="text-tan-400 text-sm">Give with food</Text>
+                  )}
+                  {med.notes && (
+                    <Text className="text-tan-400 text-sm mt-1">{med.notes}</Text>
+                  )}
+                </View>
+              ))}
+            </SectionHeader>
+          )}
+
+          {/* Health & Vet */}
+          {hasHealthVet && (
+            <SectionHeader title="Health & Vet" icon="🏥">
+              <View className="gap-2">
+                {pet.vet_info && (
+                  <>
+                    {pet.vet_info.name && <InfoRow label="Vet" value={pet.vet_info.name} />}
+                    {pet.vet_info.clinic && (
+                      <InfoRow label="Clinic" value={pet.vet_info.clinic} />
+                    )}
+                    {pet.vet_info.phone && (
+                      <PhoneRow label="Phone" phone={pet.vet_info.phone} />
+                    )}
+                    {pet.vet_info.address && (
+                      <InfoRow label="Address" value={pet.vet_info.address} />
+                    )}
+                    {pet.vet_info.emergency_phone && (
+                      <PhoneRow label="Emergency" phone={pet.vet_info.emergency_phone} />
+                    )}
+                  </>
+                )}
+                {pet.medical_notes && (
+                  <View className={pet.vet_info ? 'mt-2' : ''}>
+                    <Text className="text-tan-500">Medical Notes:</Text>
+                    <Text className="text-brown-800">{pet.medical_notes}</Text>
+                  </View>
+                )}
+              </View>
+            </SectionHeader>
+          )}
+
+          {/* Insurance */}
+          {pet.insurance && (
+            <SectionHeader title="Insurance" icon="🛡️">
+              <View className="gap-2">
+                {pet.insurance.provider && (
+                  <InfoRow label="Provider" value={pet.insurance.provider} />
+                )}
+                {pet.insurance.policy_number && (
+                  <InfoRow label="Policy #" value={pet.insurance.policy_number} />
+                )}
+                {pet.insurance.claims_phone && (
+                  <PhoneRow label="Claims" phone={pet.insurance.claims_phone} />
+                )}
+                {pet.insurance.coverage_notes && (
+                  <View className="mt-2">
+                    <Text className="text-tan-500">Coverage:</Text>
+                    <Text className="text-brown-800">{pet.insurance.coverage_notes}</Text>
+                  </View>
+                )}
+              </View>
+            </SectionHeader>
+          )}
+
+          {/* Health Protocol */}
+          {hasHealthProtocol && pet.health_protocol && (
+            <SectionHeader title="Health Protocol" icon="🚨">
+              {enabledSymptoms.length > 0 && (
+                <>
+                  <View className="bg-warm-50 p-3 rounded-lg mb-3 border border-warm-200">
+                    <Text className="text-warm-800 text-sm font-medium">
+                      {pet.health_protocol.vet_call_threshold ||
+                        'Call the vet if you notice any of these symptoms:'}
+                    </Text>
+                  </View>
+                  {enabledSymptoms.map((symptom, index) => (
+                    <View
+                      key={symptom.id}
+                      className={`py-2 ${
+                        index < enabledSymptoms.length - 1 ? 'border-b border-tan-200' : ''
+                      }`}
+                    >
+                      <Text className="text-brown-800 font-medium">{symptom.name}</Text>
+                      {symptom.notes && (
+                        <Text className="text-tan-500 text-sm mt-1">{symptom.notes}</Text>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
+              {enabledSymptoms.length === 0 && pet.health_protocol.vet_call_threshold && (
+                <View className="bg-warm-50 p-3 rounded-lg border border-warm-200">
+                  <Text className="text-warm-800 text-sm font-medium">
+                    {pet.health_protocol.vet_call_threshold}
+                  </Text>
+                </View>
+              )}
+              {pet.health_protocol.general_notes && (
+                <View className="mt-3 pt-3 border-t border-tan-200">
+                  <Text className="text-tan-500 text-sm">Additional Notes:</Text>
+                  <Text className="text-brown-800">{pet.health_protocol.general_notes}</Text>
+                </View>
+              )}
+            </SectionHeader>
+          )}
+
+          {/* Notes */}
+          {hasNotes && (
+            <SectionHeader title="Notes" icon="📝">
+              <View className="gap-2">
+                {pet.behavioral_notes && (
+                  <View>
+                    <Text className="text-tan-500">Behavioral Notes:</Text>
+                    <Text className="text-brown-800">{pet.behavioral_notes}</Text>
+                  </View>
+                )}
+                {pet.special_instructions && (
+                  <View className={pet.behavioral_notes ? 'mt-2' : ''}>
+                    <Text className="text-tan-500">Special Instructions:</Text>
+                    <Text className="text-brown-800">{pet.special_instructions}</Text>
+                  </View>
+                )}
+              </View>
+            </SectionHeader>
+          )}
+
+          {/* Quiet secondary actions at the bottom */}
+          <View className="gap-3 mt-2 mb-8">
+            {pet.status === 'active' ? (
+              <Button
+                title="Move to Memorial"
+                onPress={handleMemorial}
+                variant="outline"
+              />
+            ) : (
+              <Button
+                title="Restore from Memorial"
+                onPress={handleRestore}
+                variant="secondary"
+              />
+            )}
+            <Button title="Delete Pet" onPress={handleDelete} variant="outline" />
+          </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

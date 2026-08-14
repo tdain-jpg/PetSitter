@@ -1,14 +1,11 @@
-import { Alert, Platform } from 'react-native';
+import { showAlert as showAlertDialog } from './dialogs';
 
 /**
- * Cross-platform alert. On web, RN's Alert module is a no-op, so fall back to
- * window.alert (which ignores the title). On native, use Alert.alert normally.
+ * Compatibility shim: delegates to the branded dialog API in ./dialogs
+ * (fire-and-forget). Kept at this import path with a void return type so
+ * existing call sites keep compiling unchanged. New code that needs to await
+ * the dialog should import from './dialogs' directly.
  */
 export function showAlert(title: string, message?: string): void {
-  if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
-    window.alert(message ? `${title}\n\n${message}` : title);
-    return;
-  }
-  Alert.alert(title, message);
+  void showAlertDialog(title, message);
 }

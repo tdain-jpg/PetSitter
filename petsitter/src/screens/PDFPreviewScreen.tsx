@@ -11,7 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Button, Card } from '../components';
+import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
@@ -495,22 +495,25 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-        <View className="flex-row items-center justify-between">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-          <Button
-            title="🖨️ Export"
-            onPress={handleExport}
-            loading={exporting}
-            disabled={exporting}
-          />
-        </View>
-        <View className="mt-4">
-          <Text className="text-2xl font-bold text-brown-800">📄 PDF Preview</Text>
-          <Text className="text-tan-500">{guide.title}</Text>
-        </View>
+        <ScreenContainer variant="content">
+          <View className="flex-row items-center justify-between">
+            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button
+              title="🖨️ Export"
+              onPress={handleExport}
+              loading={exporting}
+              disabled={exporting}
+            />
+          </View>
+          <View className="mt-4">
+            <Text className="text-2xl font-bold text-brown-800">📄 PDF Preview</Text>
+            <Text className="text-tan-500">{guide.title}</Text>
+          </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1 p-4">
+        <ScreenContainer variant="content">
         {/* Section Selection */}
         <Card className="mb-4">
           <Text className="text-lg font-semibold text-brown-800 mb-3">
@@ -684,6 +687,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             disabled={exporting || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.travelItinerary && !sections.aiCheatSheet && !sections.additionalNotes)}
           />
         </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

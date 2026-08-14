@@ -7,11 +7,13 @@ export type AuthStackParamList = {
   Landing: undefined;
   Login: undefined;
   SignUp: undefined;
+  ForgotPassword: undefined;
 };
 
 export type LandingScreenProps = NativeStackScreenProps<AuthStackParamList, 'Landing'>;
 export type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export type SignUpScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
+export type ForgotPasswordScreenProps = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 // ============================================
 // Main Stack Navigator
@@ -92,7 +94,10 @@ export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
   SharedGuideView: { code: string };
+  Install: undefined;
 };
+
+export type InstallScreenProps = NativeStackScreenProps<RootStackParamList, 'Install'>;
 
 declare global {
   namespace ReactNavigation {

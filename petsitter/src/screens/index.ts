@@ -2,6 +2,8 @@ export { HomeScreen } from './HomeScreen';
 export { LandingScreen } from './LandingScreen';
 export { LoginScreen } from './LoginScreen';
 export { SignUpScreen } from './SignUpScreen';
+export { ForgotPasswordScreen } from './ForgotPasswordScreen';
+export { ResetPasswordScreen } from './ResetPasswordScreen';
 
 // Pet screens
 export { PetListScreen } from './PetListScreen';
@@ -34,3 +36,6 @@ export { OnboardingScreen } from './OnboardingScreen';
 
 // Trip Planning
 export { TripWizardScreen } from './TripWizardScreen';
+
+// PWA install instructions (public, reachable signed in or out)
+export { InstallScreen } from './InstallScreen';

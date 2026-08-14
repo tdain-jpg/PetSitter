@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, Text, ScrollView, Image } from 'react-native';
 import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, PetCard } from '../components';
+import { Button, Card, PetCard, ScreenContainer } from '../components';
 import { COLORS } from '../constants';
 
 // @ts-ignore
@@ -65,6 +65,7 @@ export function HomeScreen({ navigation }: Props) {
 
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
+        <ScreenContainer variant="wide">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center">
             <Image
@@ -95,9 +96,11 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
+        </ScreenContainer>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
+        <ScreenContainer variant="wide">
         {/* Quick Stats */}
         <View className="flex-row gap-4 mb-6">
           <Card className="flex-1">
@@ -191,6 +194,7 @@ export function HomeScreen({ navigation }: Props) {
             variant="secondary"
           />
         </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

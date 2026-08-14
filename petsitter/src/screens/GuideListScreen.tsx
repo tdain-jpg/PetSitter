@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, GuideCard, ScreenHeader } from '../components';
+import { Button, Card, GuideCard, ScreenHeader, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -40,43 +40,47 @@ export function GuideListScreen({ navigation }: Props) {
         showHome={false}
       />
 
-      <View className="flex-row justify-between items-center px-4 pt-4">
-        <Text className="text-tan-500">
-          {guides.length} {guides.length === 1 ? 'guide' : 'guides'}
-        </Text>
-        <Button
-          title="+ New Guide"
-          onPress={handleAddGuide}
-          variant="primary"
-        />
-      </View>
+      <ScreenContainer variant="wide">
+        <View className="flex-row justify-between items-center px-4 pt-4">
+          <Text className="text-tan-500">
+            {guides.length} {guides.length === 1 ? 'guide' : 'guides'}
+          </Text>
+          <Button
+            title="+ New Guide"
+            onPress={handleAddGuide}
+            variant="primary"
+          />
+        </View>
+      </ScreenContainer>
 
       <ScrollView className="flex-1 p-4">
-        {guides.length === 0 ? (
-          <Card className="items-center py-8">
-            <Text className="text-5xl mb-4">📋</Text>
-            <Text className="text-xl font-semibold text-brown-800 mb-2">
-              No guides yet
-            </Text>
-            <Text className="text-tan-500 text-center mb-6">
-              Create your first pet sitter guide to share care instructions.
-            </Text>
-            <Button
-              title="Create Your First Guide"
-              onPress={handleAddGuide}
-              variant="primary"
-            />
-          </Card>
-        ) : (
-          guides.map((guide) => (
-            <GuideCard
-              key={guide.id}
-              guide={guide}
-              pets={pets}
-              onPress={() => handleGuidePress(guide.id)}
-            />
-          ))
-        )}
+        <ScreenContainer variant="wide">
+          {guides.length === 0 ? (
+            <Card className="items-center py-8">
+              <Text className="text-5xl mb-4">📋</Text>
+              <Text className="text-xl font-semibold text-brown-800 mb-2">
+                No guides yet
+              </Text>
+              <Text className="text-tan-500 text-center mb-6">
+                Create your first pet sitter guide to share care instructions.
+              </Text>
+              <Button
+                title="Create Your First Guide"
+                onPress={handleAddGuide}
+                variant="primary"
+              />
+            </Card>
+          ) : (
+            guides.map((guide) => (
+              <GuideCard
+                key={guide.id}
+                guide={guide}
+                pets={pets}
+                onPress={() => handleGuidePress(guide.id)}
+              />
+            ))
+          )}
+        </ScreenContainer>
       </ScrollView>
     </View>
   );
