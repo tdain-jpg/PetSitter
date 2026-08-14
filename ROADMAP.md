@@ -44,7 +44,17 @@ Either finish it or hide the button.
 
 ## 2. Product features
 
-### [ ] Households (DECIDED: household is the unit of sharing)
+### [x] Households — SHIPPED 2026-08-15
+Live end to end: DB migrations 0006/0007 (applied to prod, 22 adversarial findings closed,
+RLS verified by role impersonation), merged-view client, Household screen (rename, members,
+invite/revoke/leave with last-owner protection), Home invite banner, Settings entry.
+Follow-ups: member display names need a small definer RPC (profiles are RLS-locked to self,
+so the members list shows roles + dates, not names); share-link create has a narrow
+deactivate-then-insert race (add a partial unique index `on share_links(guide_id) where
+is_active` + retry-on-conflict); invite notification is in-app only — emailing invites via
+Brevo is a natural next step.
+
+### ~~Households (original design notes)~~ (DECIDED: household is the unit of sharing)
 A couple or family share one set of pets and guides; everyone in the household can edit.
 Distinct from the existing share links, which stay exactly as they are — those are for handing
 a read-only guide to a sitter or friend who has no account, and that flow is already built.
@@ -268,6 +278,12 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
 `aria-hidden`/inert on non-focused routes or detachInactiveScreens tuning on web.
 
 ## 5. Deferred / minor
+
+- **Edit-form closure (polish):** duplicate the SaveStatusIndicator at the BOTTOM of
+  PetForm/GuideForm edit modes and add a single "Done" button that flushes any pending
+  autosave (the hook's unused `saveNow()`) and navigates back. Deliberately NO "Save"
+  button — a save button beside working autosave manufactures doubt — and the saved state
+  is never styled red (red is reserved for the error state the indicator already has).
 
 - **DailyRoutineScreen** keeps private copies of the date helpers now centralized in
   `src/lib/dates.ts` — consolidate.

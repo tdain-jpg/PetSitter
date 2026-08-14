@@ -2,6 +2,10 @@ import { supabase } from '../lib/supabase';
 import type {
   Pet,
   Guide,
+  Household,
+  HouseholdMember,
+  HouseholdInviteRow,
+  PendingInvite,
   TaskCompletion,
   ShareableLink,
   CheatSheet,
@@ -20,8 +24,17 @@ import {
  * Supabase implementation of DataService.
  *
  * Conventions:
- *  - userId arguments are tolerated for API compatibility, but RLS is the
- *    actual security boundary (auth.uid() = user_id). Callers must be signed in.
+ *  - MERGED-VIEW MODEL: a user may belong to multiple households and sees all
+ *    of their households' pets/guides merged. Pet/guide list queries do NOT
+ *    filter by user_id — RLS (household membership) is the security boundary.
+ *    userId arguments are tolerated for interface compatibility but ignored
+ *    where noted. Callers must be signed in.
+ *  - pets.user_id / guides.user_id are attribution-only and server-pinned;
+ *    never filter by them.
+ *  - New pets omit household_id so the server default places them in the
+ *    user's primary household (my_primary_household()). New guides MAY carry
+ *    household_id (kept with their pets' household); when omitted the same
+ *    server default applies.
  *  - Top-level rows use UUIDs generated server-side (omitted from inserts).
  *  - Nested entities (FeedingSchedule[], Medication[], etc.) live inside JSONB
  *    columns and keep their existing string IDs assigned client-side.
@@ -44,11 +57,11 @@ export class SupabaseAdapter implements DataService {
   // ============================================
   // Pet Operations
   // ============================================
-  async getPets(userId: string): Promise<Pet[]> {
+  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
+  async getPets(_userId: string): Promise<Pet[]> {
     const { data, error } = await supabase
       .from('pets')
       .select('*')
-      .eq('user_id', userId)
       .order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Pet[];
@@ -65,9 +78,12 @@ export class SupabaseAdapter implements DataService {
   }
 
   async createPet(pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>): Promise<Pet> {
+    // Never send household_id: the server default assigns the user's primary
+    // household. (A future household picker would relax this.)
+    const { household_id: _hh, ...row } = pet;
     const { data, error } = await supabase
       .from('pets')
-      .insert(pet)
+      .insert(row)
       .select('*')
       .single();
     return unwrap(data as Pet | null, error);
@@ -93,22 +109,22 @@ export class SupabaseAdapter implements DataService {
     if (error) throw new Error(error.message);
   }
 
-  async getActivePets(userId: string): Promise<Pet[]> {
+  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
+  async getActivePets(_userId: string): Promise<Pet[]> {
     const { data, error } = await supabase
       .from('pets')
       .select('*')
-      .eq('user_id', userId)
       .eq('status', 'active')
       .order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Pet[];
   }
 
-  async getDeceasedPets(userId: string): Promise<Pet[]> {
+  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
+  async getDeceasedPets(_userId: string): Promise<Pet[]> {
     const { data, error } = await supabase
       .from('pets')
       .select('*')
-      .eq('user_id', userId)
       .eq('status', 'deceased')
       .order('deceased_date', { ascending: false });
     if (error) throw new Error(error.message);
@@ -128,11 +144,11 @@ export class SupabaseAdapter implements DataService {
   // ============================================
   // Guide Operations
   // ============================================
-  async getGuides(userId: string): Promise<Guide[]> {
+  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
+  async getGuides(_userId: string): Promise<Guide[]> {
     const { data, error } = await supabase
       .from('guides')
       .select('*')
-      .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as Guide[];
@@ -149,9 +165,15 @@ export class SupabaseAdapter implements DataService {
   }
 
   async createGuide(guide: Omit<Guide, 'id' | 'created_at' | 'updated_at'>): Promise<Guide> {
+    // household_id is FORWARDED when provided so a guide can be created in the
+    // same household as its pets (RLS validates membership); when omitted the
+    // server default assigns the user's primary household. Callers restoring
+    // foreign data (importData) must strip household_id themselves.
+    const { household_id, ...rest } = guide;
+    const row = household_id ? { ...rest, household_id } : rest;
     const { data, error } = await supabase
       .from('guides')
-      .insert(guide)
+      .insert(row)
       .select('*')
       .single();
     return unwrap(data as Guide | null, error);
@@ -177,10 +199,28 @@ export class SupabaseAdapter implements DataService {
   }
 
   async duplicateGuide(guideId: string): Promise<Guide> {
+    // The copy keeps the ORIGINAL's household_id (createGuide forwards it), so
+    // duplicating a guide from a shared household never strands the copy in
+    // the duplicator's primary household with pet_ids its members can't see.
     const original = await this.getGuide(guideId);
     if (!original) throw new Error('Guide not found');
     const { id: _id, created_at: _ca, updated_at: _ua, ...copy } = original;
-    return this.createGuide({ ...copy, title: `${original.title} (Copy)` });
+    // Prune pet ids whose pets row no longer exists: deletePet does no
+    // guides.pet_ids cleanup, and 0007's guides_validate_pet_ids trigger
+    // would reject the copy's INSERT outright over a ghost id. RLS scopes the
+    // select to the user's households, which covers every live pet the
+    // original may validly reference.
+    let petIds = copy.pet_ids ?? [];
+    if (petIds.length > 0) {
+      const { data: petRows, error: petsErr } = await supabase
+        .from('pets')
+        .select('id')
+        .in('id', petIds);
+      if (petsErr) throw new Error(petsErr.message);
+      const liveIds = new Set(((petRows ?? []) as { id: string }[]).map((p) => p.id));
+      petIds = petIds.filter((pid) => liveIds.has(pid));
+    }
+    return this.createGuide({ ...copy, pet_ids: petIds, title: `${original.title} (Copy)` });
   }
 
   // ============================================
@@ -278,11 +318,35 @@ export class SupabaseAdapter implements DataService {
     return data as ShareableLink;
   }
 
+  /**
+   * The user's OWN links only (user_id-filtered). Per-user scope is only
+   * right where the caller wants "what I created" — exportAllData. For
+   * showing a guide's links use getShareLinksForGuide: since 0007 share_links
+   * are household-scoped, and a housemate's live link hidden by a user_id
+   * filter would be silently deactivated by createShareLink.
+   */
   async getShareLinks(userId: string): Promise<ShareableLink[]> {
     const { data, error } = await supabase
       .from('share_links')
       .select('*')
       .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ShareableLink[];
+  }
+
+  /**
+   * Every share link for a guide, across the whole household — deliberately
+   * NO user_id filter (RLS scopes visibility to household members).
+   * ShareGuideScreen must use this view: createShareLink deactivates EVERY
+   * active link for the guide, so a member has to see housemates' live links
+   * before creating a new one kills them.
+   */
+  async getShareLinksForGuide(guideId: string): Promise<ShareableLink[]> {
+    const { data, error } = await supabase
+      .from('share_links')
+      .select('*')
+      .eq('guide_id', guideId)
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as ShareableLink[];
@@ -447,17 +511,148 @@ export class SupabaseAdapter implements DataService {
   }
 
   // ============================================
+  // Household Operations
+  // ============================================
+  async getMyHouseholds(): Promise<Household[]> {
+    // RLS: members see their own households only.
+    const { data, error } = await supabase
+      .from('households')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Household[];
+  }
+
+  /**
+   * Membership rows only (user_id, role, joined date). LIMITATION: other
+   * members' emails/display names are NOT readable — household_members
+   * references auth.users (no PostgREST join to profiles), and profiles RLS
+   * only allows reading one's OWN profile, so fetching other members'
+   * profiles silently returns nothing. Render 'You' for the current user and
+   * role + joined date for others. A future security-definer RPC can expose
+   * member display names.
+   */
+  async getHouseholdMembers(householdId: string): Promise<HouseholdMember[]> {
+    const { data, error } = await supabase
+      .from('household_members')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as HouseholdMember[];
+  }
+
+  async getHouseholdInvites(householdId: string): Promise<HouseholdInviteRow[]> {
+    // RLS: members see all of their household's invites (any status).
+    const { data, error } = await supabase
+      .from('household_invites')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as HouseholdInviteRow[];
+  }
+
+  async getMyPendingInvites(): Promise<PendingInvite[]> {
+    const { data, error } = await supabase.rpc('my_pending_invites');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as PendingInvite[];
+  }
+
+  async inviteToHousehold(householdId: string, email: string): Promise<void> {
+    // Server throws 'invalid email' / 'that email already belongs to a
+    // household member' — surface the message as-is for the UI.
+    const { error } = await supabase.rpc('invite_to_household', {
+      h: householdId,
+      invite_email: email,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async respondToInvite(inviteId: string, accept: boolean): Promise<void> {
+    const { error } = await supabase.rpc('respond_to_invite', {
+      invite: inviteId,
+      accept,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async revokeInvite(inviteId: string): Promise<void> {
+    const { error } = await supabase.rpc('revoke_invite', { invite: inviteId });
+    if (error) throw new Error(error.message);
+  }
+
+  async leaveHousehold(householdId: string): Promise<void> {
+    // Delete own membership row (RLS permits self-leave). The server throws
+    // 'cannot remove the last owner of a household' when applicable.
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) throw new Error(sessionErr.message);
+    const uid = sessionData.session?.user?.id;
+    if (!uid) throw new Error('Not signed in');
+    const { error } = await supabase
+      .from('household_members')
+      .delete()
+      .eq('household_id', householdId)
+      .eq('user_id', uid);
+    if (error) throw new Error(error.message);
+  }
+
+  async removeHouseholdMember(householdId: string, userId: string): Promise<void> {
+    // RLS permits owner-removes-member; same last-owner guard as leaving.
+    const { error } = await supabase
+      .from('household_members')
+      .delete()
+      .eq('household_id', householdId)
+      .eq('user_id', userId);
+    if (error) throw new Error(error.message);
+  }
+
+  async renameHousehold(householdId: string, name: string): Promise<void> {
+    // Owner-only, enforced server-side.
+    const { error } = await supabase.rpc('rename_household', {
+      h: householdId,
+      new_name: name,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async getMyPrimaryHousehold(): Promise<string | null> {
+    const { data, error } = await supabase.rpc('my_primary_household');
+    if (error) throw new Error(error.message);
+    return (data as string | null) ?? null;
+  }
+
+  // ============================================
   // Data Export/Import
   // ============================================
+  /**
+   * Exports the user's PRIMARY household only — the exact scope importData
+   * wipes and restores, so export/import are inverses (and the Settings copy
+   * "REPLACES every pet, guide, and share link in your household" is true).
+   * Exporting the merged view here would poison later imports: rows from
+   * OTHER households would be duplicated into the primary household while
+   * their originals survive the primary-only wipe. Rows without household_id
+   * (pre-migration backups' shape) are kept. Share links remain per-user
+   * (getShareLinks), narrowed to the exported guides.
+   */
   async exportAllData(userId: string): Promise<ExportedData> {
-    const [pets, guides, settings, shareLinks] = await Promise.all([
+    const [allPets, allGuides, settings, allShareLinks, primaryHouseholdId] = await Promise.all([
       this.getPets(userId),
       this.getGuides(userId),
       this.getSettings(userId),
       this.getShareLinks(userId),
+      this.getMyPrimaryHousehold(),
     ]);
 
+    const pets = allPets.filter(
+      (p) => !p.household_id || p.household_id === primaryHouseholdId
+    );
+    const guides = allGuides.filter(
+      (g) => !g.household_id || g.household_id === primaryHouseholdId
+    );
     const guideIds = guides.map((g) => g.id);
+    const guideIdSet = new Set(guideIds);
+    const shareLinks = allShareLinks.filter((l) => guideIdSet.has(l.guide_id));
     let taskCompletions: TaskCompletion[] = [];
     let cheatSheets: CheatSheet[] = [];
     if (guideIds.length > 0) {
@@ -530,21 +725,60 @@ export class SupabaseAdapter implements DataService {
     // Validate the payload BEFORE the destructive wipe.
     this.validateImportPayload(data);
 
-    // Wipe current user data, then insert fresh.
-    await this.clearAllData(userId);
+    // Scope the restore to the PRIMARY household — the same scope the wipe
+    // below clears. Older (v1.1) backups exported the MERGED view, so without
+    // this filter a multi-household user's import would (a) duplicate other
+    // households' pets/guides into their primary household (the originals
+    // survive the primary-only wipe), and (b) crash mid-restore on the
+    // share_links UNIQUE(code) constraint — the preserved codes still exist
+    // on the un-wiped households' guides. Rows without household_id
+    // (pre-household backups) are kept. Dependent task_completions /
+    // share_links / cheat_sheets drop out automatically via the id maps.
+    const primaryHouseholdId = await this.getMyPrimaryHousehold();
+    const petsToRestore = data.pets.filter(
+      (p) => !p.household_id || p.household_id === primaryHouseholdId
+    );
+    const guidesToRestore = data.guides.filter(
+      (g) => !g.household_id || g.household_id === primaryHouseholdId
+    );
+
+    // ABORT BEFORE THE WIPE if the household filter dropped everything: v1.1
+    // exports bake household_id into every row, so a backup restored into a
+    // different account (or after the primary household changed) would
+    // otherwise wipe the current primary household and restore NOTHING —
+    // silent, irreversible data loss dressed as a successful import.
+    if (
+      (data.pets.length > 0 || data.guides.length > 0) &&
+      petsToRestore.length === 0 &&
+      guidesToRestore.length === 0
+    ) {
+      throw new Error(
+        'Import failed: this backup belongs to a different household or account, so nothing would be restored.'
+      );
+    }
+
+    // Wipe the user's PRIMARY household only (see clearAllData), then insert
+    // fresh. Restoring a backup must never delete rows in households the
+    // backup cannot recreate — other households' pets/guides are untouched.
+    // Re-inserted rows land in the primary household: household_id is stripped
+    // below so the server default applies (an exported household_id may
+    // reference a household the user has since left).
+    await this.clearAllData(userId, primaryHouseholdId);
 
     // Pets — let DB assign new UUIDs (the old client-string IDs aren't valid uuids)
     const petIdMap: Record<string, string> = {};
-    for (const p of data.pets) {
+    for (const p of petsToRestore) {
       const { id, created_at, updated_at, ...rest } = p;
       const inserted = await this.createPet({ ...rest, user_id: userId });
       petIdMap[id] = inserted.id;
     }
 
-    // Guides — remap pet_ids
+    // Guides — remap pet_ids. household_id is stripped explicitly: createGuide
+    // now forwards it when present, and a backup's household_id may reference
+    // a household the user has left (the insert would violate RLS).
     const guideIdMap: Record<string, string> = {};
-    for (const g of data.guides) {
-      const { id, created_at, updated_at, pet_ids, ...rest } = g;
+    for (const g of guidesToRestore) {
+      const { id, created_at, updated_at, pet_ids, household_id: _hh, ...rest } = g;
       const remappedPetIds = (pet_ids || []).map((pid) => petIdMap[pid]).filter(Boolean);
       const inserted = await this.createGuide({
         ...rest,
@@ -601,14 +835,38 @@ export class SupabaseAdapter implements DataService {
     await this.updateSettings(userId, settingsRest);
   }
 
-  async clearAllData(userId: string): Promise<void> {
+  /**
+   * DESTRUCTIVE: deletes every pet and guide in the user's PRIMARY household —
+   * including rows other members of that household created (the Settings
+   * screen copy warns accordingly). Pets/guides in OTHER households the user
+   * belongs to are deliberately untouched: an RLS-scoped unfiltered delete
+   * would destroy housemates' data in every household the user has joined.
+   * onboarding_state and settings resets remain per-user.
+   *
+   * @param knownPrimaryHouseholdId Optional (implementation-only): pass the
+   * already-fetched primary household id so importData's restore filter and
+   * this wipe are guaranteed to target the same household with one RPC.
+   */
+  async clearAllData(userId: string, knownPrimaryHouseholdId?: string | null): Promise<void> {
     // Cascades from pets, guides handle children (task_completions, share_links, cheat_sheets).
     // supabase-js never rejects on Postgres/network errors — every result must
     // be checked, or a failed wipe would silently report success.
-    const { error: petsErr } = await supabase.from('pets').delete().eq('user_id', userId);
-    if (petsErr) throw new Error(petsErr.message);
-    const { error: guidesErr } = await supabase.from('guides').delete().eq('user_id', userId);
-    if (guidesErr) throw new Error(guidesErr.message);
+    const primaryHouseholdId =
+      knownPrimaryHouseholdId !== undefined
+        ? knownPrimaryHouseholdId
+        : await this.getMyPrimaryHousehold();
+    if (primaryHouseholdId) {
+      const { error: petsErr } = await supabase
+        .from('pets')
+        .delete()
+        .eq('household_id', primaryHouseholdId);
+      if (petsErr) throw new Error(petsErr.message);
+      const { error: guidesErr } = await supabase
+        .from('guides')
+        .delete()
+        .eq('household_id', primaryHouseholdId);
+      if (guidesErr) throw new Error(guidesErr.message);
+    }
     const { error: onboardingErr } = await supabase
       .from('onboarding_state')
       .delete()

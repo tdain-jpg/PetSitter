@@ -59,7 +59,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const isEditing = mode === 'edit' && guideId;
 
   const { user } = useAuth();
-  const { guides, activePets, createGuide, updateGuide } = useData();
+  const { guides, pets, activePets, loadingPets, petsError, createGuide, updateGuide } = useData();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -80,6 +80,24 @@ export function GuideFormScreen({ navigation, route }: Props) {
   // dialog is up would re-enter beforeRemove, queue a duplicate dialog, and
   // double-dispatch the blocked action (popping one screen too far).
   const promptingRef = useRef(false);
+
+  // MERGED-VIEW MODEL: activePets spans every household the user belongs to,
+  // but a guide's pets must all live in ONE household — otherwise fellow
+  // members of the guide's household hit the RLS silent-empty trap (pets they
+  // can't see render as missing in detail, daily-routine, and PDF views).
+  // Editing locks the picker to the guide's own household; creating locks it
+  // to the first selected pet's household (null = nothing locked yet, or
+  // legacy rows without household_id — behaves as before).
+  const lockedHouseholdId = useMemo(() => {
+    if (isEditing) {
+      return guides.find((g) => g.id === guideId)?.household_id ?? null;
+    }
+    const firstSelected = activePets.find((p) => formData.pet_ids.includes(p.id));
+    return firstSelected?.household_id ?? null;
+  }, [isEditing, guideId, guides, activePets, formData.pet_ids]);
+
+  const isPetLockedOut = (pet: { household_id?: string }) =>
+    !!lockedHouseholdId && !!pet.household_id && pet.household_id !== lockedHouseholdId;
 
   // Build guide data from form data object (accepts data as parameter to avoid stale closures)
   const buildGuideDataFromForm = useCallback((data: FormData) => {
@@ -131,12 +149,28 @@ export function GuideFormScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (isEditing && guideId) {
       if (hydratedGuideIdRef.current === guideId) return;
+      // Defer hydration until the pets load settles: pet_ids is pruned against
+      // the merged pets list below, and pruning against an empty in-flight
+      // array would wipe the guide's pet list (auto-save would persist it).
+      if (loadingPets) return;
       const guide = guides.find((g) => g.id === guideId);
       if (guide) {
         hydratedGuideIdRef.current = guideId;
+        // Prune ids with no matching pets row. RLS guarantees `pets` (the full
+        // merged list, deceased included — NOT activePets) holds every live pet
+        // of the guide's household, so a leftover id belongs to a DELETED pet:
+        // deletePet does no guides.pet_ids cleanup, and 0007's
+        // guides_validate_pet_ids trigger rejects every save that still lists
+        // the ghost id — with no UI recovery, since deleted pets never render
+        // in the picker. The next auto-save persists the pruned list, healing
+        // the guide. If the pets load FAILED, keep pet_ids verbatim: pruning
+        // against a bad list could wipe a healthy guide's pets.
+        const petIds = petsError
+          ? guide.pet_ids
+          : guide.pet_ids.filter((id) => pets.some((p) => p.id === id));
         setFormData({
           title: guide.title,
-          pet_ids: guide.pet_ids,
+          pet_ids: petIds,
           start_date: guide.start_date || '',
           end_date: guide.end_date || '',
           emergency_contacts: guide.emergency_contacts,
@@ -149,7 +183,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       }
       setLoading(false);
     }
-  }, [isEditing, guideId, guides]);
+  }, [isEditing, guideId, guides, pets, loadingPets, petsError]);
 
   // Create mode throws the form away on leave, so every exit needs a confirm.
   // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
@@ -289,9 +323,16 @@ export function GuideFormScreen({ navigation, route }: Props) {
       if (!guideData) return;
 
       if (isEditing && guideId) {
+        // buildGuideDataFromForm never includes household_id, so auto-save and
+        // manual edits can't accidentally move a guide between households.
         await updateGuide(guideId, guideData);
       } else {
-        await createGuide(guideData);
+        // Create the guide in the same household as its selected pets; without
+        // a lock (no pets selected, or legacy pets missing household_id) the
+        // server default assigns the user's primary household.
+        await createGuide(
+          lockedHouseholdId ? { ...guideData, household_id: lockedHouseholdId } : guideData
+        );
       }
 
       // Saved — drop the guard (ref first, so the listeners see it in this
@@ -469,37 +510,50 @@ export function GuideFormScreen({ navigation, route }: Props) {
                 </View>
               ) : (
                 <View className="gap-2">
-                  {activePets.map((pet) => (
-                    <Pressable
-                      key={pet.id}
-                      onPress={() => togglePet(pet.id)}
-                      accessibilityRole="checkbox"
-                      accessibilityLabel={pet.name}
-                      accessibilityState={{ checked: formData.pet_ids.includes(pet.id) }}
-                      aria-checked={formData.pet_ids.includes(pet.id)}
-                      className={`flex-row items-center p-3 rounded-lg border ${
-                        formData.pet_ids.includes(pet.id)
-                          ? 'bg-primary-50 border-primary-200'
-                          : 'bg-cream-200 border-tan-200'
-                      }`}
-                    >
-                      <View
-                        className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                          formData.pet_ids.includes(pet.id)
-                            ? 'bg-primary-500 border-primary-500'
-                            : 'border-tan-300'
-                        }`}
+                  {activePets.map((pet) => {
+                    const selected = formData.pet_ids.includes(pet.id);
+                    // Already-selected pets stay toggleable so a legacy guide
+                    // that mixed households can still be cleaned up by hand.
+                    const lockedOut = !selected && isPetLockedOut(pet);
+                    return (
+                      <Pressable
+                        key={pet.id}
+                        onPress={() => togglePet(pet.id)}
+                        disabled={lockedOut}
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={pet.name}
+                        accessibilityState={{ checked: selected, disabled: lockedOut }}
+                        aria-checked={selected}
+                        className={`flex-row items-center p-3 rounded-lg border ${
+                          selected
+                            ? 'bg-primary-50 border-primary-200'
+                            : 'bg-cream-200 border-tan-200'
+                        } ${lockedOut ? 'opacity-40' : ''}`}
                       >
-                        {formData.pet_ids.includes(pet.id) && (
-                          <Text className="text-white text-xs">✓</Text>
-                        )}
-                      </View>
-                      <Text className="text-brown-800 font-medium">{pet.name}</Text>
-                      <Text className="text-tan-500 ml-2 capitalize">
-                        ({pet.species})
-                      </Text>
-                    </Pressable>
-                  ))}
+                        <View
+                          className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                            selected
+                              ? 'bg-primary-500 border-primary-500'
+                              : 'border-tan-300'
+                          }`}
+                        >
+                          {selected && (
+                            <Text className="text-white text-xs">✓</Text>
+                          )}
+                        </View>
+                        <Text className="text-brown-800 font-medium">{pet.name}</Text>
+                        <Text className="text-tan-500 ml-2 capitalize">
+                          ({pet.species})
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                  {activePets.some((pet) => isPetLockedOut(pet)) && (
+                    <Text className="text-tan-500 text-sm mt-1">
+                      A guide can only include pets from one household, so pets from
+                      your other households are unavailable here.
+                    </Text>
+                  )}
                 </View>
               )}
             </Card>

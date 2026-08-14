@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, PetCard, ScreenContainer } from '../components';
@@ -17,7 +18,33 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Home'>;
 
 export function HomeScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
-  const { activePets, guides, loadingPets, loadingGuides, settings, loadingSettings } = useData();
+  const {
+    activePets,
+    guides,
+    loadingPets,
+    loadingGuides,
+    settings,
+    loadingSettings,
+    pendingInvites,
+    respondToInvite,
+    refreshHouseholds,
+  } = useData();
+
+  // Re-check pending invites whenever Home regains focus: sessions persist for
+  // days (PWA-first), so without this an already-signed-in invitee would never
+  // see the invite banner until a full reload. refreshHouseholds is cheap and
+  // also reloads the household list itself.
+  useFocusEffect(
+    useCallback(() => {
+      refreshHouseholds();
+    }, [refreshHouseholds])
+  );
+
+  // Invite id currently being accepted/declined (disables that banner's buttons)
+  const [respondingInvite, setRespondingInvite] = useState<{
+    id: string;
+    accept: boolean;
+  } | null>(null);
 
   // Prefer a real name; otherwise derive something human from the address.
   // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
@@ -57,6 +84,26 @@ export function HomeScreen({ navigation }: Props) {
 
   const navigateToSettings = () => {
     navigation.navigate('Settings');
+  };
+
+  const handleInviteResponse = async (inviteId: string, accept: boolean) => {
+    setRespondingInvite({ id: inviteId, accept });
+    try {
+      // On accept the context refreshes households, pets, and guides itself,
+      // so the new household's data appears without extra calls here.
+      await respondToInvite(inviteId, accept);
+    } catch (error: any) {
+      // Map the raw server errors for a revoked/already-answered invite to
+      // friendlier copy; the context has already refreshed pendingInvites, so
+      // the stale banner is gone by the time this alert shows.
+      const raw: string = error?.message || '';
+      const message = /invite is not pending|invite not found/i.test(raw)
+        ? 'This invitation is no longer available.'
+        : raw || 'Could not respond to the invitation.';
+      showAlert('Error', message);
+    } finally {
+      setRespondingInvite(null);
+    }
   };
 
   return (
@@ -104,6 +151,42 @@ export function HomeScreen({ navigation }: Props) {
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         <ScreenContainer variant="wide">
+        {/* Pending household invites */}
+        {pendingInvites.map((invite) => {
+          const isResponding = respondingInvite?.id === invite.id;
+          return (
+            <Card key={invite.id} className="mb-4 bg-primary-50 border-primary-200">
+              <Text className="text-brown-800 font-semibold mb-1">
+                Household invitation
+              </Text>
+              <Text className="text-brown-600 mb-3">
+                {`You've been invited to ${invite.household_name}${
+                  invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                }.`}
+              </Text>
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <Button
+                    title="Accept"
+                    onPress={() => handleInviteResponse(invite.id, true)}
+                    loading={isResponding && respondingInvite?.accept === true}
+                    disabled={isResponding}
+                  />
+                </View>
+                <View className="flex-1">
+                  <Button
+                    title="Decline"
+                    variant="outline"
+                    onPress={() => handleInviteResponse(invite.id, false)}
+                    loading={isResponding && respondingInvite?.accept === false}
+                    disabled={isResponding}
+                  />
+                </View>
+              </View>
+            </Card>
+          );
+        })}
+
         {/* Quick Stats */}
         <View className="flex-row gap-4 mb-6">
           <Card className="flex-1">

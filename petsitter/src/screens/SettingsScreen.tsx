@@ -90,9 +90,11 @@ export function SettingsScreen({ navigation }: Props) {
       const reader = new FileReader();
       reader.onload = async () => {
         const confirmed = await showConfirm({
-          title: 'Replace All Data?',
+          title: 'Replace Household Data?',
           message:
-            'Importing a backup REPLACES all of your current data (pets, guides, and share links). ' +
+            "Importing a backup REPLACES every pet, guide, and share link in your household with the backup's contents — " +
+            'including pets and guides that other household members added, for everyone in the household. ' +
+            "Other households you've joined are not affected. " +
             'Share links stored in the backup keep working after the import.',
           confirmLabel: 'Import & Replace',
           destructive: true,
@@ -118,10 +120,12 @@ export function SettingsScreen({ navigation }: Props) {
 
   const handleClearData = async () => {
     const confirmed = await showConfirm({
-      title: 'Delete ALL Your Data?',
+      title: 'Delete Your Household Data?',
       message:
-        'This permanently deletes every pet, every guide, and every share link in your account. ' +
-        'There is no undo — once deleted, your data cannot be recovered.',
+        'This permanently deletes every pet, guide, and share link in your household — ' +
+        'including any that other household members added and still use. It affects everyone ' +
+        "in the household. Other households you've joined are not affected. " +
+        'There is no undo — once deleted, this data cannot be recovered.',
       confirmLabel: 'Delete Everything',
       destructive: true,
     });
@@ -229,6 +233,24 @@ export function SettingsScreen({ navigation }: Props) {
               accessibilityLabel="Receive reminders and updates"
             />
           </View>
+        </Card>
+
+        {/* Household */}
+        <Card className="mb-4">
+          <Pressable
+            onPress={() => navigation.navigate('Household')}
+            accessibilityRole="button"
+            accessibilityLabel="Manage your household"
+            className="flex-row justify-between items-center"
+          >
+            <View className="flex-1 mr-3">
+              <Text className="text-brown-800 font-medium">Household</Text>
+              <Text className="text-tan-500 text-sm">
+                Share pets and guides with family, and invite members
+              </Text>
+            </View>
+            <Text className="text-tan-400 text-xl">›</Text>
+          </Pressable>
         </Card>
 
         {/* Memorial */}

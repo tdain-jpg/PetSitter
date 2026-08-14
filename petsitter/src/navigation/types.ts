@@ -50,6 +50,7 @@ export type MainStackParamList = {
   Settings: undefined;
   Profile: undefined;
   Memorial: undefined;
+  Household: undefined;
 
   // Onboarding
   Onboarding: undefined;
@@ -84,6 +85,7 @@ export type AICheatSheetScreenProps = NativeStackScreenProps<MainStackParamList,
 export type SettingsScreenProps = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 export type ProfileScreenProps = NativeStackScreenProps<MainStackParamList, 'Profile'>;
 export type MemorialScreenProps = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
+export type HouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'Household'>;
 
 export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 

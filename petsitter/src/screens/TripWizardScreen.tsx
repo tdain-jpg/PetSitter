@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -63,8 +63,27 @@ export function TripWizardScreen({ navigation }: Props) {
     );
   };
 
+  // MERGED-VIEW MODEL: activePets spans every household the user belongs to,
+  // but a guide's pets must all live in ONE household — the created guide is
+  // placed with its pets, and members of that household can always see every
+  // pet it references. The picker locks to the first selected pet's household.
+  const lockedHouseholdId = useMemo(() => {
+    const firstSelected = activePets.find((p) => selectedPetIds.includes(p.id));
+    return firstSelected?.household_id ?? null;
+  }, [activePets, selectedPetIds]);
+
+  const isPetLockedOut = (pet: { household_id?: string }) =>
+    !!lockedHouseholdId && !!pet.household_id && pet.household_id !== lockedHouseholdId;
+
   const selectAllPets = () => {
-    setSelectedPetIds(activePets.map((p) => p.id));
+    // Single-household rule: "Select All" fills in every pet in the locked
+    // household (or, with nothing selected yet, the first pet's household).
+    const target = lockedHouseholdId ?? activePets[0]?.household_id;
+    setSelectedPetIds(
+      activePets
+        .filter((p) => !target || !p.household_id || p.household_id === target)
+        .map((p) => p.id)
+    );
   };
 
   const deselectAllPets = () => {
@@ -198,10 +217,14 @@ export function TripWizardScreen({ navigation }: Props) {
         .filter(Boolean)
         .join('\n\n');
 
+      // Create the guide in the same household as its selected pets; without a
+      // lock (legacy pets missing household_id) the server default assigns the
+      // user's primary household.
       const newGuide = await createGuide({
         user_id: user.id,
         title,
         pet_ids: selectedPetIds,
+        ...(lockedHouseholdId ? { household_id: lockedHouseholdId } : {}),
         start_date: start,
         end_date: end,
         emergency_contacts: [],
@@ -296,28 +319,32 @@ export function TripWizardScreen({ navigation }: Props) {
         </Card>
       ) : (
         <View className="gap-3">
-          {activePets.map((pet) => (
+          {activePets.map((pet) => {
+            const selected = selectedPetIds.includes(pet.id);
+            const lockedOut = !selected && isPetLockedOut(pet);
+            return (
             <Pressable
               key={pet.id}
               onPress={() => togglePet(pet.id)}
+              disabled={lockedOut}
               accessibilityRole="checkbox"
               accessibilityLabel={pet.name}
-              accessibilityState={{ checked: selectedPetIds.includes(pet.id) }}
+              accessibilityState={{ checked: selected, disabled: lockedOut }}
               className={`rounded-xl p-4 border-2 ${
-                selectedPetIds.includes(pet.id)
+                selected
                   ? 'border-primary-500 bg-primary-50'
                   : 'border-tan-200 bg-cream-50'
-              }`}
+              } ${lockedOut ? 'opacity-40' : ''}`}
             >
               <View className="flex-row items-center">
                 <View
                   className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                    selectedPetIds.includes(pet.id)
+                    selected
                       ? 'border-primary-500 bg-primary-500'
                       : 'border-tan-300'
                   }`}
                 >
-                  {selectedPetIds.includes(pet.id) && (
+                  {selected && (
                     <Text className="text-white text-xs">✓</Text>
                   )}
                 </View>
@@ -340,7 +367,14 @@ export function TripWizardScreen({ navigation }: Props) {
                 </Text>
               </View>
             </Pressable>
-          ))}
+            );
+          })}
+          {activePets.some((pet) => isPetLockedOut(pet)) && (
+            <Text className="text-tan-500 text-sm">
+              A guide can only include pets from one household, so pets from
+              your other households are unavailable here.
+            </Text>
+          )}
         </View>
       )}
 

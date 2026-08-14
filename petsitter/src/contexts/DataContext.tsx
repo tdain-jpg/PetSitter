@@ -8,11 +8,16 @@ import {
   useRef,
   ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
 import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
 import type {
   Pet,
   Guide,
+  Household,
+  HouseholdMember,
+  HouseholdInviteRow,
+  PendingInvite,
   AppSettings,
   TaskCompletion,
   ShareableLink,
@@ -48,6 +53,26 @@ interface DataContextType {
   deleteGuide: (guideId: string) => Promise<void>;
   duplicateGuide: (guideId: string) => Promise<Guide>;
 
+  // Households
+  /** Every household the signed-in user belongs to (merged-view model). */
+  households: Household[];
+  householdsLoading: boolean;
+  /** Set when the last households/invites load failed — lets screens distinguish "failed to load" from "no household". */
+  householdsError: string | null;
+  /** Pending invites addressed to ME (the signed-in user's confirmed email). */
+  pendingInvites: PendingInvite[];
+  /** Where new pets/guides land by default, or null if the user has no household. */
+  primaryHouseholdId: string | null;
+  refreshHouseholds: () => Promise<void>;
+  inviteToHousehold: (householdId: string, email: string) => Promise<void>;
+  respondToInvite: (inviteId: string, accept: boolean) => Promise<void>;
+  revokeInvite: (inviteId: string) => Promise<void>;
+  leaveHousehold: (householdId: string) => Promise<void>;
+  removeHouseholdMember: (householdId: string, memberUserId: string) => Promise<void>;
+  renameHousehold: (householdId: string, name: string) => Promise<void>;
+  getHouseholdMembers: (householdId: string) => Promise<HouseholdMember[]>;
+  getHouseholdInvites: (householdId: string) => Promise<HouseholdInviteRow[]>;
+
   // Task Completions
   getTaskCompletions: (guideId: string, date: string) => Promise<TaskCompletion[]>;
   markTaskComplete: (completion: Omit<TaskCompletion, 'id'>) => Promise<TaskCompletion>;
@@ -55,7 +80,12 @@ interface DataContextType {
 
   // Share Links
   createShareLink: (guideId: string, expiresInDays?: number) => Promise<ShareableLink>;
-  getShareLinks: () => Promise<ShareableLink[]>;
+  /**
+   * All of a guide's links across the household (no user_id filter — RLS
+   * scopes visibility). Housemates' live links MUST be visible here because
+   * createShareLink deactivates every active link for the guide.
+   */
+  getShareLinksForGuide: (guideId: string) => Promise<ShareableLink[]>;
   deactivateShareLink: (linkId: string) => Promise<void>;
   /** Resolves guide + pets in ONE resolve_share RPC call (one view_count increment). */
   getSharedGuideBundle: (code: string) => Promise<SharedGuideBundle | null>;
@@ -102,6 +132,13 @@ export function DataProvider({ children }: DataProviderProps) {
   const [loadingGuides, setLoadingGuides] = useState(true);
   const [guidesError, setGuidesError] = useState<string | null>(null);
 
+  // Households state (merged-view model: user may belong to several)
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [householdsLoading, setHouseholdsLoading] = useState(true);
+  const [householdsError, setHouseholdsError] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [primaryHouseholdId, setPrimaryHouseholdId] = useState<string | null>(null);
+
   // Stale-response guard: loads capture the userId they started with and bail
   // before setState if the signed-in user changed mid-flight (sign-out or
   // account switch), so a slow response can't repopulate another user's state.
@@ -128,17 +165,23 @@ export function DataProvider({ children }: DataProviderProps) {
     if (userId) {
       refreshPets();
       refreshGuides();
+      refreshHouseholds();
       loadSettings();
       loadOnboardingState();
     } else {
       setPets([]);
       setGuides([]);
+      setHouseholds([]);
+      setPendingInvites([]);
+      setPrimaryHouseholdId(null);
       setSettings(null);
       setOnboardingState(null);
       setPetsError(null);
       setGuidesError(null);
+      setHouseholdsError(null);
       setLoadingPets(false);
       setLoadingGuides(false);
+      setHouseholdsLoading(false);
       setLoadingSettings(false);
     }
   }, [userId]);
@@ -246,6 +289,110 @@ export function DataProvider({ children }: DataProviderProps) {
   }, []);
 
   // ============================================
+  // Household Operations
+  // ============================================
+  const refreshHouseholds = useCallback(async () => {
+    if (!userId) return;
+    setHouseholdsLoading(true);
+    try {
+      const [myHouseholds, myInvites, primaryId] = await Promise.all([
+        dataService.getMyHouseholds(),
+        dataService.getMyPendingInvites(),
+        dataService.getMyPrimaryHousehold(),
+      ]);
+      if (userIdRef.current !== userId) return; // stale response — user changed
+      setHouseholds(myHouseholds);
+      setPendingInvites(myInvites);
+      setPrimaryHouseholdId(primaryId);
+      setHouseholdsError(null);
+    } catch (err: any) {
+      console.error('Failed to load households:', err);
+      if (userIdRef.current !== userId) return;
+      setHouseholdsError(err?.message || 'Failed to load households');
+    } finally {
+      if (userIdRef.current === userId) setHouseholdsLoading(false);
+    }
+  }, [userId]);
+
+  // PWA-first sessions stay signed in for days, so invites sent while the app
+  // was backgrounded would otherwise never appear until a full reload. On web
+  // (react-native-web) AppState 'active' maps to the tab becoming visible.
+  useEffect(() => {
+    if (!userId) return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshHouseholds();
+    });
+    return () => subscription.remove();
+  }, [userId, refreshHouseholds]);
+
+  const inviteToHousehold = useCallback(async (householdId: string, email: string) => {
+    // Server throws 'invalid email' / 'that email already belongs to a
+    // household member' — let the message propagate to the UI as-is.
+    await dataService.inviteToHousehold(householdId, email);
+  }, []);
+
+  const respondToInvite = useCallback(
+    async (inviteId: string, accept: boolean) => {
+      try {
+        await dataService.respondToInvite(inviteId, accept);
+      } catch (err) {
+        // The RPC throws 'invite is not pending' / 'invite not found' when the
+        // invite was revoked or answered elsewhere. Refresh anyway so the
+        // stale banner disappears instead of failing identically on every
+        // tap, then rethrow for the caller's alert. (refreshHouseholds
+        // swallows its own errors, so it never masks the original one.)
+        await refreshHouseholds();
+        throw err;
+      }
+      // The pending-invites list changes either way (refreshHouseholds reloads
+      // it). On ACCEPT the new household's pets/guides become visible, so
+      // refresh those too — the merged view must show them immediately.
+      if (accept) {
+        await Promise.all([refreshHouseholds(), refreshPets(), refreshGuides()]);
+      } else {
+        await refreshHouseholds();
+      }
+    },
+    [refreshHouseholds, refreshPets, refreshGuides]
+  );
+
+  const revokeInvite = useCallback(async (inviteId: string) => {
+    await dataService.revokeInvite(inviteId);
+  }, []);
+
+  const leaveHousehold = useCallback(
+    async (householdId: string) => {
+      // Server throws 'cannot remove the last owner of a household' when
+      // applicable. On success the household's pets/guides disappear from the
+      // merged view, so refresh everything.
+      await dataService.leaveHousehold(householdId);
+      await Promise.all([refreshHouseholds(), refreshPets(), refreshGuides()]);
+    },
+    [refreshHouseholds, refreshPets, refreshGuides]
+  );
+
+  const removeHouseholdMember = useCallback(
+    async (householdId: string, memberUserId: string) => {
+      // Owner-only per RLS; same last-owner guard as leaveHousehold.
+      await dataService.removeHouseholdMember(householdId, memberUserId);
+    },
+    []
+  );
+
+  const renameHousehold = useCallback(async (householdId: string, name: string) => {
+    await dataService.renameHousehold(householdId, name);
+    setHouseholds((prev) => prev.map((h) => (h.id === householdId ? { ...h, name } : h)));
+  }, []);
+
+  const getHouseholdMembers = useCallback(async (householdId: string) => {
+    return dataService.getHouseholdMembers(householdId);
+  }, []);
+
+  const getHouseholdInvites = useCallback(async (householdId: string) => {
+    return dataService.getHouseholdInvites(householdId);
+  }, []);
+
+  // ============================================
   // Task Completion Operations
   // ============================================
   const getTaskCompletions = useCallback(async (guideId: string, date: string) => {
@@ -277,10 +424,9 @@ export function DataProvider({ children }: DataProviderProps) {
     [userId]
   );
 
-  const getShareLinks = useCallback(async () => {
-    if (!userId) return [];
-    return dataService.getShareLinks(userId);
-  }, [userId]);
+  const getShareLinksForGuide = useCallback(async (guideId: string) => {
+    return dataService.getShareLinksForGuide(guideId);
+  }, []);
 
   const deactivateShareLink = useCallback(async (linkId: string) => {
     await dataService.deactivateShareLink(linkId);
@@ -391,10 +537,13 @@ export function DataProvider({ children }: DataProviderProps) {
   const clearAllData = useCallback(async () => {
     if (!userId) throw new Error('Not authenticated');
     await dataService.clearAllData(userId);
-    setPets([]);
-    setGuides([]);
-    await loadSettings();
-  }, [userId, loadSettings]);
+    // The wipe is scoped to the PRIMARY household — pets/guides in the user's
+    // OTHER households survive server-side, so refetch server truth instead
+    // of zeroing the merged view (zeroing would hide them until a full
+    // reload, contradicting the Settings copy "Other households you've
+    // joined are not affected"). Mirrors importData.
+    await Promise.all([refreshPets(), refreshGuides(), loadSettings()]);
+  }, [userId, refreshPets, refreshGuides, loadSettings]);
 
   // Memoized so consumers only re-render when something they can actually see
   // changes. Every value referenced below is listed in the dep array.
@@ -424,6 +573,22 @@ export function DataProvider({ children }: DataProviderProps) {
       deleteGuide,
       duplicateGuide,
 
+      // Households
+      households,
+      householdsLoading,
+      householdsError,
+      pendingInvites,
+      primaryHouseholdId,
+      refreshHouseholds,
+      inviteToHousehold,
+      respondToInvite,
+      revokeInvite,
+      leaveHousehold,
+      removeHouseholdMember,
+      renameHousehold,
+      getHouseholdMembers,
+      getHouseholdInvites,
+
       // Task Completions
       getTaskCompletions,
       markTaskComplete,
@@ -431,7 +596,7 @@ export function DataProvider({ children }: DataProviderProps) {
 
       // Share Links
       createShareLink,
-      getShareLinks,
+      getShareLinksForGuide,
       deactivateShareLink,
       getSharedGuideBundle,
       getSharedGuide,
@@ -477,11 +642,25 @@ export function DataProvider({ children }: DataProviderProps) {
       updateGuide,
       deleteGuide,
       duplicateGuide,
+      households,
+      householdsLoading,
+      householdsError,
+      pendingInvites,
+      primaryHouseholdId,
+      refreshHouseholds,
+      inviteToHousehold,
+      respondToInvite,
+      revokeInvite,
+      leaveHousehold,
+      removeHouseholdMember,
+      renameHousehold,
+      getHouseholdMembers,
+      getHouseholdInvites,
       getTaskCompletions,
       markTaskComplete,
       markTaskIncomplete,
       createShareLink,
-      getShareLinks,
+      getShareLinksForGuide,
       deactivateShareLink,
       getSharedGuideBundle,
       getSharedGuide,

@@ -22,6 +22,7 @@ export { HomeCareScreen } from './HomeCareScreen';
 // Settings & Profile screens
 export { SettingsScreen } from './SettingsScreen';
 export { MemorialScreen } from './MemorialScreen';
+export { HouseholdScreen } from './HouseholdScreen';
 
 // Share & Export screens
 export { ShareGuideScreen } from './ShareGuideScreen';

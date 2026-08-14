@@ -10,6 +10,7 @@ import { DailyRoutineScreen } from '../screens/DailyRoutineScreen';
 import { HomeCareScreen } from '../screens/HomeCareScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { MemorialScreen } from '../screens/MemorialScreen';
+import { HouseholdScreen } from '../screens/HouseholdScreen';
 import { ShareGuideScreen } from '../screens/ShareGuideScreen';
 import { PDFPreviewScreen } from '../screens/PDFPreviewScreen';
 import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
@@ -38,6 +39,7 @@ export function MainNavigator() {
       <Stack.Screen name="HomeCare" component={HomeCareScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Memorial" component={MemorialScreen} />
+      <Stack.Screen name="Household" component={HouseholdScreen} />
       <Stack.Screen name="ShareGuide" component={ShareGuideScreen} />
       <Stack.Screen name="PDFPreview" component={PDFPreviewScreen} />
       <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />

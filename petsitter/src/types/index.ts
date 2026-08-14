@@ -19,6 +19,46 @@ export interface AuthState {
 }
 
 // ============================================
+// Household Types
+// ============================================
+export type HouseholdRole = 'owner' | 'member';
+export type HouseholdInviteStatus = 'pending' | 'accepted' | 'declined' | 'revoked';
+
+export interface Household {
+  id: string;
+  name: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface HouseholdMember {
+  household_id: string;
+  user_id: string;
+  role: HouseholdRole;
+  created_at: string;
+}
+
+/** A pending invite addressed to the signed-in user (from my_pending_invites RPC). */
+export interface PendingInvite {
+  id: string;
+  household_id: string;
+  household_name: string;
+  invited_by_email: string | null;
+  created_at: string;
+}
+
+/** A row from household_invites as seen by household members (any status). */
+export interface HouseholdInviteRow {
+  id: string;
+  household_id: string;
+  email: string;
+  invited_by: string | null;
+  status: HouseholdInviteStatus;
+  created_at: string;
+  responded_at: string | null;
+}
+
+// ============================================
 // Pet Types
 // ============================================
 export type PetSpecies = 'dog' | 'cat' | 'bird' | 'fish' | 'reptile' | 'rabbit' | 'hamster' | 'other';
@@ -40,7 +80,16 @@ export interface PetPersonality {
 
 export interface Pet {
   id: string;
-  user_id: string;
+  /**
+   * Attribution only — the user who created the row. Server-pinned on insert;
+   * do NOT filter by this. Visibility is scoped by RLS via household_id.
+   */
+  user_id?: string | null;
+  /**
+   * Household this pet belongs to. Server fills it (primary household) when
+   * omitted on insert; RLS requires membership.
+   */
+  household_id?: string;
   name: string;
   species: PetSpecies;
   breed?: string;
@@ -140,7 +189,16 @@ export interface Medication {
 // ============================================
 export interface Guide {
   id: string;
-  user_id: string;
+  /**
+   * Attribution only — the user who created the row. Server-pinned on insert;
+   * do NOT filter by this. Visibility is scoped by RLS via household_id.
+   */
+  user_id?: string | null;
+  /**
+   * Household this guide belongs to. Server fills it (primary household) when
+   * omitted on insert; RLS requires membership.
+   */
+  household_id?: string;
   title: string;
   pet_ids: string[]; // References to pets included in this guide
   start_date?: string; // ISO date string

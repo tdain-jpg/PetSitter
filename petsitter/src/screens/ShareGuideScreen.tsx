@@ -19,7 +19,7 @@ type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
 export function ShareGuideScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, getShareLinks, createShareLink, deactivateShareLink } = useData();
+  const { guides, getShareLinksForGuide, createShareLink, deactivateShareLink } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [links, setLinks] = useState<ShareableLink[]>([]);
@@ -36,8 +36,10 @@ export function ShareGuideScreen({ navigation, route }: Props) {
       const foundGuide = guides.find((g) => g.id === guideId);
       setGuide(foundGuide || null);
 
-      const allLinks = await getShareLinks();
-      setLinks(allLinks.filter((l) => l.guide_id === guideId));
+      // Household-scoped (not just the current user's links): creating a link
+      // deactivates EVERY active link for this guide, so a housemate's live
+      // link must be visible here before this member replaces it.
+      setLinks(await getShareLinksForGuide(guideId));
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,10 @@ export function ShareGuideScreen({ navigation, route }: Props) {
     setCreating(true);
     try {
       const newLink = await createShareLink(guideId, expiresInDays);
-      setLinks((prev) => [...prev, newLink]);
+      // The server deactivated every previously-active link for this guide
+      // before inserting the new one — mirror that locally so a dead link
+      // (possibly a housemate's) never keeps showing as active.
+      setLinks((prev) => [...prev.map((l) => ({ ...l, is_active: false })), newLink]);
     } catch (error: any) {
       const message = error.message || 'Failed to create link';
       showAlert('Error', message);
