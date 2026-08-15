@@ -14,6 +14,7 @@ import { HouseholdScreen } from '../screens/HouseholdScreen';
 import { ShareGuideScreen } from '../screens/ShareGuideScreen';
 import { PDFPreviewScreen } from '../screens/PDFPreviewScreen';
 import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
+import { SampleCheatSheetScreen } from '../screens/SampleCheatSheetScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
 import type { MainStackParamList } from './types';
@@ -43,6 +44,7 @@ export function MainNavigator() {
       <Stack.Screen name="ShareGuide" component={ShareGuideScreen} />
       <Stack.Screen name="PDFPreview" component={PDFPreviewScreen} />
       <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />
+      <Stack.Screen name="SampleCheatSheet" component={SampleCheatSheetScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="TripWizard" component={TripWizardScreen} />
     </Stack.Navigator>

@@ -859,10 +859,15 @@ export class SupabaseAdapter implements DataService {
       .delete()
       .eq('user_id', userId);
     if (onboardingErr) throw new Error(onboardingErr.message);
-    // Reset settings (keep row, restore defaults)
+    // Reset settings (keep row, restore defaults). journeys is cleared
+    // explicitly: clearAllData returns the user to a brand-new state (it also
+    // resets onboarding_completed), so settled welcome journeys must not
+    // survive and suppress the checklist on the restarted account.
+    // DEFAULT_SETTINGS itself stays journeys-free so getSettings' first-time
+    // upsert keeps relying on the column default.
     const { error: settingsErr } = await supabase
       .from('settings')
-      .update({ ...DEFAULT_SETTINGS })
+      .update({ ...DEFAULT_SETTINGS, journeys: {} })
       .eq('user_id', userId);
     if (settingsErr) throw new Error(settingsErr.message);
   }

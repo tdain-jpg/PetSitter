@@ -445,6 +445,38 @@ export interface AppSettings {
   notifications_enabled: boolean;
   auto_save_enabled: boolean;
   onboarding_completed: boolean;
+  /**
+   * Per-journey completion state keyed by journey key (jsonb column, default
+   * {}). See JourneyEntry for the entry lifecycle and src/lib/journeys.ts for
+   * the registry the keys/versions come from.
+   */
+  journeys?: Record<string, JourneyEntry>;
+}
+
+// ============================================
+// Journey Types
+// ============================================
+/**
+ * Stored per-journey state inside settings.journeys (jsonb). The registry of
+ * journey definitions lives in src/lib/journeys.ts.
+ *
+ * Lifecycle of an entry:
+ * - absent            → the journey has never been touched (it may show);
+ * - { cards: {...} }  → in progress: per-card completion recorded for cards
+ *                       without an isComplete predicate (journey still shows);
+ * - { status, version, at, cards? } → settled as 'done' or 'skipped' against
+ *                       a registry version; re-shows only if the registry
+ *                       version is later bumped above the stored one.
+ */
+export interface JourneyEntry {
+  /** 'done' | 'skipped' once settled; absent while only card progress exists. */
+  status?: 'done' | 'skipped';
+  /** Registry version the status was recorded against. */
+  version?: number;
+  /** ISO timestamp of when the status was recorded. */
+  at?: string;
+  /** Per-card completion for cards without an isComplete predicate. */
+  cards?: Record<string, boolean>;
 }
 
 // ============================================

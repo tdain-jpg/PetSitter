@@ -31,6 +31,7 @@ export { PDFPreviewScreen } from './PDFPreviewScreen';
 
 // AI screens
 export { AICheatSheetScreen } from './AICheatSheetScreen';
+export { SampleCheatSheetScreen } from './SampleCheatSheetScreen';
 
 // Onboarding
 export { OnboardingScreen } from './OnboardingScreen';

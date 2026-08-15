@@ -19,12 +19,18 @@ import type {
   HouseholdInviteRow,
   PendingInvite,
   AppSettings,
+  JourneyEntry,
   TaskCompletion,
   ShareableLink,
   CheatSheet,
   OnboardingState,
 } from '../types';
 import type { ExportedData, SharedGuideBundle } from '../services/DataService';
+import { JOURNEYS, getActiveJourney } from '../lib/journeys';
+
+// How long the journey member count stays fresh before a passive households
+// refresh may refetch it (see the lazy effect in the provider).
+const MEMBER_COUNT_STALE_MS = 2 * 60 * 1000;
 
 interface DataContextType {
   // Pets
@@ -67,6 +73,12 @@ interface DataContextType {
   inviteToHousehold: (householdId: string, email: string) => Promise<void>;
   respondToInvite: (inviteId: string, accept: boolean) => Promise<void>;
   revokeInvite: (inviteId: string) => Promise<void>;
+  /**
+   * True once an invite accept has succeeded this session. First-run routing
+   * must consult this: the user is a household member from that instant, but
+   * the onboarding tail that records it takes several more round trips.
+   */
+  joinedViaInvite: boolean;
   leaveHousehold: (householdId: string) => Promise<void>;
   removeHouseholdMember: (householdId: string, memberUserId: string) => Promise<void>;
   renameHousehold: (householdId: string, name: string) => Promise<void>;
@@ -100,6 +112,30 @@ interface DataContextType {
   settings: AppSettings | null;
   loadingSettings: boolean;
   updateSettings: (updates: Partial<AppSettings>) => Promise<AppSettings>;
+
+  // Journeys (C3)
+  /** settings.journeys with a stable {} fallback while settings load. */
+  journeysState: Record<string, JourneyEntry>;
+  /** Settle a journey as done/skipped by merging into settings.journeys. */
+  setJourneyState: (key: string, status: 'done' | 'skipped') => Promise<void>;
+  /**
+   * Settle SEVERAL journeys in one settings write. Dismissing the founder
+   * checklist also skips joiner-welcome; doing both atomically means no
+   * intermediate render where only the first is settled (the joiner card
+   * would flash in) and no partial-failure state if the second write dies.
+   */
+  setJourneyStates: (statuses: Record<string, 'done' | 'skipped'>) => Promise<void>;
+  /**
+   * Record a CTA tap for a predicate-less journey card ({cards:{id:true}}
+   * merged into the stored entry; the journey itself stays pending).
+   */
+  setJourneyCardComplete: (key: string, cardId: string) => Promise<void>;
+  /**
+   * Member count of the primary household; null until the one-time lazy fetch
+   * resolves. Only fetched (once per household, cached) while a journey is
+   * still pending — JourneyCards waits for non-null before evaluating.
+   */
+  primaryHouseholdMemberCount: number | null;
 
   // Onboarding
   onboardingState: OnboardingState | null;
@@ -149,6 +185,40 @@ export function DataProvider({ children }: DataProviderProps) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
+  // Latest settings for async merge-writers (journey state merges into the
+  // journeys jsonb). Kept in sync BOTH here (render) and directly inside
+  // loadSettings/updateSettings, so two awaited journey writes in a row merge
+  // on top of each other even before React re-renders between them.
+  const settingsRef = useRef<AppSettings | null>(null);
+  settingsRef.current = settings;
+
+  // Primary-household member count for journey card predicates. Fetched
+  // lazily (see effect below), never per render: at most once per staleness
+  // window per household id.
+  const [primaryHouseholdMemberCount, setPrimaryHouseholdMemberCount] = useState<number | null>(
+    null
+  );
+  const memberCountFetchedFor = useRef<string | null>(null);
+
+  /**
+   * Latched the instant an invite ACCEPT succeeds, for the rest of the session.
+   *
+   * The user HAS joined a household from this moment, but the onboarding tail
+   * that records it (skip founder-welcome, then complete onboarding) takes
+   * several more round trips. In that window `onboarding_completed` is still
+   * false and `pendingInvites` is already empty — exactly the condition Home
+   * uses to send a first-run user to the founder wizard. A screen-local flag
+   * can't cover it (the accept may happen on HouseholdScreen, and the user can
+   * navigate back to Home mid-tail), so the latch lives here.
+   */
+  const [joinedViaInvite, setJoinedViaInvite] = useState(false);
+  // When that fetch last ran. The staleness window lets the passive path
+  // (refreshHouseholds on Home focus / AppState 'active') pick up REMOTE
+  // membership changes — an invitee accepting on their own device — so the
+  // founder's "Invite your family" tick can complete within a days-long PWA
+  // session instead of caching strictly once per household id.
+  const memberCountFetchedAt = useRef(0);
+
   // Onboarding state
   const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null);
 
@@ -174,6 +244,10 @@ export function DataProvider({ children }: DataProviderProps) {
       setHouseholds([]);
       setPendingInvites([]);
       setPrimaryHouseholdId(null);
+      setPrimaryHouseholdMemberCount(null);
+      memberCountFetchedFor.current = null;
+      memberCountFetchedAt.current = 0;
+      setJoinedViaInvite(false);
       setSettings(null);
       setOnboardingState(null);
       setPetsError(null);
@@ -291,6 +365,29 @@ export function DataProvider({ children }: DataProviderProps) {
   // ============================================
   // Household Operations
   // ============================================
+  // Fetch the primary household's member count for journey card predicates
+  // ("Invite your family" completes when householdMemberCount > 1). Called by
+  // the lazy journey effect below and by the local membership mutations, so
+  // the checklist tick doesn't stay stale for a whole PWA session.
+  const loadMemberCount = useCallback(
+    async (householdId: string) => {
+      memberCountFetchedFor.current = householdId;
+      memberCountFetchedAt.current = Date.now();
+      try {
+        const members = await dataService.getHouseholdMembers(householdId);
+        if (userIdRef.current !== userId) return; // stale — user changed
+        setPrimaryHouseholdMemberCount(members.length);
+      } catch (err) {
+        console.error('Failed to load household member count:', err);
+        if (userIdRef.current !== userId) return;
+        // Fail open as "solo" so journeys still render instead of waiting
+        // forever on a count that will not arrive.
+        setPrimaryHouseholdMemberCount(1);
+      }
+    },
+    [userId]
+  );
+
   const refreshHouseholds = useCallback(async () => {
     if (!userId) return;
     setHouseholdsLoading(true);
@@ -348,7 +445,68 @@ export function DataProvider({ children }: DataProviderProps) {
       // it). On ACCEPT the new household's pets/guides become visible, so
       // refresh those too — the merged view must show them immediately.
       if (accept) {
+        // Latch FIRST: from here on the user is a household member, and Home
+        // must never route them to the founder wizard no matter how the rest
+        // of this function goes or where the caller navigates meanwhile.
+        setJoinedViaInvite(true);
+
+        // Membership changed: drop the cached journey member count so the
+        // journey effect refetches it against the (possibly new) primary
+        // household instead of serving a stale tick all session.
+        memberCountFetchedFor.current = null;
         await Promise.all([refreshHouseholds(), refreshPets(), refreshGuides()]);
+
+        // First-run joiner: settle onboarding here rather than in each caller.
+        // Every accept path (the Home gate, the Home banner, the Household
+        // screen) then behaves identically and can't be left half-done by a
+        // caller that returns early or unmounts.
+        //
+        // Order matters: record the joiner marker BEFORE completing
+        // onboarding. If the process dies between the two, the user is a
+        // known joiner who still has onboarding pending (recoverable, and
+        // Home keeps them out of the wizard via the latch). The reverse order
+        // would mark them an onboarded FOUNDER with no journey state — and
+        // JourneyCards would then silently auto-complete founder-welcome,
+        // permanently suppressing the joiner tour.
+        //
+        // Called through dataService directly (not the context callbacks)
+        // because those are declared below this one.
+        const uid = userIdRef.current;
+        const current = settingsRef.current;
+        if (uid && current && !current.onboarding_completed) {
+          try {
+            const journeys = current.journeys ?? {};
+            const afterSkip = await dataService.updateSettings(uid, {
+              journeys: {
+                ...journeys,
+                'founder-welcome': {
+                  ...journeys['founder-welcome'],
+                  status: 'skipped',
+                  version: JOURNEYS['founder-welcome']?.version ?? 1,
+                  at: new Date().toISOString(),
+                },
+              },
+            });
+            if (userIdRef.current !== uid) return; // user changed mid-flight
+            settingsRef.current = afterSkip;
+            setSettings(afterSkip);
+
+            await dataService.completeOnboarding(uid);
+            if (userIdRef.current !== uid) return;
+            setOnboardingState(null);
+
+            const fresh = await dataService.getSettings(uid);
+            if (userIdRef.current !== uid) return;
+            settingsRef.current = fresh;
+            setSettings(fresh);
+          } catch (err) {
+            // Non-fatal: the membership is already committed and the latch
+            // holds for this session, so the user lands on a normal Home
+            // rather than the wizard. Their next launch re-attempts this via
+            // the same first-run path.
+            console.error('invite accept: onboarding tail failed', err);
+          }
+        }
       } else {
         await refreshHouseholds();
       }
@@ -375,8 +533,14 @@ export function DataProvider({ children }: DataProviderProps) {
     async (householdId: string, memberUserId: string) => {
       // Owner-only per RLS; same last-owner guard as leaveHousehold.
       await dataService.removeHouseholdMember(householdId, memberUserId);
+      // Membership changed: refetch the cached journey member count. The ref
+      // is only ever populated while a journey is pending, so settled users
+      // never pay this extra query. (loadMemberCount handles its own errors.)
+      if (memberCountFetchedFor.current === householdId) {
+        loadMemberCount(householdId);
+      }
     },
-    []
+    [loadMemberCount]
   );
 
   const renameHousehold = useCallback(async (householdId: string, name: string) => {
@@ -460,6 +624,7 @@ export function DataProvider({ children }: DataProviderProps) {
     try {
       const data = await dataService.getSettings(userId);
       if (userIdRef.current !== userId) return; // stale response — user changed
+      settingsRef.current = data;
       setSettings(data);
     } catch (err) {
       console.error('Failed to load settings:', err);
@@ -472,11 +637,78 @@ export function DataProvider({ children }: DataProviderProps) {
     async (updates: Partial<AppSettings>) => {
       if (!userId) throw new Error('Not authenticated');
       const updated = await dataService.updateSettings(userId, updates);
+      // Sync the ref immediately (not just on re-render) so a merge-writer
+      // that runs right after this resolves sees the fresh row.
+      settingsRef.current = updated;
       setSettings(updated);
       return updated;
     },
     [userId]
   );
+
+  // ============================================
+  // Journey Operations (C3)
+  // ============================================
+  const journeysState = useMemo(() => settings?.journeys ?? {}, [settings]);
+
+  const setJourneyStates = useCallback(
+    async (statuses: Record<string, 'done' | 'skipped'>) => {
+      if (!userId) throw new Error('Not authenticated');
+      const journeys = settingsRef.current?.journeys ?? {};
+      const at = new Date().toISOString();
+      const next: Record<string, JourneyEntry> = { ...journeys };
+      for (const [key, status] of Object.entries(statuses)) {
+        next[key] = {
+          ...journeys[key], // keep any per-card progress
+          status,
+          version: JOURNEYS[key]?.version ?? 1,
+          at,
+        };
+      }
+      await updateSettings({ journeys: next });
+    },
+    [userId, updateSettings]
+  );
+
+  const setJourneyState = useCallback(
+    (key: string, status: 'done' | 'skipped') => setJourneyStates({ [key]: status }),
+    [setJourneyStates]
+  );
+
+  const setJourneyCardComplete = useCallback(
+    async (key: string, cardId: string) => {
+      if (!userId) throw new Error('Not authenticated');
+      const journeys = settingsRef.current?.journeys ?? {};
+      const entry = journeys[key];
+      if (entry?.cards?.[cardId]) return; // already recorded — skip the write
+      const next: JourneyEntry = { ...entry, cards: { ...entry?.cards, [cardId]: true } };
+      await updateSettings({ journeys: { ...journeys, [key]: next } });
+    },
+    [userId, updateSettings]
+  );
+
+  // Lazy member-count fetch for journey predicates. Runs only while a journey
+  // could still show, and at most once per MEMBER_COUNT_STALE_MS per primary
+  // household id — NOT on every refreshHouseholds (Home refocuses call that
+  // constantly; the `households` dep re-runs this on each success and the
+  // time guard turns almost all of those into no-ops). Local membership
+  // mutations (accepting an invite, removing a member) invalidate the
+  // ref-cache for an immediate refetch; the staleness window covers REMOTE
+  // changes — the invitee accepting on their own device — so the founder's
+  // "Invite your family" tick can still complete and celebrate within a
+  // days-long PWA session. Settled users skip at the journey check and never
+  // pay the query.
+  useEffect(() => {
+    if (!userId || !primaryHouseholdId || !settings) return;
+    if (!getActiveJourney(settings.journeys)) return; // nothing pending — skip
+    if (
+      memberCountFetchedFor.current === primaryHouseholdId &&
+      Date.now() - memberCountFetchedAt.current < MEMBER_COUNT_STALE_MS
+    ) {
+      return; // fresh enough — skip
+    }
+    loadMemberCount(primaryHouseholdId);
+  }, [userId, primaryHouseholdId, settings, households, loadMemberCount]);
 
   // ============================================
   // Onboarding Operations
@@ -576,6 +808,7 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteToHousehold,
       respondToInvite,
       revokeInvite,
+      joinedViaInvite,
       leaveHousehold,
       removeHouseholdMember,
       renameHousehold,
@@ -602,6 +835,13 @@ export function DataProvider({ children }: DataProviderProps) {
       settings,
       loadingSettings,
       updateSettings,
+
+      // Journeys
+      journeysState,
+      setJourneyState,
+      setJourneyStates,
+      setJourneyCardComplete,
+      primaryHouseholdMemberCount,
 
       // Onboarding
       onboardingState,
@@ -643,6 +883,7 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteToHousehold,
       respondToInvite,
       revokeInvite,
+      joinedViaInvite,
       leaveHousehold,
       removeHouseholdMember,
       renameHousehold,
@@ -661,6 +902,11 @@ export function DataProvider({ children }: DataProviderProps) {
       settings,
       loadingSettings,
       updateSettings,
+      journeysState,
+      setJourneyState,
+      setJourneyStates,
+      setJourneyCardComplete,
+      primaryHouseholdMemberCount,
       onboardingState,
       updateOnboardingStateCallback,
       completeOnboarding,

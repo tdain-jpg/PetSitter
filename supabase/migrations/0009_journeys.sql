@@ -1,0 +1,41 @@
+-- ============================================================================
+-- 0009 — journeys: per-user guided-journey state on settings
+-- ============================================================================
+-- Model:
+--   * A "journey" is a client-side guided checklist/card sequence (e.g.
+--     'founder-welcome', 'joiner-welcome'). The registry — keys, versions,
+--     titles, cards, completion predicates — lives entirely in the client
+--     (src/lib/journeys.ts); the database only persists each user's
+--     dismissal/completion state.
+--   * settings.journeys is a jsonb map keyed by journey key:
+--       { "<journey-key>": { "status": "done" | "skipped",
+--                            "version": <number>,
+--                            "at": "<ISO timestamp>" } }
+--     A journey SHOWS when the map has no entry for its key OR the stored
+--     version is below the registry version — bumping a journey's version in
+--     the registry re-surfaces it for everyone. Skipping stores
+--     {status:'skipped'}, finishing stores {status:'done'}; both pin the
+--     registry version and a timestamp. The client merges entries into the
+--     map via its existing settings-update path (never replacing the map
+--     wholesale beyond that merge).
+--   * In-progress form: an entry may exist BEFORE any status is recorded —
+--     cards without a completion predicate persist their CTA-tap progress as
+--       { "<journey-key>": { "cards": { "<card-id>": true } } }
+--     with "status"/"version"/"at" absent until the journey settles (and
+--     "cards" may linger alongside a settled status afterward). Matches
+--     JourneyEntry in src/types/index.ts; server-side readers must not
+--     assume entry.status is present.
+--   * Default '{}' (no entries) means "no journey state recorded yet", i.e.
+--     every registered journey is eligible to show — correct for both new
+--     signups and existing rows backfilled by this DDL.
+--
+-- RLS: none needed here. settings is per-user with owner-only CRUD from 0002
+-- ("settings: owner can crud"), deliberately left per-user by the household
+-- work (0007). Adding a jsonb column changes no policy surface — the existing
+-- FOR ALL owner policy already covers reads and writes of the new column.
+--
+-- Idempotency: guarded ALTER (IF NOT EXISTS) — safe to re-run.
+-- ============================================================================
+
+alter table public.settings
+  add column if not exists journeys jsonb not null default '{}'::jsonb;

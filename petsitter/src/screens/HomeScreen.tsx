@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { ActivityIndicator, View, Text, ScrollView, Image } from 'react-native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { showAlert } from '../lib/showAlert';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, PetCard, ScreenContainer } from '../components';
+import { Button, Card, InviteGate, JourneyCards, PetCard, ScreenContainer } from '../components';
 import { COLORS } from '../constants';
 
 // @ts-ignore
@@ -13,8 +13,23 @@ const wordmark = require('../../assets/wordmark.png');
 import { useAuth, useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
+import type { PendingInvite } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Home'>;
+
+// The invite RPCs raise bare lowercase strings. Map the revoked/answered
+// cases to friendly copy; anything unexpected passes through sentence-cased
+// with a trailing period instead of verbatim (mirrors HouseholdScreen's
+// friendlyRpcError). Empty/missing falls back.
+function friendlyInviteError(raw: unknown, fallback: string): string {
+  const message = typeof raw === 'string' ? raw.trim() : '';
+  if (!message) return fallback;
+  if (/invite is not pending|invite not found/i.test(message)) {
+    return 'This invitation is no longer available.';
+  }
+  const sentence = message.charAt(0).toUpperCase() + message.slice(1);
+  return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
+}
 
 export function HomeScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
@@ -26,7 +41,10 @@ export function HomeScreen({ navigation }: Props) {
     settings,
     loadingSettings,
     pendingInvites,
+    householdsLoading,
+    householdsError,
     respondToInvite,
+    joinedViaInvite,
     refreshHouseholds,
   } = useData();
 
@@ -46,6 +64,20 @@ export function HomeScreen({ navigation }: Props) {
     accept: boolean;
   } | null>(null);
 
+  // Invite currently being accepted through the first-run gate. Holds the
+  // invite ROW (not just a flag): the accept flow's refreshes empty
+  // pendingInvites before settings flip to onboarding_completed, and this
+  // snapshot keeps the gate rendered (and the Onboarding replace suppressed)
+  // across that window.
+  const [acceptingGateInvite, setAcceptingGateInvite] = useState<PendingInvite | null>(null);
+
+  // Latched once respondToInvite succeeds in the gate flow: the user HAS
+  // joined a household, so Home must never fall through to the founder
+  // wizard — even if the completeOnboarding/setJourneyState tail fails
+  // (which would otherwise leave onboarding_completed false with zero
+  // pending invites, exactly the replace('Onboarding') condition).
+  const [joinedViaGate, setJoinedViaGate] = useState(false);
+
   // Prefer a real name; otherwise derive something human from the address.
   // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
   // ("tcdain+qapaws", "first.last"), which reads like a bug to the user.
@@ -59,12 +91,122 @@ export function HomeScreen({ navigation }: Props) {
     return base.charAt(0).toUpperCase() + base.slice(1);
   })();
 
-  // Check if onboarding is needed
+  // Invite-aware first run (contract C5). Replace to Onboarding ONLY after
+  // the pending-invites fetch has settled with zero invites — routing while
+  // invites were still loading was the observed failure: a brand-new invitee
+  // got pushed into the founder pet-wizard and never saw their invite.
+  // (If the invites fetch fails, householdsLoading still settles with an
+  // empty list and we fall through to Onboarding — same as the old behavior,
+  // and the invite stays pending for the post-onboarding Home banner.)
+  //
+  // isFocused: the gate keeps Home's header (Settings button) live, so a
+  // gated user can accept their invite from Settings → Household. That accept
+  // empties pendingInvites BEFORE its completeOnboarding write lands; without
+  // the focus guard this effect fired in that window (Home stays mounted
+  // under the pushed screen) and replaced Home with the founder wizard for a
+  // user who had just JOINED a household. Deferring until Home regains focus
+  // lets the accept flow finish first; useIsFocused re-runs the effect on
+  // focus changes.
+  const isFocused = useIsFocused();
   useEffect(() => {
-    if (!loadingSettings && settings && !settings.onboarding_completed) {
+    if (
+      isFocused &&
+      !loadingSettings &&
+      settings &&
+      !settings.onboarding_completed &&
+      !householdsLoading &&
+      // A FAILED invites fetch leaves pendingInvites empty, which is
+      // indistinguishable from "no invites" — routing on it would send a
+      // genuinely-invited user to the founder wizard because their network
+      // blipped. Wait for a clean read instead.
+      !householdsError &&
+      pendingInvites.length === 0 &&
+      !acceptingGateInvite &&
+      // Set by DataContext the instant any accept succeeds — covers accepts
+      // made on other screens, whose onboarding tail may still be in flight.
+      !joinedViaInvite &&
+      !joinedViaGate
+    ) {
       navigation.replace('Onboarding');
     }
-  }, [loadingSettings, settings, navigation]);
+  }, [
+    isFocused,
+    loadingSettings,
+    settings,
+    householdsLoading,
+    householdsError,
+    pendingInvites,
+    acceptingGateInvite,
+    joinedViaInvite,
+    joinedViaGate,
+    navigation,
+  ]);
+
+  // Show the gate for an un-onboarded user with invites waiting; keep it
+  // mounted through the whole accept flow (acceptingGateInvite) so it doesn't
+  // flicker away while refreshes run.
+  const gateInvite = acceptingGateInvite ?? pendingInvites[0] ?? null;
+  const showInviteGate =
+    acceptingGateInvite !== null ||
+    (!loadingSettings &&
+      !!settings &&
+      !settings.onboarding_completed &&
+      pendingInvites.length > 0);
+  const gateExtraCount = gateInvite
+    ? pendingInvites.filter((i) => i.id !== gateInvite.id).length
+    : 0;
+
+  // Un-onboarded but not (yet) gated: either the invites fetch hasn't settled
+  // (C5 forbids routing to Onboarding until it does) or the routing effect is
+  // about to replace this screen. Render a neutral spinner instead of the
+  // interactive dashboard so a fast tap can't take a not-yet-gated invitee
+  // into PetForm and plant a pet in their personal household before the gate
+  // ever appears. joinedViaGate is excluded: the gate's failure tail
+  // deliberately lands on the normal Home.
+  // "Unknown" counts as unsettled, not as onboarded. Before settings load
+  // there is no basis to render the founder dashboard, and for a brand-new
+  // signup that window is the LONGEST part of first run: getSettings does
+  // three sequential round trips (miss → upsert → read) because the signup
+  // trigger creates a profile and household but no settings row, while the
+  // invites fetch resolves in one. Rendering the dashboard there let an
+  // invitee tap "Add Your First Pet" — planting a pet in their personal
+  // household — or accept via the dashboard banner, whose path predates the
+  // gate. Both landed them in the founder wizard: the exact bug this loop
+  // exists to kill. Falls through normally if settings genuinely fail to
+  // load (settings stays null, loadingSettings false).
+  const firstRunSettling =
+    !showInviteGate &&
+    !joinedViaGate &&
+    !joinedViaInvite &&
+    (loadingSettings || (!!settings && !settings.onboarding_completed));
+
+  const handleGateAccept = async () => {
+    const invite = pendingInvites[0];
+    if (!invite || acceptingGateInvite) return;
+    setAcceptingGateInvite(invite);
+    try {
+      // respondToInvite owns the whole join: the RPC, the data refreshes, and
+      // the first-run tail (record the joiner marker, then complete
+      // onboarding). Keeping it there means every accept path behaves the
+      // same and none can be left half-done — including accepts made from the
+      // Household screen, where the user can navigate away mid-tail.
+      await respondToInvite(invite.id, true);
+      setJoinedViaGate(true);
+    } catch (error: any) {
+      showAlert(
+        'Error',
+        friendlyInviteError(error?.message, 'Could not accept the invitation.')
+      );
+    } finally {
+      setAcceptingGateInvite(null);
+    }
+  };
+
+  const handleGateStartFresh = () => {
+    // NEVER auto-decline — the invite stays pending, and after the founder
+    // wizard the standard Home invite banner offers it again.
+    navigation.replace('Onboarding');
+  };
 
   const handleSignOut = async () => {
     try {
@@ -96,11 +238,10 @@ export function HomeScreen({ navigation }: Props) {
       // Map the raw server errors for a revoked/already-answered invite to
       // friendlier copy; the context has already refreshed pendingInvites, so
       // the stale banner is gone by the time this alert shows.
-      const raw: string = error?.message || '';
-      const message = /invite is not pending|invite not found/i.test(raw)
-        ? 'This invitation is no longer available.'
-        : raw || 'Could not respond to the invitation.';
-      showAlert('Error', message);
+      showAlert(
+        'Error',
+        friendlyInviteError(error?.message, 'Could not respond to the invitation.')
+      );
     } finally {
       setRespondingInvite(null);
     }
@@ -151,6 +292,23 @@ export function HomeScreen({ navigation }: Props) {
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         <ScreenContainer variant="wide">
+        {/* First-run invite gate (contract C5): replaces the normal Home
+            content so an invited newcomer chooses Accept vs Start-fresh
+            instead of being routed into the founder pet-wizard. */}
+        {showInviteGate && gateInvite ? (
+          <InviteGate
+            invite={gateInvite}
+            extraCount={gateExtraCount}
+            accepting={acceptingGateInvite !== null}
+            onAccept={handleGateAccept}
+            onStartFresh={handleGateStartFresh}
+          />
+        ) : firstRunSettling ? (
+          <View className="py-16 items-center">
+            <ActivityIndicator color={COLORS.primary} />
+          </View>
+        ) : (
+        <>
         {/* Pending household invites */}
         {pendingInvites.map((invite) => {
           const isResponding = respondingInvite?.id === invite.id;
@@ -186,6 +344,11 @@ export function HomeScreen({ navigation }: Props) {
             </Card>
           );
         })}
+
+        {/* First-run journeys (contract C4): at most one active journey card.
+            Gated on onboarding_completed so a transient pre-Onboarding render
+            never flashes a journey it's about to navigate away from. */}
+        {settings?.onboarding_completed && <JourneyCards />}
 
         {/* Quick Stats */}
         <View className="flex-row gap-4 mb-6">
@@ -288,6 +451,8 @@ export function HomeScreen({ navigation }: Props) {
             variant="secondary"
           />
         </View>
+        </>
+        )}
         </ScreenContainer>
       </ScrollView>
     </View>

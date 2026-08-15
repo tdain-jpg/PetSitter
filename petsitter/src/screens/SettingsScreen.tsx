@@ -161,9 +161,14 @@ export function SettingsScreen({ navigation }: Props) {
           <Text className="text-lg font-semibold text-brown-800 mb-1">
             👑 Crown — coming soon
           </Text>
-          <Text className="text-brown-600 text-sm">
+          <Text className="text-brown-600 text-sm mb-3">
             AI-written cheat sheets for your sitters, while supporting Pawstructions.
           </Text>
+          <Button
+            title="👀 See a Sample Cheat Sheet"
+            onPress={() => navigation.navigate('SampleCheatSheet')}
+            variant="outline"
+          />
         </Card>
 
         {/* Preferences */}

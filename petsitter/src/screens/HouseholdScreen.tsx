@@ -6,7 +6,7 @@ import { useAuth, useData } from '../contexts';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
-import type { Household, HouseholdInviteRow, HouseholdMember } from '../types';
+import type { Household, HouseholdInviteRow, HouseholdMember, PendingInvite } from '../types';
 
 // The household RPCs raise bare lowercase strings (e.g. 'invalid email').
 // Map the known ones to friendly copy; anything unexpected passes through
@@ -21,6 +21,9 @@ function friendlyRpcError(raw: unknown, fallback: string): string {
       return 'That person is already in your household.';
     case 'not a member of this household':
       return 'You are no longer a member of this household.';
+    case 'invite is not pending':
+    case 'invite not found':
+      return 'This invitation is no longer available.';
     default: {
       const sentence = message.charAt(0).toUpperCase() + message.slice(1);
       return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
@@ -42,6 +45,8 @@ export function HouseholdScreen() {
     householdsLoading,
     householdsError,
     refreshHouseholds,
+    pendingInvites,
+    respondToInvite,
     inviteToHousehold,
     revokeInvite,
     leaveHousehold,
@@ -49,6 +54,7 @@ export function HouseholdScreen() {
     renameHousehold,
     getHouseholdMembers,
     getHouseholdInvites,
+    settings,
   } = useData();
 
   const [membersByHousehold, setMembersByHousehold] = useState<Record<string, HouseholdMember[]>>(
@@ -67,6 +73,18 @@ export function HouseholdScreen() {
   // Invite composer (one draft per household)
   const [inviteDrafts, setInviteDrafts] = useState<Record<string, string>>({});
   const [invitingHouseholdId, setInvitingHouseholdId] = useState<string | null>(null);
+
+  // Invite addressed to ME currently being answered (disables that card's buttons)
+  const [respondingInvite, setRespondingInvite] = useState<{
+    id: string;
+    accept: boolean;
+  } | null>(null);
+
+  // Sent invites currently being resent (revoke + re-invite under the hood).
+  // A Set, not a single id: two rows' resends can overlap, and each row must
+  // stay disabled until ITS list reload lands — otherwise the stale revoked
+  // row could be re-tapped mid-flight.
+  const [resendingInviteIds, setResendingInviteIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +180,10 @@ export function HouseholdScreen() {
       await inviteToHousehold(household.id, email);
       setInviteDrafts((prev) => ({ ...prev, [household.id]: '' }));
       await reloadInvites(household.id);
-      showAlert('Invite sent', `${email} will see the invitation when they sign in.`);
+      showAlert(
+        'Invite sent',
+        `We emailed ${email} — they'll also see the invitation when they sign in.`
+      );
     } catch (error: any) {
       showAlert(
         'Could not invite',
@@ -170,6 +191,78 @@ export function HouseholdScreen() {
       );
     } finally {
       setInvitingHouseholdId(null);
+    }
+  };
+
+  const handleInviteResponse = async (invite: PendingInvite, accept: boolean) => {
+    setRespondingInvite({ id: invite.id, accept });
+    try {
+      // The context owns the whole join: the RPC, the data refreshes, and —
+      // for an un-onboarded invitee who reached this screen through the
+      // invite gate's live Home header — the first-run tail that records the
+      // joiner marker and completes onboarding. It also latches
+      // joinedViaInvite, so Home can't route this user into the founder
+      // wizard even if they navigate back while that tail is still running.
+      await respondToInvite(invite.id, accept);
+    } catch (error: any) {
+      showAlert(
+        'Error',
+        friendlyRpcError(error?.message, 'Could not respond to the invitation.')
+      );
+    } finally {
+      setRespondingInvite(null);
+    }
+  };
+
+  const handleResend = async (invite: HouseholdInviteRow) => {
+    const confirmed = await showConfirm({
+      title: 'Resend Invite?',
+      message: `This sends a fresh invitation email to ${invite.email}. Each person can receive at most 5 invite emails per day.`,
+      confirmLabel: 'Resend',
+    });
+    if (!confirmed) return;
+
+    setResendingInviteIds((prev) => new Set(prev).add(invite.id));
+    let revoked = false;
+    try {
+      // The invite email is deduped per invite id, so a plain repeat invite
+      // would never email again — revoking and re-inviting really does.
+      await revokeInvite(invite.id);
+      revoked = true;
+      await inviteToHousehold(invite.household_id, invite.email);
+      // No delivery claim: the server silently skips the email at the
+      // 5-per-recipient-per-day cap while the invite itself still succeeds.
+      showAlert('Invite resent', `A fresh invitation was created for ${invite.email}.`);
+    } catch (error: any) {
+      if (revoked) {
+        // The old invite is gone but the replacement never went out. Generic
+        // "try again" copy would point at a Resend button the reload below is
+        // about to remove — tell the user what actually happened instead.
+        showAlert(
+          'Invite cancelled, not resent',
+          `The old invitation to ${invite.email} was cancelled, but the new one could not be sent. Invite them again from the email box above.`
+        );
+      } else {
+        showAlert(
+          'Could not resend',
+          friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+        );
+      }
+    } finally {
+      // Refresh regardless of outcome: if the re-invite failed after the
+      // revoke succeeded, the list must stop showing the revoked invite.
+      try {
+        await reloadInvites(invite.household_id);
+      } catch {
+        // A stale list isn't worth stacking a second alert on the first.
+      }
+      // Only NOW re-enable this row: clearing before the reload landed left a
+      // window where the stale (already-revoked) row could be re-tapped.
+      setResendingInviteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(invite.id);
+        return next;
+      });
     }
   };
 
@@ -383,24 +476,41 @@ export function HouseholdScreen() {
           {invites.length > 0 && (
             <View className="mt-4">
               <Text className="text-brown-600 font-medium mb-1">Pending invites</Text>
-              {invites.map((invite) => {
+              {invites.map((invite, index) => {
                 const sent = formatDate(invite.created_at?.slice(0, 10));
+                const isResending = resendingInviteIds.has(invite.id);
                 return (
                   <View
                     key={invite.id}
-                    className="flex-row justify-between items-center py-2"
+                    className={`py-3 ${
+                      index === invites.length - 1 ? '' : 'border-b border-tan-200'
+                    }`}
                   >
-                    <View className="flex-1 mr-3">
+                    <View className="mb-3">
                       <Text className="text-brown-800">{invite.email}</Text>
                       <Text className="text-tan-500 text-sm">
                         {sent ? `Invited ${sent}` : 'Pending'}
                       </Text>
                     </View>
-                    <Button
-                      title="Revoke"
-                      variant="outline"
-                      onPress={() => handleRevoke(invite)}
-                    />
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <Button
+                          title="Resend"
+                          variant="outline"
+                          onPress={() => handleResend(invite)}
+                          loading={isResending}
+                          disabled={isResending}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Button
+                          title="Revoke"
+                          variant="outline"
+                          onPress={() => handleRevoke(invite)}
+                          disabled={isResending}
+                        />
+                      </View>
+                    </View>
                   </View>
                 );
               })}
@@ -428,6 +538,51 @@ export function HouseholdScreen() {
               family so you can keep care instructions up to date together.
             </Text>
           </Card>
+
+          {/* Invites addressed to the signed-in user — mirrors the Home banner
+              so invitations are findable here too. Hidden when there are none. */}
+          {pendingInvites.length > 0 && (
+            <View className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-2">
+                Invites for you
+              </Text>
+              {pendingInvites.map((invite) => {
+                const isResponding = respondingInvite?.id === invite.id;
+                const invited = formatDate(invite.created_at?.slice(0, 10));
+                return (
+                  <Card key={invite.id} className="mb-3 bg-primary-50 border-primary-200">
+                    <Text className="text-brown-800 font-semibold mb-1">
+                      {invite.household_name}
+                    </Text>
+                    <Text className="text-brown-600 mb-3">
+                      {`Invited${
+                        invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                      }${invited ? ` · ${invited}` : ''}.`}
+                    </Text>
+                    <View className="flex-row gap-3">
+                      <View className="flex-1">
+                        <Button
+                          title="Accept"
+                          onPress={() => handleInviteResponse(invite, true)}
+                          loading={isResponding && respondingInvite?.accept === true}
+                          disabled={isResponding}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Button
+                          title="Decline"
+                          variant="outline"
+                          onPress={() => handleInviteResponse(invite, false)}
+                          loading={isResponding && respondingInvite?.accept === false}
+                          disabled={isResponding}
+                        />
+                      </View>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
 
           {households.length === 0 ? (
             householdsLoading ? (

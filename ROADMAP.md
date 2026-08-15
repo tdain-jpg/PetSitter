@@ -68,11 +68,29 @@ This is the largest single change on the list — it touches all eight tables' p
 adapter, and the contexts. Worth doing before there are many users, since the migration only
 gets harder with real data.
 
-### [ ] Loop 4 slate — invite-first onboarding + welcome journeys (DESIGNED 2026-08-14)
-Born from Dana's real first-run: no invite email yet (fixed once Loop 3's notify pipeline is
-live), and `HomeScreen` replaces itself with the founder pet-wizard the moment
-`onboarding_completed` is false — before the pending-invite banner can render. A joiner got a
-founder's first run.
+### [x] Loop 4 — invite-first onboarding + welcome journeys — SHIPPED 2026-08-15
+Built by a 5-package fleet through 3 gauntlet rounds (13 → 8 → 5 problems, **zero must-fix at
+every round**), plus a replacement verification round for two lenses that died on API credits
+mid-run. Migration 0009 applied (settings.journeys jsonb; RLS re-verified by impersonation —
+own write reads back, only own row visible). Delivered:
+- **Invite gate** (the Dana fix): `HomeScreen`'s replace-to-Onboarding is now guarded on six
+  conditions — focused, settings loaded, households/invites *settled*, zero pending invites,
+  not mid-accept, and a `joinedViaGate` latch so a failed accept-tail can never dump a joined
+  user into the founder wizard. Invited signups see "💌 You're invited!" with Accept & Join;
+  "Start fresh instead" leaves the invite pending.
+- **Journey framework**: `settings.journeys` + version-gated registry (`src/lib/journeys.ts`)
+  + `<JourneyCards />`. founder-welcome (live checklist that ticks itself off real data) and
+  joiner-welcome (3-card shared-household intro). Skip/done never re-shows unless we bump a
+  journey's version.
+- **Household invite UX**: "Invites for you" section + honest Resend (revoke + re-invite, so
+  the per-invite-id email dedupe actually re-sends; server caps at 5/recipient/day).
+- **Crown sample sheet**: Banjo / Marmalade / Tortellini, rendered through the *same*
+  `CheatSheetView` component as real sheets (extracted in this loop), reachable from the Crown
+  upsell card and Settings. Format-audited: no pipes, no dash rules, no leaked tokens.
+
+Original problem statement, for the record: no invite email yet (fixed in Loop 3), and
+`HomeScreen` replaced itself with the founder pet-wizard the moment `onboarding_completed` was
+false — before the pending-invite banner could render. A joiner got a founder's first run.
 
 **A. Invite-aware first run.** Before routing to the wizard, wait for `pendingInvites` too.
 - Pending invite exists → show an **invite gate** instead of the wizard: "«Inviter» invited
@@ -383,6 +401,37 @@ fallback; expo-image-picker MediaTypeOptions deprecation.
   agents own most screen files.
 - [ ] **Google OAuth** — Cloud Console client (SETUP.md §3), or remove the button.
 - [ ] **Social/n8n** — Tim's n8n instance; plan in §3.
+
+## 4b. Known bug — a joiner's new pets land in their PRIVATE household 🔴
+
+**Found 2026-08-15 during Loop 4 verification; predates Loop 4 (it's inherent to the Loop 2
+households model). Highest-value thing to fix next.**
+
+`handle_new_user` gives every signup a personal "My Household" they OWN. `primary_household_of`
+orders by `(role='owner') desc, created_at asc`, and the pets/guides BEFORE INSERT trigger
+stamps `household_id = primary_household_of(auth.uid())`. So for someone who signed up and
+*then* joined a family, their own empty household still wins — **every pet or guide they create
+silently lands there, invisible to the household they think they're contributing to.**
+
+Verified in production: Dana belongs to The Dain Family, but `primary_household_of` returns her
+own "My Household" (0 pets, 1 member). If she adds a pet, Tim will not see it.
+
+Loop 4 shipped honest joiner copy as a stopgap (the tour now promises only that you can *see
+and edit* what's already there — see the comment on the `shared` card in `src/lib/journeys.ts`),
+but the underlying behavior is still wrong.
+
+Candidate fixes, in preference order:
+1. **Drop the empty solo household on accept** — in `respond_to_invite`, if the accepting user's
+   own household has zero pets, zero guides, and only them as a member, delete it. Their primary
+   then becomes the joined household naturally. Must handle: what happens if they later leave
+   the joined household and have none left (`primary_household_of` → null makes pet creation
+   fail — check whether that hole already exists today).
+2. **Change `primary_household_of` ordering** to prefer a household with other members or
+   existing data over an empty solo one. Simpler, but changes behavior for every user.
+3. **Let the user choose** a "default household" explicitly (most flexible, most UI).
+
+Deliberately NOT rushed into the Loop 4 checkpoint: it's a DB-semantics change that deserves
+its own migration, adversarial round, and RLS re-verification.
 
 ## 5. Deferred / minor
 

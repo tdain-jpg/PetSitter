@@ -33,9 +33,6 @@ export type MainStackParamList = {
   GuideForm: { mode: 'create' } | { mode: 'edit'; guideId: string };
 
   // Guide Sub-screens
-  EmergencyContacts: { guideId: string };
-  HomeInfo: { guideId: string };
-  TravelItinerary: { guideId: string };
   DailyRoutine: { guideId: string };
   HomeCare: { guideId: string };
 
@@ -45,10 +42,10 @@ export type MainStackParamList = {
 
   // AI Features
   AICheatSheet: { guideId: string };
+  SampleCheatSheet: undefined;
 
   // Settings
   Settings: undefined;
-  Profile: undefined;
   Memorial: undefined;
   Household: undefined;
 
@@ -70,9 +67,6 @@ export type GuideListScreenProps = NativeStackScreenProps<MainStackParamList, 'G
 export type GuideDetailScreenProps = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 export type GuideFormScreenProps = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
 
-export type EmergencyContactsScreenProps = NativeStackScreenProps<MainStackParamList, 'EmergencyContacts'>;
-export type HomeInfoScreenProps = NativeStackScreenProps<MainStackParamList, 'HomeInfo'>;
-export type TravelItineraryScreenProps = NativeStackScreenProps<MainStackParamList, 'TravelItinerary'>;
 export type DailyRoutineScreenProps = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
 export type HomeCareScreenProps = NativeStackScreenProps<MainStackParamList, 'HomeCare'>;
 
@@ -81,9 +75,9 @@ export type SharedGuideViewScreenProps = NativeStackScreenProps<RootStackParamLi
 export type PDFPreviewScreenProps = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
 export type AICheatSheetScreenProps = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
+export type SampleCheatSheetScreenProps = NativeStackScreenProps<MainStackParamList, 'SampleCheatSheet'>;
 
 export type SettingsScreenProps = NativeStackScreenProps<MainStackParamList, 'Settings'>;
-export type ProfileScreenProps = NativeStackScreenProps<MainStackParamList, 'Profile'>;
 export type MemorialScreenProps = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
 export type HouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'Household'>;
 
