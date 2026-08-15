@@ -187,14 +187,27 @@ ${homeInfo}
 
 ${guide.additional_notes ? `ADDITIONAL NOTES:\n${guide.additional_notes}` : ''}
 
-Please create a cheat sheet that includes:
-1. A quick daily schedule summary for each pet
-2. Important medications and times
-3. Emergency contact quick reference
-4. Key home access info — values written as [[TOKEN]] (for example [[DOOR_CODE]]) are placeholders that will be automatically filled in with the real values after you finish. Where that information belongs, write the placeholder EXACTLY as given, character for character. Never invent a code, password, or location, and never alter, describe, or omit a placeholder for information that exists
-5. Important reminders and warnings
+Build the cheat sheet with these sections in this order, skipping any with nothing to say:
 
-Format it using markdown with clear sections, bullet points, and bold text for important items. Keep it concise but comprehensive - this should fit on 1-2 pages when printed.`;
+## ⏰ Daily Schedule   (one subsection per pet if there are several)
+## 💊 Medications
+## 🚨 Emergency Contacts
+## 🔑 Home Access
+## ⚠️ Important Reminders
+
+End with "## ❓ Ask the Owner" ONLY if essential information is genuinely missing.
+
+STRICT FORMATTING RULES:
+- Use ONLY these constructs: "## " section headings (emoji + short title as shown above), "**Label:** value" lines, and "- " bullets. Keep lines short and scannable on a phone.
+- NEVER use markdown tables — do not output the | character at all.
+- NEVER use horizontal rules — do not output lines of dashes.
+- No HTML. Bold the truly critical values: times, doses, phone numbers.
+- Keep the whole sheet tight — a fridge-door reference that fits on 1-2 printed pages.
+
+STRICT PLACEHOLDER RULES:
+- The ONLY placeholders that exist are the exact [[ALL_CAPS]] strings appearing in HOME INFORMATION above. Where such a value belongs, copy its placeholder character for character.
+- NEVER invent a new [[...]] placeholder of your own, and never wrap any other text in double brackets.
+- Never invent a code, password, or location. For a field marked "Not provided", either leave it out or tell the sitter to ask the owner.`;
 }
 
 // ----------------------------------------------------------------------------

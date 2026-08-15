@@ -155,6 +155,10 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                   This guide has been shared with you for viewing. Some sensitive information
                   may be included. Please handle this information responsibly.
                 </Text>
+                <Text className="text-tan-600 text-sm mt-2">
+                  Codes and passwords stay hidden until you tap to reveal them, and the owner
+                  can turn this link off at any time.
+                </Text>
               </View>
             </View>
           </Card>

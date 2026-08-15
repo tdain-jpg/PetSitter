@@ -19,6 +19,13 @@ const TOKEN_FIELDS: Record<string, keyof HomeInfo> = {
   '[[GATE_CODE]]': 'gate_code',
   '[[MAILBOX_CODE]]': 'mailbox_code',
   '[[SPARE_KEY_LOCATION]]': 'spare_key_location',
+  // Defensive aliases: the prompt forbids inventing tokens, but a model that
+  // pattern-generalizes anyway (seen once: [[WIFI_NETWORK]]) should still
+  // resolve to the right value rather than a fallback pointer.
+  '[[WIFI_NETWORK]]': 'wifi_name',
+  '[[WIFI_NAME]]': 'wifi_name',
+  '[[ADDRESS]]': 'address',
+  '[[TRASH_DAY]]': 'trash_day',
 };
 
 export function fillCheatSheetTokens(

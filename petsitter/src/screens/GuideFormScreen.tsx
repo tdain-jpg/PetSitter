@@ -10,7 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, TravelItineraryEditor, Select } from '../components';
+import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, SecurityNote, TravelItineraryEditor, Select } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { generateId } from '../services';
@@ -677,9 +677,10 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
             {/* Home Info */}
             <Card className="mb-4">
-              <Text className="text-lg font-semibold text-brown-800 mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
                 Home Information
               </Text>
+              <SecurityNote context="entry" />
 
               <Input
                 label="Address"
