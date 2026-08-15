@@ -183,9 +183,18 @@ export function HouseholdScreen() {
       // household from the server, so the badge only moves once it's real.
       await setPrimaryHousehold(household.id);
     } catch (error: any) {
+      // An error here does NOT prove the change didn't happen. The write can
+      // land and only its RESPONSE be lost — a gateway timeout, a flaky
+      // connection — which QA reproduced by returning a synthetic 500 after
+      // letting the PATCH through. Asserting "could not change default" there
+      // tells the user the exact opposite of the truth, and they only find out
+      // on the next reload. So reconcile the badge from the server first, then
+      // say only what we actually know.
+      await refreshHouseholds();
       showAlert(
-        'Could not change default',
-        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+        "Couldn't confirm the change",
+        `${friendlyRpcError(error?.message, 'Something went wrong.')} ` +
+          'The Default badge now shows where things actually stand — check it before trying again.'
       );
     } finally {
       setSettingDefaultId(null);
@@ -519,8 +528,11 @@ export function HouseholdScreen() {
                   disabled: settingDefaultId !== null,
                   busy: isMakingDefault,
                 }}
-                className="bg-primary-50 px-3 py-1.5 rounded self-start mt-2"
-                style={{ opacity: settingDefaultId !== null ? 0.5 : 1 }}
+                className="bg-primary-50 px-3 py-1.5 rounded self-start mt-2 items-center justify-center"
+                // minWidth holds the label's footprint while the spinner is
+                // swapped in, so the chip doesn't collapse to a square and
+                // shove the surrounding rows around mid-request.
+                style={{ opacity: settingDefaultId !== null ? 0.5 : 1, minWidth: 96 }}
               >
                 {isMakingDefault ? (
                   <ActivityIndicator size="small" color={COLORS.primary} />
@@ -712,12 +724,18 @@ export function HouseholdScreen() {
           ) : (
             <>
               {/* Said once for the whole list, not repeated on every card. The
-                  second sentence is not decoration: the default household is
+                  last sentence is not decoration: the default household is
                   also what Settings backs up, replaces on import, and DELETES
-                  under "Clear All Data". */}
+                  under "Clear All Data".
+                  Pets only — a GUIDE lands in the household of the first pet
+                  you pick (GuideFormScreen), and falls back to the default just
+                  when no pet is selected. The old copy claimed the default for
+                  both, which is wrong whenever the selected pet lives
+                  elsewhere. */}
               <Text className="text-brown-600 text-sm mb-3">
-                New pets and guides you add go to your default household. Backup, import and
-                Clear All Data in Settings apply to it too.
+                New pets you add go to your default household, and so does a new guide unless
+                you pick a pet from another one. Backup, import and Clear All Data in Settings
+                apply to the default too.
               </Text>
               {households.map(renderHousehold)}
             </>

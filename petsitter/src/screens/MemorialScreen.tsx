@@ -2,6 +2,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
+import { formatDate } from '../lib/dates';
 import { Button, Card, Icon, ScreenContainer, speciesIconName } from '../components';
 import { useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -94,7 +95,13 @@ export function MemorialScreen({ navigation }: Props) {
                     </Text>
                     {pet.deceased_date && (
                       <Text className="text-tan-400 text-sm">
-                        🕊️ {new Date(pet.deceased_date).toLocaleDateString()}
+                        {/* parseLocalDate, NOT new Date(): the bare string
+                            constructor parses 'YYYY-MM-DD' as UTC midnight, so
+                            every user west of UTC saw the day BEFORE the one
+                            PetDetail wrote with todayLocal(). On a memorial
+                            screen a date that is silently wrong by a day reads
+                            as corruption, not as a rounding artefact. */}
+                        🕊️ {formatDate(pet.deceased_date, { dateStyle: 'medium' })}
                       </Text>
                     )}
                   </View>

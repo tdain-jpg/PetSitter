@@ -397,6 +397,23 @@ covered by `beforeunload`). Hacking popstate directly conflicts with React Navig
 history sync. **Planned fix: create-mode draft persistence** — save form drafts to
 localStorage as the user types and offer "Resume draft?" on next open, which makes any exit
 path harmless rather than fighting the router. QA repro: Add Pet → type name → browser back.
+**Re-confirmed still live in the 2026-08-15 Loop 5 QA pass** — and confirmed armed, not
+missing: the same form state raised the dialog correctly via the in-app Cancel immediately
+before browser Back discarded it. Suspect site is `PetFormScreen.tsx` (~line 513), where the
+guard hangs off the header control rather than a `beforeRemove` / `popstate` listener.
+
+### [ ] A dead session renders a normal signed-in Home with ZERO counts 🔴
+Found 2026-08-15 (Loop 5 QA). After an auth failure that occurs *post-mount*, Home renders as
+fully signed in — "Welcome, Tcdain!" — with **0 Pets, 0 Guides** and the "Add your first pet"
+empty state. It is pixel-indistinguishable from a wiped account. Console shows 401s and
+`permission denied for function my_pending_invites`. Signing back in restores everything, so
+nothing is actually lost — but a user seeing this has every reason to believe their data is
+gone, and that is a support incident (or a churn event) rather than a cosmetic bug.
+Honest caveat from the QA agent: this was induced artificially (`localStorage.clear()` in a
+second tab), **not** reproduced from a natural refresh-token expiry. The failure mode is
+generic to any post-mount auth failure, so treat it as plausible-in-the-wild rather than
+observed-in-the-wild. Fix direction: treat a 401 from the data layer as a session-expired
+signal — route to sign-in or render an explicit expired state, never an empty-but-happy Home.
 
 ### [ ] Authenticated deep links don't survive reload
 Hard-loading `/Main/PetForm?...` or `/Main/DailyRoutine?...` lands on Home after session
@@ -646,7 +663,18 @@ email**, which directly constrains the `notify` pipeline.
   is never styled red (red is reserved for the error state the indicator already has).
 
 - **DailyRoutineScreen** keeps private copies of the date helpers now centralized in
-  `src/lib/dates.ts` — consolidate.
+  `src/lib/dates.ts` — consolidate. (MemorialScreen had the same problem and shipped a
+  user-visible bug because of it: `new Date('YYYY-MM-DD')` parses as UTC midnight, so every
+  user west of UTC saw the deceased date a day early. Fixed in Loop 5 by switching to
+  `formatDate`. Worth auditing for any remaining bare `new Date(someDateString)`.)
+- **Emoji still in avatar-shaped circles (Loop 5 QA):** the commissioned icons replaced the
+  species ladders, but `OnboardingScreen.tsx` (~line 293) still renders 🐕 at `text-4xl`
+  inside a `w-20 h-20 rounded-full` circle — the same avatar treatment — directly above copy
+  reading "furry (or scaly) friend". Also `HomeScreen.tsx` (~536) 🐾 and Memorial's 🌈 empty
+  state, while `icon-paw` and `icon-memorial-rainbow` both exist in the delivered set.
+- **`Unexpected text node` dev warning (Loop 5 QA):** logged twice per session, React Native
+  Web. QA could not pin it to a screen — a DOM walk for text nodes parented to `css-view-*`
+  came back empty everywhere they looked. Recorded so it isn't lost, not localized.
 - **`brevo-test.txt` EHLO oddity** — curl reports the upload filename as the SMTP EHLO name.
   Harmless, noted in case it ever matters.
 - **Tagline** — "Where Pets Rule the Kingdom!" carried over from the old brand. Keep or rework.
