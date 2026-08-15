@@ -316,26 +316,42 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
 "Go back" buttons live in the DOM), so keyboard order can reach invisible screens. Needs
 `aria-hidden`/inert on non-focused routes or detachInactiveScreens tuning on web.
 
-## Loop 3 — in flight (no human dependencies)
+## Loop 3 — SHIPPED 2026-08-14 (activation gated on Round-4 pastes)
 
-- [ ] **Crown full build** (minus billing): `households.crown_until` entitlement, server-side
-  cheat-sheet generation in an Edge Function with a server Gemini key, AI Settings card
-  removed, Crown upsell for non-members. Activation needs two human pastes (below).
-- [ ] **Invite emails** — outbox table + trigger on invite creation; `notify` Edge Function
-  drains it through the Brevo API on a GitHub Actions cron.
-- [ ] **Notifications #1 + #2** — "sitter opened your guide" (trigger on first share view) and
-  "trip starts tomorrow, guide incomplete" (daily scan), same outbox + cron.
-- [ ] **Pet photo storage** — `pet-photos` bucket, owner-scoped write policies, PhotoPicker
-  uploads and stores permanent URLs (closes the blob-URL bug for good).
-- [ ] **Deep links survive reload** (web) — restore the intended /Main/* route after session
-  restore.
-- [ ] **Polish**: Done button + bottom save indicator on edit forms; household error copy;
-  emoji spacing.
+All six packages built by a 3-round gauntlet (21 agents), re-verified by a final 3-lens
+adversarial round (9 findings, 0 must-fix, all fixed pre-deploy), live-probed in prod, and
+QA-passed on production (all journeys green, zero blockers):
+
+- [x] **Crown** — `households.crown_until` + membership-gated `has_crown()` (migration 0008
+  applied); `generate-cheat-sheet` Edge Function (caller-RLS, redacts every house-opening
+  code AND spare-key location from Gemini prompts; wifi stays — stance to re-confirm below);
+  per-user Gemini key UI removed; friendly Crown upsell verified in prod (402 path).
+- [x] **Invite emails + notifications #1/#2** — service-role-only `notifications_outbox`,
+  invite + first-share-view triggers, daily incomplete-guide scan with missed-run catch-up;
+  `notify` Edge Function (verify_jwt OFF per supabase/config.toml — its auth is the
+  x-cron-secret header) drains via Brevo on a 15-min GH cron; pre-activation 503s are green
+  no-ops. Anti-bombing: 5 invite emails/recipient/day cap + per-invite dedupe.
+- [x] **Pet photos** — hardened public bucket (5MB, images only), per-user-folder policies,
+  PhotoPicker uploads permanent URLs, friendly size guard. QA note: the OS file dialog is
+  un-automatable — needs ONE manual upload check (Round 4).
+- [x] **Deep links survive reload** — /Main/* restore after auth; loading gates on all 10
+  restore-reachable screens (no "not found" flash, no empty-form clobber). All 6 deep-link
+  journeys + bogus-id case verified on prod.
+- [x] **Polish** — Done buttons + bottom save indicator on edit forms; household error copy.
+
+New minors from the post-deploy QA (parked in §5): share-link Copy button needs a clipboard
+fallback; expo-image-picker MediaTypeOptions deprecation.
 
 ## Round 4 — gated on Tim
 
 - [ ] **Three secret pastes** to activate Loop 3's server features (Supabase → Edge Functions →
-  Secrets): `GEMINI_API_KEY`, `BREVO_API_KEY`, `CRON_SECRET` (value provided when Loop 3 lands).
+  Secrets): `GEMINI_API_KEY`, `BREVO_API_KEY`, `CRON_SECRET` (value ready in the gitignored
+  `petsitter/.env.cron.local`; its GitHub twin `NOTIFY_CRON_SECRET` is already set).
+- [ ] **Manual photo-upload check** (~1 min): edit a pet, add a real photo, reload — it should
+  persist. QA's browser harness cannot drive the OS file dialog.
+- [ ] **Confirm wifi-password stance**: the cheat-sheet prompt sends wifi name/password (and
+  address) to Gemini — matches the old client behavior, all house-OPENING codes are redacted.
+  Say the word and wifi gets redacted the same way.
 - [ ] **Stripe** — account + product setup, then the Crown billing flow (webhook →
   `crown_until`).
 - [ ] **Amazon store** — needs the Associates account first.
@@ -350,6 +366,13 @@ Previous screens in the native-stack remain mounted with tabbable controls (QA c
 
 ## 5. Deferred / minor
 
+- **Share-link Copy button (Loop 3 QA):** "Failed to copy link" alert in the QA browser pane —
+  likely a clipboard-permission artifact of the embedded pane, but add a fallback anyway
+  (legacy execCommand or select-the-text) and friendlier copy. Verify once in normal Chrome.
+- **expo-image-picker deprecation (Loop 3 QA):** `MediaTypeOptions` → `MediaType` in the
+  PhotoPicker call site before the next Expo SDK upgrade.
+- **Crown-gate console noise:** the intentional 402 logs `Failed to load resource` in devtools;
+  harmless, documented here so nobody chases it.
 - **Household polish (from the 2026-08-15 QA pass):** map raw RPC error strings to
   sentence-case copy in HouseholdScreen alerts ("invalid email" → "That doesn't look like an
   email address."); add a space after the emoji in the info-card header; "Joined" dates for
