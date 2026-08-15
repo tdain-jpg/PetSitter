@@ -71,12 +71,15 @@ gets harder with real data.
 ### [x] Loop 4 — invite-first onboarding + welcome journeys — SHIPPED 2026-08-15
 Built by a 5-package fleet through 3 gauntlet rounds (13 → 8 → 5 problems, **zero must-fix at
 every round**), plus a replacement verification round for two lenses that died on API credits
-mid-run. Migration 0009 applied (settings.journeys jsonb; RLS re-verified by impersonation —
-own write reads back, only own row visible). Delivered:
+mid-run. Migrations 0009 (settings.journeys jsonb) and 0010 (backfills pre-existing onboarded users as
+founder-welcome:'done', so established accounts never see a welcome checklist) both applied;
+RLS re-verified by impersonation — own write reads back, only own row visible. Delivered:
 - **Invite gate** (the Dana fix): `HomeScreen`'s replace-to-Onboarding is now guarded on six
   conditions — focused, settings loaded, households/invites *settled*, zero pending invites,
-  not mid-accept, and a `joinedViaGate` latch so a failed accept-tail can never dump a joined
-  user into the founder wizard. Invited signups see "💌 You're invited!" with Accept & Join;
+  not mid-accept, and a `joinedViaInvite` latch (set in DataContext the instant any accept
+  succeeds) so a failed accept-tail can never dump a joined user into the founder wizard.
+  Belated joins self-repair: belonging to a household you did not create is durable proof, so
+  Home finishes the interrupted setup instead of routing. Invited signups see "💌 You're invited!" with Accept & Join;
   "Start fresh instead" leaves the invite pending.
 - **Journey framework**: `settings.journeys` + version-gated registry (`src/lib/journeys.ts`)
   + `<JourneyCards />`. founder-welcome (live checklist that ticks itself off real data) and

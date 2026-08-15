@@ -20,9 +20,10 @@ interface InviteGateProps {
  * household invite is waiting. Without this gate a brand-new invitee was
  * replaced straight into the founder pet-wizard and never saw their invite.
  *
- * Presentational on purpose: HomeScreen owns the accept flow so it can hold
- * the gate open (and suppress the replace-to-Onboarding effect) while the
- * accept's refreshes briefly empty pendingInvites before settings catch up.
+ * Presentational on purpose. DataContext.respondToInvite owns the join
+ * itself (RPC, refreshes, and the first-run onboarding tail); HomeScreen only
+ * holds this gate open across that window, since the refreshes empty
+ * pendingInvites before settings catch up.
  */
 export function InviteGate({
   invite,

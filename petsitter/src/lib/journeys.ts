@@ -120,7 +120,7 @@ export function isJourneyPending(def: JourneyDef, entry: JourneyEntry | undefine
  * The single journey that may currently show (at most one — C4), or null.
  *
  * founder-welcome always takes priority. joiner-welcome is gated on
- * founder-welcome being SKIPPED, because that's the marker the invite gate
+ * founder-welcome being SKIPPED, because that's the marker the accept flow
  * (C5) writes when a user accepts an invite instead of founding their own
  * household ("joiner-welcome left unset so it shows"). A founder whose
  * checklist finishes as 'done' must never see "You've joined a household".

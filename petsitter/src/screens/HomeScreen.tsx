@@ -40,6 +40,8 @@ export function HomeScreen({ navigation }: Props) {
     loadingGuides,
     settings,
     loadingSettings,
+    settingsError,
+    refreshSettings,
     pendingInvites,
     householdsLoading,
     households,
@@ -64,8 +66,8 @@ export function HomeScreen({ navigation }: Props) {
       // whole session (nothing else retries them), and the journey cards
       // treat an errored load as unsettled — so without this they'd never
       // appear again after one bad request.
-      refreshPets();
-      refreshGuides();
+      refreshPets({ background: true });
+      refreshGuides({ background: true });
     }, [refreshHouseholds, refreshPets, refreshGuides])
   );
 
@@ -100,11 +102,17 @@ export function HomeScreen({ navigation }: Props) {
     try {
       await setJourneyState('founder-welcome', 'skipped');
       await completeOnboarding();
+      // completeOnboarding resolves even if its follow-up settings read
+      // fails (loadSettings swallows), which would leave this latched while
+      // the UI still believes the user is un-onboarded — a permanent
+      // spinner. Verify, and unlatch so a later focus retries.
+      await refreshSettings();
     } catch (err) {
       console.error('Failed to finish an interrupted join:', err);
-      repairingJoin.current = false; // let a later focus try again
+    } finally {
+      repairingJoin.current = false;
     }
-  }, [setJourneyState, completeOnboarding]);
+  }, [setJourneyState, completeOnboarding, refreshSettings]);
 
   // Prefer a real name; otherwise derive something human from the address.
   // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
@@ -123,9 +131,10 @@ export function HomeScreen({ navigation }: Props) {
   // the pending-invites fetch has settled with zero invites — routing while
   // invites were still loading was the observed failure: a brand-new invitee
   // got pushed into the founder pet-wizard and never saw their invite.
-  // (If the invites fetch fails, householdsLoading still settles with an
-  // empty list and we fall through to Onboarding — same as the old behavior,
-  // and the invite stays pending for the post-onboarding Home banner.)
+  //
+  // A FAILED invites read blocks routing entirely (it can't be told apart
+  // from "no invites"): Home renders the firstRunBlockedByError retry card
+  // instead, so a network blip never silently abandons an invite.
   //
   // isFocused: the gate keeps Home's header (Settings button) live, so a
   // gated user can accept their invite from Settings → Household. That accept
@@ -137,11 +146,21 @@ export function HomeScreen({ navigation }: Props) {
   // focus changes.
   const isFocused = useIsFocused();
   useEffect(() => {
+    if (!isFocused || loadingSettings || !settings || settings.onboarding_completed) return;
+
+    // Durable membership check FIRST, before anything about invites. Belonging
+    // to a household you did not create proves you already joined, so the
+    // setup simply needs finishing — regardless of whether OTHER invites are
+    // still pending. Checking this only after `pendingInvites.length === 0`
+    // left a real hole: invited to two households, accept one, tail fails,
+    // relaunch — the second invite keeps the gate on screen, and its "Start
+    // fresh instead" button routes an existing member into the founder wizard.
+    if (joinedHousehold) {
+      void finishInterruptedJoin();
+      return;
+    }
+
     if (
-      isFocused &&
-      !loadingSettings &&
-      settings &&
-      !settings.onboarding_completed &&
       !householdsLoading &&
       // A FAILED invites fetch leaves pendingInvites empty, which is
       // indistinguishable from "no invites" — routing on it would send a
@@ -154,17 +173,6 @@ export function HomeScreen({ navigation }: Props) {
       // made on other screens, whose onboarding tail may still be in flight.
       !joinedViaInvite
     ) {
-      // Last line of defence, and the only recovery that exists. If the
-      // onboarding tail ever failed (or was skipped because settings hadn't
-      // loaded), the invite is already consumed — nothing re-runs it, and
-      // this user would be sent to the founder wizard on every launch
-      // forever. Membership is the durable proof they joined: belonging to a
-      // household you did not create means you are a joiner, so finish the
-      // setup instead of routing.
-      if (joinedHousehold) {
-        void finishInterruptedJoin();
-        return;
-      }
       navigation.replace('Onboarding');
     }
   }, [
@@ -191,10 +199,12 @@ export function HomeScreen({ navigation }: Props) {
       !!settings &&
       !settings.onboarding_completed &&
       // Never re-offer the first-run choice to someone who already joined:
-      // its "Start fresh instead" button routes to the founder wizard, and a
-      // stale invite row (e.g. a refresh that failed after the RPC committed)
-      // could otherwise put that button back in front of a member.
+      // its "Start fresh instead" button routes to the founder wizard. Both
+      // signals are needed — the in-memory latch for the current session, and
+      // durable membership for a relaunch after an interrupted join (where a
+      // second pending invite would otherwise bring the gate back).
       !joinedViaInvite &&
+      !joinedHousehold &&
       pendingInvites.length > 0);
   const gateExtraCount = gateInvite
     ? pendingInvites.filter((i) => i.id !== gateInvite.id).length
@@ -202,29 +212,37 @@ export function HomeScreen({ navigation }: Props) {
 
   // Un-onboarded, or not yet known to be onboarded: hold back the interactive
   // dashboard. A fast tap on "Add Your First Pet" would otherwise plant a pet
-  // in a not-yet-gated invitee's personal household, and the pre-gate invite
-  // banner runs an accept path that predates the gate — both landed users in
-  // the founder wizard, the exact bug this loop exists to kill.
+  // in a not-yet-gated invitee's personal household — landing them in the
+  // founder wizard, the exact bug this loop exists to kill. (Accepting from
+  // the plain banner is safe now that DataContext owns the whole join, but
+  // the pet-planting tap still is not.)
   //
   // "Unknown" counts as unsettled: for a brand-new signup the settings fetch
   // is the LONGEST part of first run (three sequential round trips — miss →
   // create → read — because the signup trigger makes a profile and household
   // but no settings row), while invites resolve in one.
   //
-  // Scoped to `!settings` so it costs a spinner only on the true first paint
-  // of a session; later reloads of settings (completeOnboarding, import,
-  // clear) keep the dashboard rendered. Falls through normally if settings
-  // genuinely fail to load.
+  // Scoped to `!settings` so a reload of already-loaded settings never blanks
+  // the dashboard. Note import/clear DO re-enter this branch on purpose: both
+  // reset onboarding_completed, so first-run rules legitimately apply again.
   const firstRunSettling =
     !showInviteGate &&
     !joinedViaInvite &&
-    ((loadingSettings && !settings) || (!!settings && !settings.onboarding_completed));
+    ((loadingSettings && !settings) ||
+      // Settings failed to load: we cannot tell whether this user is
+      // onboarded, so we must not render the interactive dashboard (a fast
+      // tap could plant a pet before the gate ever appears).
+      (!loadingSettings && !settings) ||
+      (!!settings && !settings.onboarding_completed));
 
   // A failed invites fetch blocks the routing effect (it can't tell "no
   // invites" from "couldn't ask"), so without an escape hatch an un-onboarded
   // user would sit on a bare spinner forever. Offer a retry instead.
   const firstRunBlockedByError =
-    firstRunSettling && !!householdsError && !loadingSettings && !householdsLoading;
+    firstRunSettling &&
+    !loadingSettings &&
+    !householdsLoading &&
+    (!!householdsError || !!settingsError || !settings);
 
   const handleGateAccept = async () => {
     const invite = pendingInvites[0];
@@ -351,13 +369,20 @@ export function HomeScreen({ navigation }: Props) {
         ) : firstRunBlockedByError ? (
           <Card className="mt-4">
             <Text className="text-brown-800 font-semibold mb-1">
-              Couldn&apos;t load your invitations
+              Couldn&apos;t finish setting up
             </Text>
             <Text className="text-tan-500 mb-4">
-              We couldn&apos;t check whether anyone has invited you to their
-              household. Check your connection and try again.
+              We couldn&apos;t load your account or check whether anyone has
+              invited you to their household. Check your connection and try
+              again.
             </Text>
-            <Button title="Try Again" onPress={() => refreshHouseholds()} />
+            <Button
+              title="Try Again"
+              onPress={() => {
+                refreshHouseholds();
+                refreshSettings();
+              }}
+            />
           </Card>
         ) : firstRunSettling ? (
           <View className="py-16 items-center">

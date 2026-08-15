@@ -40,7 +40,7 @@ interface DataContextType {
   loadingPets: boolean;
   /** Set when the last pets load failed — lets screens distinguish "failed to load" from "no pets". */
   petsError: string | null;
-  refreshPets: () => Promise<void>;
+  refreshPets: (opts?: { background?: boolean }) => Promise<void>;
   createPet: (pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>) => Promise<Pet>;
   updatePet: (petId: string, updates: Partial<Pet>) => Promise<Pet>;
   deletePet: (petId: string) => Promise<void>;
@@ -52,7 +52,7 @@ interface DataContextType {
   loadingGuides: boolean;
   /** Set when the last guides load failed — lets screens distinguish "failed to load" from "no guides". */
   guidesError: string | null;
-  refreshGuides: () => Promise<void>;
+  refreshGuides: (opts?: { background?: boolean }) => Promise<void>;
   getGuide: (guideId: string) => Promise<Guide | null>;
   createGuide: (guide: Omit<Guide, 'id' | 'created_at' | 'updated_at'>) => Promise<Guide>;
   updateGuide: (guideId: string, updates: Partial<Guide>) => Promise<Guide>;
@@ -111,6 +111,10 @@ interface DataContextType {
   // Settings
   settings: AppSettings | null;
   loadingSettings: boolean;
+  /** Set when the last settings load failed — distinguishes "couldn't ask" from "not onboarded". */
+  settingsError: string | null;
+  /** Re-run the settings load (retry after a failure, or verify a write landed). */
+  refreshSettings: () => Promise<void>;
   updateSettings: (updates: Partial<AppSettings>) => Promise<AppSettings>;
 
   // Journeys (C3)
@@ -184,6 +188,11 @@ export function DataProvider({ children }: DataProviderProps) {
   // Settings state
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loadingSettings, setLoadingSettings] = useState(true);
+  // Set when the last settings load failed. Without it, "settings never
+  // loaded" is indistinguishable from "loaded, not onboarded" — and since
+  // nothing else re-fetches settings, first-run routing had no way to tell
+  // the difference or offer a retry.
+  const [settingsError, setSettingsError] = useState<string | null>(null);
 
   // Latest settings for async merge-writers (journey state merges into the
   // journeys jsonb). Kept in sync BOTH here (render) and directly inside
@@ -249,6 +258,7 @@ export function DataProvider({ children }: DataProviderProps) {
       memberCountFetchedAt.current = 0;
       setJoinedViaInvite(false);
       setSettings(null);
+      setSettingsError(null);
       setOnboardingState(null);
       setPetsError(null);
       setGuidesError(null);
@@ -263,9 +273,12 @@ export function DataProvider({ children }: DataProviderProps) {
   // ============================================
   // Pet Operations
   // ============================================
-  const refreshPets = useCallback(async () => {
+  const refreshPets = useCallback(async (opts?: { background?: boolean }) => {
     if (!userId) return;
-    setLoadingPets(true);
+    // A background refresh (e.g. Home regaining focus) must not raise the
+    // loading flag: screens render '...' while it is true, so doing so blanks
+    // the dashboard's counters on every single navigation back to Home.
+    if (!opts?.background) setLoadingPets(true);
     try {
       const data = await dataService.getPets(userId);
       if (userIdRef.current !== userId) return; // stale response — user changed
@@ -315,9 +328,10 @@ export function DataProvider({ children }: DataProviderProps) {
   // ============================================
   // Guide Operations
   // ============================================
-  const refreshGuides = useCallback(async () => {
+  const refreshGuides = useCallback(async (opts?: { background?: boolean }) => {
     if (!userId) return;
-    setLoadingGuides(true);
+    // See refreshPets — background refreshes leave the loading flag alone.
+    if (!opts?.background) setLoadingGuides(true);
     try {
       const data = await dataService.getGuides(userId);
       if (userIdRef.current !== userId) return; // stale response — user changed
@@ -641,8 +655,12 @@ export function DataProvider({ children }: DataProviderProps) {
       if (userIdRef.current !== userId) return; // stale response — user changed
       settingsRef.current = data;
       setSettings(data);
-    } catch (err) {
+      setSettingsError(null);
+    } catch (err: any) {
       console.error('Failed to load settings:', err);
+      if (userIdRef.current === userId) {
+        setSettingsError(err?.message || 'Failed to load settings');
+      }
     } finally {
       if (userIdRef.current === userId) setLoadingSettings(false);
     }
@@ -849,6 +867,8 @@ export function DataProvider({ children }: DataProviderProps) {
       // Settings
       settings,
       loadingSettings,
+      settingsError,
+      refreshSettings: loadSettings,
       updateSettings,
 
       // Journeys
@@ -916,6 +936,8 @@ export function DataProvider({ children }: DataProviderProps) {
       getCheatSheet,
       settings,
       loadingSettings,
+      settingsError,
+      loadSettings,
       updateSettings,
       journeysState,
       setJourneyState,

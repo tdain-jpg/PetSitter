@@ -25,7 +25,8 @@ interface CheatSheetViewProps {
   generatedAt?: string;
 }
 
-// Simple markdown-to-text renderer for display
+// Markdown renderer for cheat sheets: real bold, section rules, callouts,
+// and defensive handling of any table/hrule the model shouldn't emit.
 // Inline renderer: real bold instead of stripped ** markers.
 const renderInline = (
   text: string,

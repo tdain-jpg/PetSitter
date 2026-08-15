@@ -179,9 +179,12 @@ export function HouseholdScreen() {
       await inviteToHousehold(household.id, email);
       setInviteDrafts((prev) => ({ ...prev, [household.id]: '' }));
       await reloadInvites(household.id);
+      // No unconditional delivery claim: the server silently skips the email
+      // past the 5-per-recipient-per-day cap, and the in-app invitation is
+      // the part we can actually promise.
       showAlert(
         'Invite sent',
-        `We emailed ${email} — they'll also see the invitation when they sign in.`
+        `We've emailed ${email} an invitation — they'll also see it in the app when they sign in.`
       );
     } catch (error: any) {
       showAlert(

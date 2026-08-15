@@ -819,7 +819,23 @@ export class SupabaseAdapter implements DataService {
       updated_at?: string;
     };
     delete settingsRest.updated_at;
-    await this.updateSettings(userId, settingsRest);
+    // Backups taken before journeys existed carry no `journeys` key, and the
+    // clearAllData above reset it to {}. Restoring only the other keys would
+    // hand an established user the "Add your first pet" welcome checklist —
+    // the exact state migration 0010 exists to prevent, reintroduced through
+    // the import path. Settle it the same way 0010 does.
+    const journeys =
+      settingsRest.journeys ??
+      (settingsRest.onboarding_completed
+        ? {
+            'founder-welcome': {
+              status: 'done' as const,
+              version: 1,
+              at: new Date().toISOString(),
+            },
+          }
+        : {});
+    await this.updateSettings(userId, { ...settingsRest, journeys });
   }
 
   /**
