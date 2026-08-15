@@ -345,13 +345,15 @@ fallback; expo-image-picker MediaTypeOptions deprecation.
 ## Round 4 — gated on Tim
 
 - [ ] **Three secret pastes** to activate Loop 3's server features (Supabase → Edge Functions →
-  Secrets): `GEMINI_API_KEY`, `BREVO_API_KEY`, `CRON_SECRET` (value ready in the gitignored
-  `petsitter/.env.cron.local`; its GitHub twin `NOTIFY_CRON_SECRET` is already set).
+  Secrets): `ANTHROPIC_API_KEY` (Claude powers the cheat sheets — Tim's call, replacing the
+  original Gemini plan), `BREVO_API_KEY` ✅ (pasted 2026-08-15, drain verified end-to-end),
+  `CRON_SECRET` ✅ (pasted 2026-08-15, cron auth verified; GitHub twin `NOTIFY_CRON_SECRET`
+  set earlier).
 - [ ] **Manual photo-upload check** (~1 min): edit a pet, add a real photo, reload — it should
   persist. QA's browser harness cannot drive the OS file dialog.
 - [ ] **Confirm wifi-password stance**: the cheat-sheet prompt sends wifi name/password (and
-  address) to Gemini — matches the old client behavior, all house-OPENING codes are redacted.
-  Say the word and wifi gets redacted the same way.
+  address) to the AI provider (now Anthropic/Claude) — matches the old client behavior, all
+  house-OPENING codes are redacted. Say the word and wifi gets redacted the same way.
 - [ ] **Stripe** — account + product setup, then the Crown billing flow (webhook →
   `crown_until`).
 - [ ] **Amazon store** — needs the Associates account first.

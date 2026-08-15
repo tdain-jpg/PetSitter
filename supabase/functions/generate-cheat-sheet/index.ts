@@ -8,9 +8,9 @@
 //   POST { guideId: string }  with the user's Authorization header
 //   200 { content: string }
 //   402 { error: 'crown_required' }
-//   503 { error: 'ai_not_configured' }   (GEMINI_API_KEY secret not set)
+//   503 { error: 'ai_not_configured' }   (ANTHROPIC_API_KEY secret not set)
 //   404 { error: 'guide_not_found' }     (missing OR invisible under RLS)
-//   502 { error: 'ai_failed' }           (Gemini returned non-200 / no text)
+//   502 { error: 'ai_failed' }           (Claude call failed, refused, or empty)
 // This function upserts the cheat_sheets row itself before returning.
 //
 // Security model:
@@ -20,15 +20,17 @@
 //   * The prompt is built SERVER-SIDE and ports src/services/AIService.ts,
 //     hardening its redaction stance: physical-access codes (door, alarm,
 //     garage, gate, mailbox) AND the spare-key location are NEVER sent to
-//     Google — the prompt carries placeholders instead. WiFi name/password
-//     and the address are included, matching the existing client behavior.
+//     the AI provider — the prompt carries placeholders instead. WiFi
+//     name/password and the address are included, matching the existing
+//     client behavior.
 //
-// Secrets: GEMINI_API_KEY (Supabase → Edge Functions → Secrets).
+// Secrets: ANTHROPIC_API_KEY (Supabase → Edge Functions → Secrets).
 // SUPABASE_URL / SUPABASE_ANON_KEY are auto-provided by the platform.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import Anthropic from 'npm:@anthropic-ai/sdk';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const CLAUDE_MODEL = 'claude-opus-5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -143,7 +145,7 @@ Veterinarian: ${pet.vet_info ? `${pet.vet_info.name} at ${pet.vet_info.clinic} -
 
   // SECURITY: physical-access codes (door, alarm, garage, gate, mailbox) AND
   // the spare-key location are deliberately REDACTED before this prompt leaves
-  // our infrastructure — it is sent to Google's Gemini API and the generated
+  // our infrastructure — it is sent to Anthropic's Claude API and the generated
   // cheat sheet is stored in plaintext, so nothing that opens the house may
   // ride along (a spare key's hiding spot opens it as surely as a door code).
   // The placeholder tells the model (and the sitter) that the info exists; the
@@ -271,8 +273,8 @@ Deno.serve(async (req) => {
     return json(402, { error: 'crown_required' });
   }
 
-  const geminiKey = Deno.env.get('GEMINI_API_KEY');
-  if (!geminiKey) {
+  const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!anthropicKey) {
     return json(503, { error: 'ai_not_configured' });
   }
 
@@ -295,42 +297,47 @@ Deno.serve(async (req) => {
 
   const prompt = buildPrompt(guide as GuideRow, pets);
 
-  // Call Gemini. The API key travels in a header, never the URL: query strings
-  // leak into proxy/access logs.
-  let geminiResponse: Response;
+  // Call Claude. On claude-opus-5 thinking is on by default (adaptive), and
+  // max_tokens caps thinking + response text together, so leave headroom.
+  // effort: "low" — this is formatting/summarization over fully-provided
+  // structured data with a user waiting in the browser; raise if quality
+  // ever underwhelms. fallbacks: "default" is the recommended opt-in: if a
+  // safety classifier ever declines (vanishingly unlikely for pet care), the
+  // API re-serves the request on Anthropic's recommended fallback model
+  // inside the same call instead of failing the generation.
+  const anthropic = new Anthropic({ apiKey: anthropicKey });
+  let message: Anthropic.Beta.BetaMessage;
   try {
-    geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': geminiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          },
-        }),
-      }
-    );
+    message = await anthropic.beta.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 16000,
+      output_config: { effort: 'low' },
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      messages: [{ role: 'user', content: prompt }],
+    } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
   } catch (err) {
-    console.error('gemini fetch failed:', err instanceof Error ? err.message : err);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`claude request failed: ${detail.slice(0, 500)}`);
     return json(502, { error: 'ai_failed' });
   }
 
-  if (!geminiResponse.ok) {
-    const detail = await geminiResponse.text().catch(() => '');
-    console.error(`gemini returned ${geminiResponse.status}: ${detail.slice(0, 500)}`);
+  // A refusal is HTTP 200 with stop_reason "refusal" — check before reading
+  // content. With fallbacks:"default", reaching here means the whole chain
+  // declined.
+  if (message.stop_reason === 'refusal') {
+    console.error(
+      `claude refused (category: ${message.stop_details?.category ?? 'unknown'})`
+    );
     return json(502, { error: 'ai_failed' });
   }
 
-  const data = await geminiResponse.json().catch(() => null);
-  const content: unknown = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (typeof content !== 'string' || content.length === 0) {
-    console.error('gemini returned 200 but no text candidate');
+  const content = message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => ('text' in block ? block.text : ''))
+    .join('');
+  if (content.length === 0) {
+    console.error('claude returned no text content');
     return json(502, { error: 'ai_failed' });
   }
 
@@ -341,7 +348,7 @@ Deno.serve(async (req) => {
     {
       guide_id: guide.id,
       content,
-      model_used: GEMINI_MODEL,
+      model_used: CLAUDE_MODEL,
       generated_at: new Date().toISOString(),
     },
     { onConflict: 'guide_id' }
