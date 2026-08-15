@@ -54,7 +54,6 @@ export function HouseholdScreen() {
     renameHousehold,
     getHouseholdMembers,
     getHouseholdInvites,
-    settings,
   } = useData();
 
   const [membersByHousehold, setMembersByHousehold] = useState<Record<string, HouseholdMember[]>>(

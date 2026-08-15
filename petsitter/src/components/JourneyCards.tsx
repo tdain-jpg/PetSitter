@@ -120,6 +120,7 @@ export function JourneyCards() {
     if (!allCardsDone || celebratedRef.current.has(key)) return;
     celebratedRef.current.add(key);
     setCelebrating(key);
+    if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
     celebrateTimer.current = setTimeout(() => setCelebrating(null), 3500);
     setJourneyState(key, 'done').catch((err) => {
       // Release the guard so a later render can retry. Without this a

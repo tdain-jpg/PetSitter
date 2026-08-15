@@ -430,6 +430,10 @@ export function DataProvider({ children }: DataProviderProps) {
 
   const respondToInvite = useCallback(
     async (inviteId: string, accept: boolean) => {
+      // Capture identity BEFORE the first await. Reading it later would
+      // capture whoever is signed in when the awaits resolve, which is
+      // exactly the case the staleness guards below exist to catch.
+      const uid = userIdRef.current;
       try {
         await dataService.respondToInvite(inviteId, accept);
       } catch (err) {
@@ -471,10 +475,19 @@ export function DataProvider({ children }: DataProviderProps) {
         //
         // Called through dataService directly (not the context callbacks)
         // because those are declared below this one.
-        const uid = userIdRef.current;
-        const current = settingsRef.current;
-        if (uid && current && !current.onboarding_completed) {
+        if (userIdRef.current !== uid) return; // user changed during refreshes
+        if (uid) {
           try {
+            // A null snapshot means settings never loaded (loadSettings
+            // swallows its error), NOT "already onboarded" — treating those
+            // the same silently skipped the tail and left the user
+            // permanently un-onboarded with their invite already consumed:
+            // the original bug, made unrecoverable. Fetch instead of bailing.
+            const current =
+              settingsRef.current ?? (await dataService.getSettings(uid));
+            if (userIdRef.current !== uid) return;
+            if (current.onboarding_completed) return; // nothing to settle
+
             const journeys = current.journeys ?? {};
             const afterSkip = await dataService.updateSettings(uid, {
               journeys: {
@@ -500,10 +513,12 @@ export function DataProvider({ children }: DataProviderProps) {
             settingsRef.current = fresh;
             setSettings(fresh);
           } catch (err) {
-            // Non-fatal: the membership is already committed and the latch
-            // holds for this session, so the user lands on a normal Home
-            // rather than the wizard. Their next launch re-attempts this via
-            // the same first-run path.
+            // Non-fatal for THIS session — the membership is committed and
+            // joinedViaInvite keeps Home off the wizard. It is not
+            // self-healing, though: the invite is consumed, so this function
+            // never runs again. The safety net is Home's membership-aware
+            // routing, which finishes the tail on a later launch for anyone
+            // who belongs to a household they didn't create.
             console.error('invite accept: onboarding tail failed', err);
           }
         }
