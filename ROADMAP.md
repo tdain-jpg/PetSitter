@@ -91,6 +91,15 @@ RLS re-verified by impersonation — own write reads back, only own row visible.
   `CheatSheetView` component as real sheets (extracted in this loop), reachable from the Crown
   upsell card and Settings. Format-audited: no pipes, no dash rules, no leaked tokens.
 
+**QA on production 2026-08-15 (QA account put into Dana's exact situation — un-onboarded with a
+pending invite):** invite gate PASS (gate rendered, no wizard, survived three reloads), accept
++ joiner tour PASS (correct joiner tour, not the founder checklist; no wizard on reload),
+stats-flicker fix PASS (verified with a MutationObserver across two Home↔Settings round trips —
+counters never blank), Crown sample sheet PASS (0 pipes, 0 dash-rules, 0 leaked tokens),
+regression sweep PASS with **zero console messages of any kind**. No blockers, no majors. Two
+minors, both pre-existing and already tracked (see 4b and the Loop 2 follow-ups). The real
+invite email also delivered end to end via the Loop 3 outbox → Brevo pipeline.
+
 Original problem statement, for the record: no invite email yet (fixed in Loop 3), and
 `HomeScreen` replaced itself with the founder pet-wizard the moment `onboarding_completed` was
 false — before the pending-invite banner could render. A joiner got a founder's first run.
@@ -422,6 +431,12 @@ own "My Household" (0 pets, 1 member). If she adds a pet, Tim will not see it.
 Loop 4 shipped honest joiner copy as a stopgap (the tour now promises only that you can *see
 and edit* what's already there — see the comment on the `shared` card in `src/lib/journeys.ts`),
 but the underlying behavior is still wrong.
+
+**The UX face of this bug** (found by the same QA pass): a joiner's Household screen lists TWO
+household cards — the family's and their own personal one — with no indication of which is
+active and no switcher, and each card carries its own "Send Invite" composer. That ambiguity is
+a symptom of the same root cause; fixing the primary-household model should fix the screen too
+(or at minimum the screen needs to name the active household explicitly).
 
 Candidate fixes, in preference order:
 1. **Drop the empty solo household on accept** — in `respond_to_invite`, if the accepting user's
