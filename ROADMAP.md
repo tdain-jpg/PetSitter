@@ -98,6 +98,12 @@ of a host screen (same visual pattern as the pending-invite banner — never blo
 - Cards are **state-aware checklists** where possible: "Add your first pet" completes itself
   when `activePets.length > 0`, not when tapped.
 
+**C. Crown sample cheat sheet (added 2026-08-15, Tim).** Since Crown will be paid, non-Crown
+users get a "See a sample" path: a static, fully-rendered example sheet (dog **Banjo**, cat
+**Marmalade**, turtle **Tortellini** — realistic fake codes filled in, SAMPLE-badged)
+reachable from the Crown upsell card and the Settings Crown card. Rendered through the same
+component as real sheets so it always previews the true experience.
+
 **Journeys to ship first:**
 1. `founder-welcome` (Home): Add a pet → Create a guide → Share it with a sitter (no account
    needed) → Invite family. Auto-completes off real data.
