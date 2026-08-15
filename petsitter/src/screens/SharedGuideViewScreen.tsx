@@ -14,6 +14,7 @@ const wordmark = require('../../assets/wordmark.png');
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import { formatDate } from '../lib/dates';
+import { displayablePhotoUrl } from '../lib/petPhotos';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
@@ -166,12 +167,12 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
               guidePets.map((pet) => (
                 <Card key={pet.id} className="mb-3">
                   <View className="flex-row items-center">
-                    {pet.photo_url ? (
+                    {displayablePhotoUrl(pet.photo_url) ? (
                       <View
                         className="w-16 h-16 rounded-full bg-tan-200 mr-4 overflow-hidden"
                       >
                         <Image
-                          source={{ uri: pet.photo_url }}
+                          source={{ uri: displayablePhotoUrl(pet.photo_url)! }}
                           className="w-full h-full"
                           resizeMode="cover"
                         />

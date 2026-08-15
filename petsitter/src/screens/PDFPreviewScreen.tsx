@@ -14,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
+import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
 import { showAlert } from '../lib/showAlert';
 import { escapeHtml } from '../lib/escapeHtml';
 import { formatDate, todayLocal } from '../lib/dates';
@@ -440,7 +441,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         ${sections.aiCheatSheet && cheatSheetContent ? `
           <div class="cheat-sheet">
             <h2>🤖 AI Cheat Sheet</h2>
-            <div>${esc(cheatSheetContent).replace(/\n/g, '<br>')}</div>
+            <div>${esc(fillCheatSheetTokens(cheatSheetContent, guide?.home_info)).replace(/\n/g, '<br>')}</div>
           </div>
         ` : ''}
 

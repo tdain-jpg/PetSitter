@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Image, Pressable, Linking, ActivityIndicator } 
 import { StatusBar } from 'expo-status-bar';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { todayLocal } from '../lib/dates';
+import { displayablePhotoUrl } from '../lib/petPhotos';
 import { Button, SectionHeader, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
@@ -139,6 +140,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
   }
 
   const emoji = speciesEmoji[pet.species] || '🐾';
+  const photoUrl = displayablePhotoUrl(pet.photo_url);
 
   // Section gating — only render sections that actually have content.
   const hasBasics = !!(
@@ -177,9 +179,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
 
           {/* Pet identity */}
           <View className="items-center pb-6">
-            {pet.photo_url ? (
+            {photoUrl ? (
               <Image
-                source={{ uri: pet.photo_url }}
+                source={{ uri: photoUrl }}
                 className="w-28 h-28 rounded-full"
                 resizeMode="cover"
               />

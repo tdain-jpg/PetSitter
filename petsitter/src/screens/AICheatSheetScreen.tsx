@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
+import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, CheatSheet } from '../types';
@@ -136,11 +137,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     if (!cheatSheet) return;
 
     try {
+      // Copy the FILLED text — the stored content carries [[TOKEN]]
+      // placeholders instead of real codes.
+      const filled = fillCheatSheetTokens(cheatSheet.content, guide?.home_info);
       if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(cheatSheet.content);
+        await navigator.clipboard.writeText(filled);
       } else {
         const Clipboard = require('expo-clipboard');
-        await Clipboard.setStringAsync(cheatSheet.content);
+        await Clipboard.setStringAsync(filled);
       }
       showAlert('Copied', 'Cheat sheet copied to clipboard!');
     } catch (err) {
@@ -292,7 +296,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               </View>
 
               <View className="border-t border-tan-200 pt-4">
-                {renderMarkdown(cheatSheet.content)}
+                {renderMarkdown(fillCheatSheetTokens(cheatSheet.content, guide?.home_info))}
               </View>
             </Card>
 

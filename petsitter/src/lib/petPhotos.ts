@@ -30,6 +30,17 @@ const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 /**
+ * Returns a photo_url only if it can actually render: legacy rows may still
+ * hold transient blob:/file: URIs from before photos persisted to storage,
+ * and an Image pointed at one renders as a blank box. Treat those as absent
+ * so the species fallback shows instead.
+ */
+export function displayablePhotoUrl(url?: string | null): string | null {
+  if (!url) return null;
+  return /^https?:\/\//.test(url) ? url : null;
+}
+
+/**
  * Upload a locally-picked photo and return its permanent public URL.
  *
  * `localUri` is whatever expo-image-picker handed us: a blob: URL on web or

@@ -17,12 +17,11 @@
 //   * Every database query runs through a client built with the ANON key plus
 //     the caller's own Authorization header, so RLS decides what the caller
 //     can see and write. There is no service-role access in this function.
-//   * The prompt is built SERVER-SIDE and ports src/services/AIService.ts,
-//     hardening its redaction stance: physical-access codes (door, alarm,
-//     garage, gate, mailbox) AND the spare-key location are NEVER sent to
-//     the AI provider — the prompt carries placeholders instead. WiFi
-//     name/password and the address are included, matching the existing
-//     client behavior.
+//   * ZERO-CREDENTIAL prompt: every sensitive home value (door/alarm/garage/
+//     gate/mailbox codes, spare-key location, WiFi password) is replaced by a
+//     [[TOKEN]] placeholder before the prompt leaves our infrastructure. The
+//     stored cheat sheet contains only tokens; the app substitutes real
+//     values at display time (src/lib/cheatSheetTokens.ts — names in sync).
 //
 // Secrets: ANTHROPIC_API_KEY (Supabase → Edge Functions → Secrets).
 // SUPABASE_URL / SUPABASE_ANON_KEY are auto-provided by the platform.
@@ -143,28 +142,30 @@ Veterinarian: ${pet.vet_info ? `${pet.vet_info.name} at ${pet.vet_info.clinic} -
     )
     .join('\n');
 
-  // SECURITY: physical-access codes (door, alarm, garage, gate, mailbox) AND
-  // the spare-key location are deliberately REDACTED before this prompt leaves
-  // our infrastructure — it is sent to Anthropic's Claude API and the generated
-  // cheat sheet is stored in plaintext, so nothing that opens the house may
-  // ride along (a spare key's hiding spot opens it as surely as a door code).
-  // The placeholder tells the model (and the sitter) that the info exists; the
-  // actual value stays in the app/PDF. WiFi credentials and the address are
-  // kept: sitters need them verbatim in the summary, and they don't open the
-  // house.
+  // SECURITY: NO credential or house-opening value is ever sent to the AI
+  // provider — not door/alarm/garage/gate/mailbox codes, not the spare-key
+  // location, not the WiFi password. Each sensitive field present in the
+  // guide is represented by a [[TOKEN]] placeholder; the model composes the
+  // sheet around the tokens, the stored cheat_sheets row contains only
+  // tokens, and the app substitutes the real values AT DISPLAY TIME from the
+  // guide (src/lib/cheatSheetTokens.ts — token names must stay in sync).
+  // The reader gets a complete sheet; Anthropic gets nothing that opens the
+  // house or joins the network. The address and WiFi network NAME stay
+  // verbatim: needed in context, and neither is a credential.
   const home = guide.home_info ?? {};
-  const redactCode = (value?: string) =>
-    value ? '(see the full guide for access codes)' : 'Not provided';
+  const token = (name: string, value?: string) =>
+    value ? `[[${name}]]` : 'Not provided';
 
   const homeInfo = `
 Address: ${home.address || 'Not provided'}
-WiFi: ${home.wifi_name || 'Not provided'}${home.wifi_password ? ` / Password: ${home.wifi_password}` : ''}
-Door Code: ${redactCode(home.door_code)}
-Alarm Code: ${redactCode(home.alarm_code)}
-Garage Code: ${redactCode(home.garage_code)}
-Gate Code: ${redactCode(home.gate_code)}
-Mailbox Code: ${redactCode(home.mailbox_code)}
-Spare Key: ${home.spare_key_location ? '(see the full guide for the spare key location)' : 'Not provided'}
+WiFi Network: ${home.wifi_name || 'Not provided'}
+WiFi Password: ${token('WIFI_PASSWORD', home.wifi_password)}
+Door Code: ${token('DOOR_CODE', home.door_code)}
+Alarm Code: ${token('ALARM_CODE', home.alarm_code)}
+Garage Code: ${token('GARAGE_CODE', home.garage_code)}
+Gate Code: ${token('GATE_CODE', home.gate_code)}
+Mailbox Code: ${token('MAILBOX_CODE', home.mailbox_code)}
+Spare Key: ${token('SPARE_KEY_LOCATION', home.spare_key_location)}
 Trash Day: ${home.trash_day || 'Not specified'}
 `;
 
@@ -190,7 +191,7 @@ Please create a cheat sheet that includes:
 1. A quick daily schedule summary for each pet
 2. Important medications and times
 3. Emergency contact quick reference
-4. Key home access info — access codes are redacted as "(see the full guide for access codes)" and the spare key as "(see the full guide for the spare key location)"; keep those placeholder texts exactly, never invent a code or location
+4. Key home access info — values written as [[TOKEN]] (for example [[DOOR_CODE]]) are placeholders that will be automatically filled in with the real values after you finish. Where that information belongs, write the placeholder EXACTLY as given, character for character. Never invent a code, password, or location, and never alter, describe, or omit a placeholder for information that exists
 5. Important reminders and warnings
 
 Format it using markdown with clear sections, bullet points, and bold text for important items. Keep it concise but comprehensive - this should fit on 1-2 pages when printed.`;

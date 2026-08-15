@@ -1,4 +1,5 @@
 import { View, Text, Image, Pressable } from 'react-native';
+import { displayablePhotoUrl } from '../lib/petPhotos';
 import type { Pet } from '../types';
 
 interface PetCardProps {
@@ -19,6 +20,7 @@ const speciesEmoji: Record<string, string> = {
 
 export function PetCard({ pet, onPress }: PetCardProps) {
   const emoji = speciesEmoji[pet.species] || '🐾';
+  const photoUrl = displayablePhotoUrl(pet.photo_url);
 
   return (
     <Pressable
@@ -28,9 +30,9 @@ export function PetCard({ pet, onPress }: PetCardProps) {
       className="bg-cream-50 rounded-xl p-4 mb-3 shadow-sm border border-tan-200 flex-row items-center"
       style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
     >
-      {pet.photo_url ? (
+      {photoUrl ? (
         <Image
-          source={{ uri: pet.photo_url }}
+          source={{ uri: photoUrl }}
           className="w-16 h-16 rounded-full"
           resizeMode="cover"
         />

@@ -352,10 +352,20 @@ fallback; expo-image-picker MediaTypeOptions deprecation.
   revoked). Granting a founder's Crown to Tim's household is a one-line update whenever he
   says the word.
 - [ ] **Manual photo-upload check** (~1 min): edit a pet, add a real photo, reload — it should
-  persist. QA's browser harness cannot drive the OS file dialog.
-- [ ] **Confirm wifi-password stance**: the cheat-sheet prompt sends wifi name/password (and
-  address) to the AI provider (now Anthropic/Claude) — matches the old client behavior, all
-  house-OPENING codes are redacted. Say the word and wifi gets redacted the same way.
+  persist. QA's browser harness cannot drive the OS file dialog. Context from Tim's report
+  2026-08-15: Clark's photo was a dead legacy `blob:` URL (added via the old client before
+  the storage fix) rendering as a blank box — row nulled in prod, and all photo render
+  sites now treat legacy `blob:`/`file:` URLs as absent (`displayablePhotoUrl`). Re-adding
+  via Edit Pet → photo picker persists to storage for good.
+- [x] **Sensitive-value stance RESOLVED 2026-08-15 — zero-credential prompts via
+  render-time token substitution.** The cheat-sheet prompt now carries `[[TOKEN]]`
+  placeholders for EVERY sensitive value (all house codes, spare-key location, AND the wifi
+  password); the stored cheat sheet contains only tokens, and the app fills in real values
+  at display time (`src/lib/cheatSheetTokens.ts` ↔ Edge Function token names in sync;
+  screen render, clipboard copy, and PDF embed all substitute). Verified end-to-end: model
+  preserved all tokens verbatim, zero planted secrets in the AI output, all values present
+  in the rendered result. Sitters get complete sheets; Anthropic gets nothing that opens
+  the house or joins the network.
 - [ ] **Stripe** — account + product setup, then the Crown billing flow (webhook →
   `crown_until`).
 - [ ] **Amazon store** — needs the Associates account first.
