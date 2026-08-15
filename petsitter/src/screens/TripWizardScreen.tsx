@@ -6,7 +6,15 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, ScreenHeader, ScreenContainer } from '../components';
+import {
+  Button,
+  Card,
+  Icon,
+  Input,
+  ScreenHeader,
+  ScreenContainer,
+  speciesIconName,
+} from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
@@ -357,14 +365,11 @@ export function TripWizardScreen({ navigation }: Props) {
                     {pet.breed && ` - ${pet.breed}`}
                   </Text>
                 </View>
-                <Text className="text-3xl">
-                  {pet.species === 'dog' ? '🐕' :
-                   pet.species === 'cat' ? '🐈' :
-                   pet.species === 'bird' ? '🐦' :
-                   pet.species === 'fish' ? '🐟' :
-                   pet.species === 'rabbit' ? '🐰' :
-                   pet.species === 'hamster' ? '🐹' : '🐾'}
-                </Text>
+                {/* Same commissioned avatar the pet list and pet detail show —
+                    the emoji ladder this replaced had no reptile branch, so a
+                    gecko fell to a generic paw here while its card showed the
+                    gecko. */}
+                <Icon name={speciesIconName(pet.species)} size={32} />
               </View>
             </Pressable>
             );
@@ -522,14 +527,12 @@ export function TripWizardScreen({ navigation }: Props) {
         <View className="gap-2">
           {selectedPets.map((pet) => (
             <View key={pet.id} className="flex-row items-center">
-              <Text className="text-2xl mr-2">
-                {pet.species === 'dog' ? '🐕' :
-                 pet.species === 'cat' ? '🐈' :
-                 pet.species === 'bird' ? '🐦' :
-                 pet.species === 'fish' ? '🐟' :
-                 pet.species === 'rabbit' ? '🐰' :
-                 pet.species === 'hamster' ? '🐹' : '🐾'}
-              </Text>
+              {/* mr-2 as a style, not a class: Icon takes a style prop. */}
+              <Icon
+                name={speciesIconName(pet.species)}
+                size={28}
+                style={{ marginRight: 8 }}
+              />
               <Text className="text-brown-800">{pet.name}</Text>
             </View>
           ))}

@@ -69,9 +69,33 @@ interface DataContextType {
   pendingInvites: PendingInvite[];
   /** Where new pets/guides land by default, or null if the user has no household. */
   primaryHouseholdId: string | null;
+  /**
+   * Pick the default household explicitly (settings.primary_household_id),
+   * then re-read `primaryHouseholdId` from the my_primary_household RPC —
+   * server truth, since the RPC re-validates membership — and refresh the
+   * household list. REJECTS if the pointer did not take, so the caller can
+   * surface a real error rather than a spinner that stops with nothing
+   * changed. A server that DECLINED the pointer gets the PREVIOUS choice put
+   * back first, so a refused change never costs the user the default they
+   * already had. A failed re-read does not: the write itself very likely
+   * landed, so it rejects with copy that claims only that we could not
+   * confirm.
+   */
+  setPrimaryHousehold: (householdId: string) => Promise<void>;
   refreshHouseholds: () => Promise<void>;
   inviteToHousehold: (householdId: string, email: string) => Promise<void>;
-  respondToInvite: (inviteId: string, accept: boolean) => Promise<void>;
+  /**
+   * Accept or decline an invite, including (on accept) the data refreshes and
+   * the first-run onboarding tail.
+   *
+   * Resolves with the household new pets and guides will land in AFTER the
+   * response — which is NOT necessarily the one just joined: the server adopts
+   * the joined household only when the joiner's current default is empty and
+   * was never chosen explicitly (migration 0011). Callers should tell the user
+   * which one won. Null on decline, or when the signed-in user changed
+   * mid-flight.
+   */
+  respondToInvite: (inviteId: string, accept: boolean) => Promise<string | null>;
   revokeInvite: (inviteId: string) => Promise<void>;
   /**
    * True once an invite accept has succeeded this session. First-run routing
@@ -79,6 +103,14 @@ interface DataContextType {
    * the onboarding tail that records it takes several more round trips.
    */
   joinedViaInvite: boolean;
+  /**
+   * Leave a household. Also clears settings.primary_household_id when it named
+   * that household, so a later re-invite doesn't silently resurrect a default
+   * the user chose long ago. (An owner REMOVING someone can't do the same —
+   * only that user's own session can write their settings row — so their
+   * pointer does come back on a rejoin; the Household screen shows which
+   * household is default and changes it in one tap.)
+   */
   leaveHousehold: (householdId: string) => Promise<void>;
   removeHouseholdMember: (householdId: string, memberUserId: string) => Promise<void>;
   renameHousehold: (householdId: string, name: string) => Promise<void>;
@@ -474,6 +506,31 @@ export function DataProvider({ children }: DataProviderProps) {
         memberCountFetchedFor.current = null;
         await Promise.all([refreshHouseholds(), refreshPets(), refreshGuides()]);
 
+        // Where new pets and guides will land now — the server decides on
+        // accept (migration 0011 adopts the joined household only when the
+        // joiner's current default is empty and was never chosen explicitly),
+        // so the caller cannot predict it and must be told.
+        //
+        // Read it with a call that FAILS rather than trusting the household
+        // state the refresh above just wrote: refreshHouseholds swallows its
+        // own errors, so if that refresh lost the network primaryHouseholdId
+        // still holds the PRE-accept value and we would confidently report the
+        // wrong destination. The
+        // Household screen would then say "new pets still go to <old>" and
+        // offer to keep it — stating, and getting the user to confirm, the
+        // opposite of the truth. Null means "we could not find out"; callers
+        // treat that as "say nothing", which is the correct degradation.
+        let joinedPrimaryId: string | null = null;
+        try {
+          joinedPrimaryId = await dataService.getMyPrimaryHousehold();
+          if (userIdRef.current !== uid) return null; // user changed mid-flight
+          // Doubles as a repair for the swallowed-refresh case above.
+          setPrimaryHouseholdId(joinedPrimaryId);
+        } catch (err) {
+          console.error('invite accept: could not read the destination household', err);
+          joinedPrimaryId = null;
+        }
+
         // First-run joiner: settle onboarding here rather than in each caller.
         // Every accept path (the Home gate, the Home banner, the Household
         // screen) then behaves identically and can't be left half-done by a
@@ -489,18 +546,29 @@ export function DataProvider({ children }: DataProviderProps) {
         //
         // Called through dataService directly (not the context callbacks)
         // because those are declared below this one.
-        if (userIdRef.current !== uid) return; // user changed during refreshes
+        if (userIdRef.current !== uid) return null; // user changed during refreshes
         if (uid) {
           try {
-            // A null snapshot means settings never loaded (loadSettings
-            // swallows its error), NOT "already onboarded" — treating those
-            // the same silently skipped the tail and left the user
-            // permanently un-onboarded with their invite already consumed:
-            // the original bug, made unrecoverable. Fetch instead of bailing.
-            const current =
-              settingsRef.current ?? (await dataService.getSettings(uid));
-            if (userIdRef.current !== uid) return;
-            if (current.onboarding_completed) return; // nothing to settle
+            // Always re-read from the server; never trust the snapshot here.
+            // Two separate bugs live in that shortcut. (1) A null snapshot
+            // means settings never loaded (loadSettings swallows its error),
+            // NOT "already onboarded" — treating those the same silently
+            // skipped the tail and left the user permanently un-onboarded
+            // with their invite already consumed. (2) respond_to_invite
+            // writes primary_household_id server-side whenever the joiner's
+            // default was empty, so ANY snapshot taken before the accept is
+            // stale in exactly that field — and the refresh further down runs
+            // only for first-run joiners. An already-onboarded joiner would
+            // carry the pre-accept null all session, which setPrimaryHousehold's
+            // rollback then writes back OVER the real pointer (stranding them
+            // again, the state this round exists to remove) and which makes
+            // leaveHousehold's clear-the-pointer guard a no-op against its own
+            // doc comment.
+            const current = await dataService.getSettings(uid);
+            if (userIdRef.current !== uid) return null;
+            settingsRef.current = current;
+            setSettings(current);
+            if (current.onboarding_completed) return joinedPrimaryId; // nothing to settle
 
             const journeys = current.journeys ?? {};
             const afterSkip = await dataService.updateSettings(uid, {
@@ -514,16 +582,16 @@ export function DataProvider({ children }: DataProviderProps) {
                 },
               },
             });
-            if (userIdRef.current !== uid) return; // user changed mid-flight
+            if (userIdRef.current !== uid) return null; // user changed mid-flight
             settingsRef.current = afterSkip;
             setSettings(afterSkip);
 
             await dataService.completeOnboarding(uid);
-            if (userIdRef.current !== uid) return;
+            if (userIdRef.current !== uid) return null;
             setOnboardingState(null);
 
             const fresh = await dataService.getSettings(uid);
-            if (userIdRef.current !== uid) return;
+            if (userIdRef.current !== uid) return null;
             settingsRef.current = fresh;
             setSettings(fresh);
           } catch (err) {
@@ -536,9 +604,10 @@ export function DataProvider({ children }: DataProviderProps) {
             console.error('invite accept: onboarding tail failed', err);
           }
         }
-      } else {
-        await refreshHouseholds();
+        return joinedPrimaryId;
       }
+      await refreshHouseholds();
+      return null; // declined — no destination to report
     },
     [refreshHouseholds, refreshPets, refreshGuides]
   );
@@ -552,7 +621,43 @@ export function DataProvider({ children }: DataProviderProps) {
       // Server throws 'cannot remove the last owner of a household' when
       // applicable. On success the household's pets/guides disappear from the
       // merged view, so refresh everything.
+      const uid = userIdRef.current;
       await dataService.leaveHousehold(householdId);
+
+      // Drop an explicit default that named the household we just left.
+      // primary_household_of already refuses to honour it (it re-checks
+      // membership), so leaving it behind is not wrong TODAY — but it is not
+      // inert forever: on a later re-invite the membership comes back and the
+      // dormant pointer silently retakes the default, months after the user
+      // last thought about it. Clearing it on the way out means a rejoin
+      // starts from the same "no explicit choice" state a first join does.
+      // (Called through dataService, not the updateSettings callback: that one
+      // is declared further down, so referencing it here hits the TDZ.)
+      if (uid) {
+        try {
+          // Fetch the row if the ref never loaded rather than reading through
+          // an optional chain: a null ref means settings never loaded
+          // (loadSettings swallows its error), NOT "no pointer set", so the
+          // guard below would silently skip the clear and leave exactly the
+          // dormant pointer this block exists to remove.
+          const before = settingsRef.current ?? (await dataService.getSettings(uid));
+          if (before.primary_household_id === householdId) {
+            const updated = await dataService.updateSettings(uid, {
+              primary_household_id: null,
+            });
+            if (userIdRef.current === uid) {
+              settingsRef.current = updated;
+              setSettings(updated);
+            }
+          }
+        } catch (err) {
+          // Non-fatal: the membership is already gone and the pointer is
+          // ignored while they are out. Worst case it resurrects on a rejoin,
+          // which the Household screen shows and can change in one tap.
+          console.error('leaveHousehold: could not clear the default household', err);
+        }
+      }
+
       await Promise.all([refreshHouseholds(), refreshPets(), refreshGuides()]);
     },
     [refreshHouseholds, refreshPets, refreshGuides]
@@ -677,6 +782,97 @@ export function DataProvider({ children }: DataProviderProps) {
       return updated;
     },
     [userId]
+  );
+
+  /**
+   * Household operation, but declared HERE because it builds on
+   * updateSettings, which is defined above (the household block runs before
+   * this one, so referencing it from there would hit the TDZ).
+   *
+   * The write itself is just the settings pointer; the authority on "which
+   * household is primary" stays the my_primary_household RPC (it validates
+   * membership server-side), so re-read it instead of optimistically setting
+   * primaryHouseholdId from the id we just wrote.
+   */
+  const setPrimaryHousehold = useCallback(
+    async (householdId: string) => {
+      if (!userId) throw new Error('Not authenticated');
+
+      // Remember the pointer we are about to overwrite. NOTHING validates the
+      // column at write time — it carries only the households FK and the
+      // per-user settings policy — so an id the server will refuse to HONOUR
+      // (0011 re-checks membership on read) still lands in the row. Writing
+      // first and validating second would therefore destroy a good explicit
+      // default on a tap that changes nothing: tap a household card that went
+      // stale because an owner just removed you, and your real default is
+      // overwritten with an id that is ignored, silently dropping you back to
+      // the ordering fallback — the stranded state this whole round removes.
+      // Read the row FRESH rather than trusting the cached ref. A null ref is
+      // the obvious hazard (null is itself a meaningful previous value and
+      // would clear a real choice), but a non-null ref goes stale just as
+      // badly: nothing reloads settings when the server writes this column
+      // outside this session — respond_to_invite's UPSERT on another device, or
+      // 0011's backfill landing while a long-lived PWA tab stays open. Only
+      // refreshHouseholds runs on AppState 'active', and it never touches
+      // settings. One PK lookup on a path that already makes three round trips.
+      const before = await dataService.getSettings(userId);
+      if (userIdRef.current !== userId) return; // user changed mid-flight
+      const previous = before.primary_household_id ?? null;
+
+      // updateSettings syncs settingsRef + settings state (and creates the
+      // settings row first if it somehow doesn't exist yet).
+      await updateSettings({ primary_household_id: householdId });
+
+      // Confirm the pointer took, HERE rather than leaving it to
+      // refreshHouseholds — that one swallows its own errors, so a dropped
+      // connection between the two round trips would resolve this call
+      // normally while the badge stayed on the old card: a write that landed,
+      // rendered as a silent no-op with no error for the user to act on. This
+      // read throws, and a server that declined the pointer (not a member of
+      // that household) throws too instead of quietly ignoring the tap.
+      //
+      // A THROWN read is not a decline, though, and must not be reported as
+      // one: the write already landed, so restoring `previous` would undo a
+      // change the server has, and "the default household did not change"
+      // would tell the user to stop looking while every new pet lands
+      // somewhere else. Say only what we actually know, and still reconcile
+      // the badge from the server (refreshHouseholds swallows its own errors,
+      // so it can only help) — if the connection is back by then the badge
+      // moves and corroborates the message.
+      let confirmed: string | null;
+      try {
+        confirmed = await dataService.getMyPrimaryHousehold();
+      } catch (err) {
+        console.error('setPrimaryHousehold: could not confirm the new default', err);
+        if (userIdRef.current !== userId) return; // user changed mid-flight
+        await refreshHouseholds();
+        throw new Error(
+          "We couldn't confirm the change — check your connection and reopen this screen."
+        );
+      }
+      if (userIdRef.current !== userId) return; // user changed mid-flight
+
+      if (confirmed !== householdId) {
+        // Declined. Put the old pointer back so a refused tap is a true
+        // no-op, then let refreshHouseholds re-read whatever the server now
+        // considers primary (it swallows its own errors, and the throw below
+        // is the signal that matters).
+        try {
+          await updateSettings({ primary_household_id: previous });
+        } catch (err) {
+          console.error('setPrimaryHousehold: could not restore the previous default', err);
+        }
+        if (userIdRef.current !== userId) return;
+        await refreshHouseholds();
+        throw new Error('The default household did not change. Please try again.');
+      }
+
+      setPrimaryHouseholdId(confirmed);
+
+      // Reconcile the rest of the household state (names, members, invites).
+      await refreshHouseholds();
+    },
+    [userId, updateSettings, refreshHouseholds]
   );
 
   // ============================================
@@ -837,6 +1033,7 @@ export function DataProvider({ children }: DataProviderProps) {
       householdsError,
       pendingInvites,
       primaryHouseholdId,
+      setPrimaryHousehold,
       refreshHouseholds,
       inviteToHousehold,
       respondToInvite,
@@ -914,6 +1111,7 @@ export function DataProvider({ children }: DataProviderProps) {
       householdsError,
       pendingInvites,
       primaryHouseholdId,
+      setPrimaryHousehold,
       refreshHouseholds,
       inviteToHousehold,
       respondToInvite,

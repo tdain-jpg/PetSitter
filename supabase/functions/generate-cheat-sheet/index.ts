@@ -117,8 +117,8 @@ function buildPrompt(guide: GuideRow, pets: PetRow[]): string {
       return `
 Pet: ${pet.name}
 Species: ${pet.species}${pet.breed ? ` (${pet.breed})` : ''}
-${pet.age ? `Age: ${pet.age} years` : ''}
-${pet.weight ? `Weight: ${pet.weight} ${pet.weight_unit || 'lbs'}` : ''}
+${pet.age != null ? `Age: ${pet.age} years` : ''}
+${pet.weight != null ? `Weight: ${pet.weight} ${pet.weight_unit || 'lbs'}` : ''}
 
 Feeding Schedule:
 ${feedingInfo || '  No specific schedule'}
@@ -343,6 +343,17 @@ Deno.serve(async (req) => {
     console.error(
       `claude refused (category: ${message.stop_details?.category ?? 'unknown'})`
     );
+    return json(502, { error: 'ai_failed' });
+  }
+
+  // Truncation is NOT a partial success. Thinking is on by default and shares
+  // the max_tokens budget with the response text, so a large guide can run out
+  // mid-sheet — and `content.length > 0` would happily pass. Storing that would
+  // hand a sitter a printed document cut off mid-instruction, potentially
+  // mid-medication-dose, with nothing marking it incomplete. Fail instead; the
+  // client already treats 502 as retryable.
+  if (message.stop_reason === 'max_tokens') {
+    console.error('claude hit max_tokens — refusing to store a truncated sheet');
     return json(502, { error: 'ai_failed' });
   }
 

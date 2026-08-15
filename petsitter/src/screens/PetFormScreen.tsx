@@ -161,7 +161,24 @@ export function PetFormScreen({ navigation, route }: Props) {
   const isEditing = mode === 'edit' && petId;
 
   const { user } = useAuth();
-  const { activePets, deceasedPets, loadingPets, createPet, updatePet } = useData();
+  const {
+    activePets,
+    deceasedPets,
+    loadingPets,
+    createPet,
+    updatePet,
+    households,
+    primaryHouseholdId,
+  } = useData();
+
+  // Which household a new pet lands in is decided server-side by the user's
+  // default (see migration 0011) and was invisible on this form. Only worth
+  // saying when the user actually belongs to more than one — for everyone else
+  // there is no choice to be confused about.
+  const destinationHouseholdName =
+    !isEditing && households.length > 1
+      ? households.find((household) => household.id === primaryHouseholdId)?.name ?? null
+      : null;
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -516,6 +533,12 @@ export function PetFormScreen({ navigation, route }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           <ScreenContainer variant="form">
+          {destinationHouseholdName && (
+            <Text className="text-brown-600 text-sm mb-3">
+              {`This pet will be shared with ${destinationHouseholdName}. Change your default household on the Household screen.`}
+            </Text>
+          )}
+
           {/* Photo */}
           <Card className="mb-4">
             <PhotoPicker

@@ -7,7 +7,7 @@ import {
   Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, SectionHeader, ContactCard, SensitiveValue, ScreenContainer } from '../components';
+import { Button, Card, SectionHeader, ContactCard, SensitiveValue, ScreenContainer, Icon, speciesIconName } from '../components';
 
 // @ts-ignore
 const wordmark = require('../../assets/wordmark.png');
@@ -183,7 +183,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                       </View>
                     ) : (
                       <View className="w-16 h-16 rounded-full bg-primary-100 items-center justify-center mr-4">
-                        <Text className="text-3xl">🐾</Text>
+                        <Icon name={speciesIconName(pet.species)} size={40} />
                       </View>
                     )}
                     <View className="flex-1">
@@ -194,12 +194,12 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                   </View>
 
                   {/* Pet Details */}
-                  {(pet.age || pet.weight) && (
+                  {(pet.age != null || pet.weight != null) && (
                     <View className="flex-row mt-3 gap-4">
-                      {pet.age && (
+                      {pet.age != null && (
                         <Text className="text-tan-600">Age: {pet.age} years</Text>
                       )}
-                      {pet.weight && (
+                      {pet.weight != null && (
                         <Text className="text-tan-600">
                           Weight: {pet.weight} {pet.weight_unit}
                         </Text>

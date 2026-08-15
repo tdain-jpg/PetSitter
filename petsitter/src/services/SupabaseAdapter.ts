@@ -729,18 +729,25 @@ export class SupabaseAdapter implements DataService {
       (g) => !g.household_id || g.household_id === primaryHouseholdId
     );
 
-    // ABORT BEFORE THE WIPE if the household filter dropped everything: v1.1
-    // exports bake household_id into every row, so a backup restored into a
-    // different account (or after the primary household changed) would
-    // otherwise wipe the current primary household and restore NOTHING —
-    // silent, irreversible data loss dressed as a successful import.
-    if (
-      (data.pets.length > 0 || data.guides.length > 0) &&
-      petsToRestore.length === 0 &&
-      guidesToRestore.length === 0
-    ) {
+    // ABORT BEFORE THE WIPE whenever nothing would be restored — silent,
+    // irreversible data loss dressed as a successful import. Two ways to get
+    // here, and BOTH must throw before clearAllData runs:
+    //
+    //  1. The household filter dropped everything. v1.1 exports bake
+    //     household_id into every row, so a backup restored into a different
+    //     account (or after the primary household changed) matches nothing.
+    //  2. The backup was empty to begin with. A brand-new user who taps
+    //     Export before adding anything gets a file with pets: [] and
+    //     guides: [] — it validates cleanly and looks harmless. It is not:
+    //     once they join a family household and migration 0011 adopts it as
+    //     their default, importing that old file would wipe everyone else's
+    //     pets, guides and live share links and restore nothing. An empty
+    //     backup can only ever destroy, so it is refused outright.
+    if (petsToRestore.length === 0 && guidesToRestore.length === 0) {
       throw new Error(
-        'Import failed: this backup belongs to a different household or account, so nothing would be restored.'
+        data.pets.length > 0 || data.guides.length > 0
+          ? 'Import failed: this backup belongs to a different household or account, so nothing would be restored.'
+          : 'Import failed: this backup contains no pets or guides, so importing it would delete everything in this household and restore nothing.'
       );
     }
 
@@ -815,7 +822,21 @@ export class SupabaseAdapter implements DataService {
     // Settings — strip identity/DB-managed fields: the exported row carries
     // the ORIGINAL exporter's user_id, and writing it into another account
     // violates RLS. The row must belong to the current user.
-    const { user_id: _uid, ...settingsRest } = data.settings as AppSettings & {
+    //
+    // primary_household_id goes with them. It is current-account membership
+    // state, not backup content: restoring a backup taken BEFORE the user
+    // picked a different default would silently move the default back — the
+    // restored rows would sit in the household the restore targeted while
+    // every pet added afterwards landed somewhere else (the ROADMAP-4b bug,
+    // reintroduced through the restore path). It is also a real FK, so a
+    // backup naming a household that no longer exists here would fail this
+    // update AFTER the wipe and full restore had already run, reporting
+    // "Import failed" for an import that actually succeeded.
+    const {
+      user_id: _uid,
+      primary_household_id: _primaryHouseholdId,
+      ...settingsRest
+    } = data.settings as AppSettings & {
       updated_at?: string;
     };
     delete settingsRest.updated_at;

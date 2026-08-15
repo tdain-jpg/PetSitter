@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View, Text, ScrollView, Image } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { showAlert } from '../lib/showAlert';
+import { announceJoinDestination } from '../lib/inviteDestination';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, InviteGate, JourneyCards, PetCard, ScreenContainer } from '../components';
 import { COLORS } from '../constants';
@@ -47,6 +48,7 @@ export function HomeScreen({ navigation }: Props) {
     households,
     householdsError,
     respondToInvite,
+    setPrimaryHousehold,
     joinedViaInvite,
     refreshHouseholds,
     refreshPets,
@@ -254,7 +256,17 @@ export function HomeScreen({ navigation }: Props) {
       // onboarding). Keeping it there means every accept path behaves the
       // same and none can be left half-done — including accepts made from the
       // Household screen, where the user can navigate away mid-tail.
-      await respondToInvite(invite.id, true);
+      const destinationId = await respondToInvite(invite.id, true);
+      // Same dialog the Household screen shows: which household new pets land
+      // in is the server's decision, not a property of the button tapped.
+      // (Awaited inside the try so the gate stays mounted behind the dialog.)
+      await announceJoinDestination({
+        invite,
+        destinationId,
+        households,
+        setPrimaryHousehold,
+        formatError: friendlyInviteError,
+      });
     } catch (error: any) {
       showAlert(
         'Error',
@@ -291,12 +303,25 @@ export function HomeScreen({ navigation }: Props) {
     navigation.navigate('Settings');
   };
 
-  const handleInviteResponse = async (inviteId: string, accept: boolean) => {
-    setRespondingInvite({ id: inviteId, accept });
+  // Takes the whole invite row, not just its id: the post-accept dialog names
+  // the household the user joined, and this banner is the accept surface an
+  // ESTABLISHED user (who already has a default that may win) reaches first.
+  const handleInviteResponse = async (invite: PendingInvite, accept: boolean) => {
+    setRespondingInvite({ id: invite.id, accept });
     try {
       // On accept the context refreshes households, pets, and guides itself,
       // so the new household's data appears without extra calls here.
-      await respondToInvite(inviteId, accept);
+      const destinationId = await respondToInvite(invite.id, accept);
+      if (!accept) return;
+
+      // Same dialog the Household screen shows — see the shared helper.
+      await announceJoinDestination({
+        invite,
+        destinationId,
+        households,
+        setPrimaryHousehold,
+        formatError: friendlyInviteError,
+      });
     } catch (error: any) {
       // Map the raw server errors for a revoked/already-answered invite to
       // friendlier copy; the context has already refreshed pendingInvites, so
@@ -407,7 +432,7 @@ export function HomeScreen({ navigation }: Props) {
                 <View className="flex-1">
                   <Button
                     title="Accept"
-                    onPress={() => handleInviteResponse(invite.id, true)}
+                    onPress={() => handleInviteResponse(invite, true)}
                     loading={isResponding && respondingInvite?.accept === true}
                     disabled={isResponding}
                   />
@@ -416,7 +441,7 @@ export function HomeScreen({ navigation }: Props) {
                   <Button
                     title="Decline"
                     variant="outline"
-                    onPress={() => handleInviteResponse(invite.id, false)}
+                    onPress={() => handleInviteResponse(invite, false)}
                     loading={isResponding && respondingInvite?.accept === false}
                     disabled={isResponding}
                   />

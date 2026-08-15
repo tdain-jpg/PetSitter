@@ -141,8 +141,16 @@ function printExportedGuideOnWeb(html: string) {
 
 export function PDFPreviewScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, loadingGuides, loadingPets, getCheatSheet } =
-    useData();
+  const {
+    guides,
+    activePets,
+    deceasedPets,
+    loadingGuides,
+    loadingPets,
+    getCheatSheet,
+    petsError,
+    refreshPets,
+  } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
@@ -186,7 +194,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         // Don't consume the one-shot seed while pets are still loading: on a
         // deep-link restore the guides fetch can win the race, and seeding
         // against an empty pets array would leave every pet unchecked.
-        if (selectionSeededForGuide.current !== guideId && !loadingPets) {
+        // A FAILED pets load looks identical from here — `pets` is [] and
+        // loadingPets is false — so it must not burn the seed either, or a
+        // later successful refresh would never select anything.
+        if (selectionSeededForGuide.current !== guideId && !loadingPets && !petsError) {
           setSelectedPetIds(pets.map((p) => p.id)); // Select all pets by default
           selectionSeededForGuide.current = guideId;
         }
@@ -227,8 +238,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     const petSections = selectedPets.map((pet) => `
       <div class="section">
         <h2>${esc(pet.name)} (${esc(pet.species)}${pet.breed ? ` - ${esc(pet.breed)}` : ''})</h2>
-        ${pet.age ? `<p><strong>Age:</strong> ${esc(pet.age)} years</p>` : ''}
-        ${pet.weight ? `<p><strong>Weight:</strong> ${esc(pet.weight)} ${esc(pet.weight_unit || 'lbs')}</p>` : ''}
+        ${pet.age != null ? `<p><strong>Age:</strong> ${esc(pet.age)} years</p>` : ''}
+        ${pet.weight != null ? `<p><strong>Weight:</strong> ${esc(pet.weight)} ${esc(pet.weight_unit || 'lbs')}</p>` : ''}
 
         ${pet.feeding_schedule.length > 0 ? `
           <h3>Feeding Schedule</h3>
@@ -521,7 +532,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
               title="🖨️ Export"
               onPress={handleExport}
               loading={exporting}
-              disabled={exporting}
+              // Same guard as the bottom Export button — this one would
+              // otherwise be an unblocked path to a pet-less PDF.
+              disabled={exporting || (petsError != null && guide.pet_ids.length > 0)}
             />
           </View>
           <View className="mt-4">
@@ -704,12 +717,29 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           </Text>
         </Card>
 
+        {/* A failed pets load is indistinguishable from "this guide has no
+            pets" once loadingPets clears, so without this the export silently
+            produces a document with no Pets section at all — every feeding
+            schedule, medication and vet contact missing from the page a sitter
+            is handed. Refuse to export instead, and offer the retry. */}
+        {petsError && guide.pet_ids.length > 0 && (
+          <Card className="mb-4 border border-red-300 bg-red-50">
+            <Text className="font-semibold text-red-700 mb-1">Pets couldn't be loaded</Text>
+            <Text className="text-tan-600 mb-3">
+              This guide covers {guide.pet_ids.length}{' '}
+              {guide.pet_ids.length === 1 ? 'pet' : 'pets'}, but we couldn't read
+              their details. Exporting now would leave them out of the PDF.
+            </Text>
+            <Button title="Try again" onPress={() => refreshPets()} variant="outline" />
+          </Card>
+        )}
+
         <View className="mb-8">
           <Button
             title={exporting ? 'Exporting...' : '📄 Export as PDF'}
             onPress={handleExport}
             loading={exporting}
-            disabled={exporting || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.travelItinerary && !sections.aiCheatSheet && !sections.additionalNotes)}
+            disabled={exporting || (petsError != null && guide.pet_ids.length > 0) || (!sections.emergencyContacts && !sections.homeInfo && !sections.pets && !sections.travelItinerary && !sections.aiCheatSheet && !sections.additionalNotes)}
           />
         </View>
         </ScreenContainer>

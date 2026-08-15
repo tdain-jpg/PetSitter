@@ -446,6 +446,14 @@ export interface AppSettings {
   auto_save_enabled: boolean;
   onboarding_completed: boolean;
   /**
+   * Explicit default household — where new pets and guides land. Read by
+   * primary_household_of(), which honours it ONLY while the user is still a
+   * member of that household and otherwise falls back to the implicit
+   * ordering, so a stale pointer can never win. null/undefined simply means
+   * "no explicit choice yet".
+   */
+  primary_household_id?: string | null;
+  /**
    * Per-journey completion state keyed by journey key (jsonb column, default
    * {}). See JourneyEntry for the entry lifecycle and src/lib/journeys.ts for
    * the registry the keys/versions come from.

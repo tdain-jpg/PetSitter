@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
-import { Button, Card, ScreenContainer } from '../components';
+import { Button, Card, Icon, ScreenContainer, speciesIconName } from '../components';
 import { useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -79,10 +79,11 @@ export function MemorialScreen({ navigation }: Props) {
             <View key={pet.id} className="mb-4">
               <Card>
                 <View className="flex-row items-center mb-4">
+                  {/* Same circle and same size as PetCard's photo fallback, so
+                      a pet looks like itself on both screens (this used to be
+                      a three-branch emoji ladder — every rabbit was a paw). */}
                   <View className="w-16 h-16 rounded-full bg-tan-100 items-center justify-center mr-4">
-                    <Text className="text-3xl">
-                      {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐱' : '🐾'}
-                    </Text>
+                    <Icon name={speciesIconName(pet.species)} size={40} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-lg font-semibold text-brown-800">

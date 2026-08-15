@@ -20,3 +20,4 @@ export { SecurityNote } from './SecurityNote';
 export { JourneyCards } from './JourneyCards';
 export { InviteGate } from './InviteGate';
 export { CheatSheetView } from './CheatSheetView';
+export { Icon, speciesIconName, type IconName } from './Icon';

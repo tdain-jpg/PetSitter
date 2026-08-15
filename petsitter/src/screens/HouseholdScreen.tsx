@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenContainer, ScreenHeader } from '../components';
 import { useAuth, useData } from '../contexts';
 import { showAlert, showConfirm } from '../lib/dialogs';
+import { announceJoinDestination } from '../lib/inviteDestination';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
 import type { Household, HouseholdInviteRow, HouseholdMember, PendingInvite } from '../types';
@@ -46,6 +47,8 @@ export function HouseholdScreen() {
     householdsError,
     refreshHouseholds,
     pendingInvites,
+    primaryHouseholdId,
+    setPrimaryHousehold,
     respondToInvite,
     inviteToHousehold,
     revokeInvite,
@@ -72,6 +75,11 @@ export function HouseholdScreen() {
   // Invite composer (one draft per household)
   const [inviteDrafts, setInviteDrafts] = useState<Record<string, string>>({});
   const [invitingHouseholdId, setInvitingHouseholdId] = useState<string | null>(null);
+
+  // Household currently being promoted to default (one at a time — every
+  // "Make default" button is disabled while one is in flight, since they all
+  // write the same single pointer).
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   // Invite addressed to ME currently being answered (disables that card's buttons)
   const [respondingInvite, setRespondingInvite] = useState<{
@@ -168,6 +176,22 @@ export function HouseholdScreen() {
     }
   };
 
+  const handleMakeDefault = async (household: Household) => {
+    setSettingDefaultId(household.id);
+    try {
+      // The context writes the pointer and then re-reads the primary
+      // household from the server, so the badge only moves once it's real.
+      await setPrimaryHousehold(household.id);
+    } catch (error: any) {
+      showAlert(
+        'Could not change default',
+        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+      );
+    } finally {
+      setSettingDefaultId(null);
+    }
+  };
+
   const handleInvite = async (household: Household) => {
     const email = (inviteDrafts[household.id] ?? '').trim();
     if (!email) {
@@ -205,7 +229,26 @@ export function HouseholdScreen() {
       // joiner marker and completes onboarding. It also latches
       // joinedViaInvite, so Home can't route this user into the founder
       // wizard even if they navigate back while that tail is still running.
-      await respondToInvite(invite.id, accept);
+      //
+      // It resolves with the household new pets and guides will land in from
+      // now on. That is NOT always the one just joined — the server keeps the
+      // joiner's own default when it already holds pets or guides (migration
+      // 0011) — and getting that wrong silently is the whole bug this round
+      // fixes, so the user is told either way.
+      const destinationId = await respondToInvite(invite.id, accept);
+      if (!accept) return;
+
+      // Shared with Home's two accept surfaces: the same invite must produce
+      // the same dialog wherever it was accepted from. It swallows its own
+      // "could not change default" failure, so the catch below stays about
+      // the invite itself.
+      await announceJoinDestination({
+        invite,
+        destinationId,
+        households,
+        setPrimaryHousehold,
+        formatError: friendlyRpcError,
+      });
     } catch (error: any) {
       showAlert(
         'Error',
@@ -391,6 +434,8 @@ export function HouseholdScreen() {
     const onlyOwner = isOwner && ownerCount === 1;
     const isEditing = editingHouseholdId === household.id;
     const isInviting = invitingHouseholdId === household.id;
+    const isDefault = household.id === primaryHouseholdId;
+    const isMakingDefault = settingDefaultId === household.id;
 
     return (
       <Card key={household.id} className="mb-4">
@@ -424,18 +469,64 @@ export function HouseholdScreen() {
             </View>
           </View>
         ) : (
-          <View className="flex-row justify-between items-center">
-            <Text className="text-xl font-bold text-brown-800 flex-1 mr-3">
-              {household.name}
-            </Text>
-            {isOwner && (
+          <View>
+            <View className="flex-row justify-between items-center">
+              <View className="flex-1 mr-3 flex-row items-center gap-2 flex-wrap">
+                {/* shrink + minWidth:0 so a long name still wraps instead of
+                    pushing the badge (and Rename) off the card. */}
+                <Text className="text-xl font-bold text-brown-800 shrink" style={{ minWidth: 0 }}>
+                  {household.name}
+                </Text>
+                {isDefault && (
+                  // "Default household", not "Default for new pets": new pets
+                  // and guides are only part of what this pointer decides — it
+                  // is also what Settings backs up, what Import replaces, and
+                  // what Clear All Data wipes. A label naming one consequence
+                  // reads as a promise that it is the ONLY one. The sentence
+                  // above the list spells the scope out.
+                  <View className="bg-primary-100 px-2 py-0.5 rounded-full">
+                    <Text className="text-primary-700 text-xs font-medium">
+                      Default household
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {isOwner && (
+                <Pressable
+                  onPress={() => startRename(household)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Rename ${household.name}`}
+                  className="bg-primary-50 px-3 py-1.5 rounded"
+                >
+                  <Text className="text-primary-600 text-sm font-medium">Rename</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* Which household is the default — for new pets and guides, and
+                for Backup / Import / Clear All Data in Settings. Only offered
+                on the cards that aren't already the default. The accessibility
+                label starts with the VISIBLE text so voice control ("tap make
+                default") still matches, then names the household the sighted
+                user reads from the card above it. */}
+            {!isDefault && (
               <Pressable
-                onPress={() => startRename(household)}
+                onPress={() => handleMakeDefault(household)}
+                disabled={settingDefaultId !== null}
                 accessibilityRole="button"
-                accessibilityLabel={`Rename ${household.name}`}
-                className="bg-primary-50 px-3 py-1.5 rounded"
+                accessibilityLabel={`Make default: ${household.name}`}
+                accessibilityState={{
+                  disabled: settingDefaultId !== null,
+                  busy: isMakingDefault,
+                }}
+                className="bg-primary-50 px-3 py-1.5 rounded self-start mt-2"
+                style={{ opacity: settingDefaultId !== null ? 0.5 : 1 }}
               >
-                <Text className="text-primary-600 text-sm font-medium">Rename</Text>
+                {isMakingDefault ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Text className="text-primary-600 text-sm font-medium">Make default</Text>
+                )}
               </Pressable>
             )}
           </View>
@@ -457,7 +548,11 @@ export function HouseholdScreen() {
 
         {/* Invites */}
         <View className="mt-4 pt-4 border-t border-tan-200">
-          <Text className="text-base font-semibold text-brown-800 mb-2">Invite someone</Text>
+          {/* Named, because a user in two households sees two of these
+              composers and must never wonder which one they're filling in. */}
+          <Text className="text-base font-semibold text-brown-800 mb-2">
+            {`Invite someone to ${household.name}`}
+          </Text>
           <Input
             label="Email address"
             placeholder="name@example.com"
@@ -615,7 +710,17 @@ export function HouseholdScreen() {
               </Card>
             )
           ) : (
-            households.map(renderHousehold)
+            <>
+              {/* Said once for the whole list, not repeated on every card. The
+                  second sentence is not decoration: the default household is
+                  also what Settings backs up, replaces on import, and DELETES
+                  under "Clear All Data". */}
+              <Text className="text-brown-600 text-sm mb-3">
+                New pets and guides you add go to your default household. Backup, import and
+                Clear All Data in Settings apply to it too.
+              </Text>
+              {households.map(renderHousehold)}
+            </>
           )}
         </ScreenContainer>
       </ScrollView>

@@ -4,3 +4,6 @@
 .claude/settings.local.json
 reviews/
 brand-drop/
+
+# Supabase CLI scratch
+supabase/.temp/

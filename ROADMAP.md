@@ -202,6 +202,64 @@ categories, each mapping to an anxiety the app already addresses:
 Requirements: Amazon Associates account, visible affiliate disclosure, no link cloaking.
 Physical goods are exempt from Apple's IAP rules, so this is safe for the app stores.
 
+**🔴 Blocker found in the 2026-08-15 research — check before building anything Amazon.**
+Amazon's Program Policies prohibit Special Links "in connection with any printed material,
+ebook, mailing." Pawstructions' core artifact is a **printable, shareable care guide**. If a
+guide carrying Amazon links can be exported to PDF or printed, that is a policy violation.
+Audit the export/print path first and design around it. Rate is **3.00% on Pets Products**
+(verified on Amazon's fee schedule, no printed effective date — Amazon revises unilaterally).
+Cookie window was not researched. Insurance click-out links carry no equivalent constraint.
+
+### [ ] Pet insurance affiliate — RESEARCHED 2026-08-15, do NOT build yet
+Full brief in the workflow output; the load-bearing conclusions:
+
+**Trupanion: yes, you can use the company you actually like.** Public, self-serve, live today
+on Impact. Two caveats: the rate is unpublished (the widely-repeated "$25/policy, 30-day
+cookie" traces to a 2020 SEO blog post and appears on **zero** primary sources — treat as
+folklore), and their better long-term door is the **Partner API** (quotes/enrollments,
+verified live), which is BD-gated and worth pitching only once we have users.
+
+**🔴 The legal constraint is real and it removes the best idea.** Two state-law safe harbors
+exist: *advertising* (no compensation restriction) and *referral* (fee must NOT depend on
+whether a purchase results — so per-policy commission fails outright). Which one applies is
+decided by **our UI copy, not our contract**.
+
+Without an insurance producer license we CAN: display carrier-supplied creative, link out,
+take per-click/flat-fee compensation. We CANNOT: explain/compare/recommend policies
+editorially, discuss coverage or pricing, host any part of the application, or **personalize
+using the user's stored insurance data**.
+
+That last one kills the placement I originally proposed. The empty `insurance provider` field
+on the pet profile is the highest-intent moment in the app — and targeting an offer off stored
+policy data converts a passive ad into individualized advice. **The most valuable version is
+the least defensible one.**
+
+Also: "We use Trupanion and recommend it" maps almost verbatim onto the statutory definition
+of *solicit*. Single-carrier personal endorsement is the highest-risk framing available.
+
+**FTC disclosure** (16 CFR § 255.0(f), § 255.5(a)) must be adjacent to the link, in-flow, and
+unavoidable — not a footer or a /disclosures page. **And it must render in the sitter view of
+any shared guide containing the link** — an easy-to-miss code path and a live compliance gap
+if we forget it.
+
+**Plan: apply now, build later.** Applying is free, needs no code, and is the only way to get
+real numbers. Building needs rates *and* a written opinion.
+1. One afternoon on **Impact**: apply to Embrace, Trupanion, Healthy Paws, Pets Best (Pets Best
+   has a 90-day cookie — the only window verified on a primary source in the whole set).
+2. Fallback if Impact stalls: **Spot via Sovrn** (only listing explicitly marked open).
+3. Two emails, not applications: **Lemonade** (solicits "Embedded Partners", offers APIs) and
+   **ASPCA** (pre-launch, recruiting early adopters to help shape commission structure).
+4. Skip: ManyPets (exited US), Prudent Pet (licensed agents only), Nationwide, Figo, Pumpkin.
+5. Do NOT build on Trupanion refer-a-friend — $100/yr cap, clawback rights.
+
+**Safest launch shape:** per-click or flat fee, carrier creative, multiple carriers presented
+neutrally, no targeting off stored data, written legal opinion before any per-policy deal.
+Enforcement here is triggered by **competitor complaints**, not consumer harm — "we're small"
+is a weak shield. NerdWallet is licensed in all 50 states; Policygenius is a licensed agency.
+
+⚠️ Programs churn fast (ManyPets: active → fully exited in ~14 months). Re-verify before
+signing. All checks made 2026-08-15.
+
 ### [ ] About Us page
 Staff page with in-universe titles:
 - **Clark** (dog) — Chief Executive Pawficer
@@ -414,10 +472,36 @@ fallback; expo-image-picker MediaTypeOptions deprecation.
 - [ ] **Google OAuth** — Cloud Console client (SETUP.md §3), or remove the button.
 - [ ] **Social/n8n** — Tim's n8n instance; plan in §3.
 
-## 4b. Known bug — a joiner's new pets land in their PRIVATE household 🔴
+## 4b. Joiner's new pets land in their PRIVATE household — ✅ FIXED (Loop 5, 2026-08-15)
 
-**Found 2026-08-15 during Loop 4 verification; predates Loop 4 (it's inherent to the Loop 2
-households model). Highest-value thing to fix next.**
+**Fixed by migration 0011 (applied to prod 2026-08-15) + the default-household UI.** Dana's
+explicit pointer now names The Dain Family; the dry run showed she was the ONLY affected user,
+and no other user's effective default moved. Re-running the backfill is a verified no-op.
+
+Chosen fix was candidate 3 below (**explicit user-visible default**), not 1 or 2 — dropping or
+reordering households guesses at intent, and the whole failure mode here was a silent guess.
+
+Two bugs the verification rounds caught that are worth remembering, because both were created
+*by the fix* and neither showed up in three earlier rounds:
+- **Emptiness is not vestigial-ness.** The first draft adopted away from any empty household.
+  That re-homed an invite-first FOUNDER — her household is empty precisely *because* she invited
+  her partner before adding a pet — sending her first pet somewhere the partner can't see it.
+  Silently, at deploy time. The test is now **empty AND solo**: a household with a second member
+  is somebody's family, not a signup artefact. Reproduced and fixed against a real Postgres 16
+  with the full 0001→0010 chain applied.
+- **A migration can make a dormant bug lethal.** `importData`'s pre-wipe guard only fired for
+  non-empty backups, so an EMPTY backup reached `clearAllData` and restored nothing. Harmless
+  while everyone's default was their own empty household — catastrophic once 0011 repoints
+  people at the SHARED family one. Export on day one, join a family, import that file months
+  later, and twelve pets are gone for every member. Guard now refuses any backup with nothing
+  to restore.
+
+Known limit, stated plainly: users already stranded who have **since added a pet or guide** are
+deliberately NOT repointed — from the database, "solo household holding data" is indistinguishable
+from a genuine founder. They're covered by the Household screen's default control and Pet Detail's
+move action instead. Same for anyone whose current default has other members.
+
+<details><summary>Original bug report (kept for context)</summary>
 
 `handle_new_user` gives every signup a personal "My Household" they OWN. `primary_household_of`
 orders by `(role='owner') desc, created_at asc`, and the pets/guides BEFORE INSERT trigger
@@ -450,6 +534,96 @@ Candidate fixes, in preference order:
 
 Deliberately NOT rushed into the Loop 4 checkpoint: it's a DB-semantics change that deserves
 its own migration, adversarial round, and RLS re-verification.
+
+</details>
+
+## Loop 6 — monetization spine + trust pages — PLANNED 2026-08-15
+
+**Decisions locked with Tim (2026-08-15):**
+- **Crown = $5 one-time, per household, permanent.** Not a subscription. `crown_until` is set
+  far-future rather than a renewal date. One purchase covers every member of the household,
+  which is deliberate: a couple sharing pets pays once. Framed as "founding" so the price can
+  rise later with early buyers grandfathered.
+- **Crown is bought by the OWNER.** The sitter subscription (§2 "Sitter accounts") is a
+  separate product for people doing this professionally — do not conflate the two.
+- **Free tier = one watermarked generation per guide.** Regenerating that guide needs Crown.
+  Generous enough that a new trip or a new pet earns another free look, while keeping AI spend
+  from scaling with the free tier.
+- **Watermark says PREVIEW, not SAMPLE.** Heavy repeated diagonal PREVIEW plus the
+  Pawstructions mark and a footer unlock CTA. "Preview" describes the *feature state*;
+  "sample" would imply the *content* is fabricated, and a sitter must never hesitate over a
+  medication dose because the page looks like demo data. This is a safety constraint, not a
+  style preference.
+- **Legal pages ship WITH Stripe, not after.** Stripe will not activate a live account without
+  a public site carrying a service description, pricing, terms, privacy policy, refund policy,
+  and contact info. They are on the critical path.
+
+### Package A — payments backend
+- **Migration 0012:**
+  - `crown_purchases` table (stripe_event_id UNIQUE, checkout_session_id, household_id,
+    amount_cents, currency, created_at) — service-role only, RLS on with no policies, matching
+    the `notifications_outbox` pattern. The UNIQUE event id is the idempotency key.
+  - `households.crown_source text` + `crown_granted_at` — distinguishes 'stripe' / 'founder' /
+    'promo' so the founder grant and paid grants stay auditable.
+  - `guides.free_generation_used_at timestamptz` — the per-guide free allowance marker.
+    **Server-authoritative:** written only by the Edge Function, never trusted from the client,
+    or the allowance is trivially replayable.
+- **Edge Function `create-checkout-session`** (verify_jwt=true). Must verify the caller is a
+  member of the target household via `is_household_member` before creating the session —
+  otherwise it leaks household existence. Sets `client_reference_id` = household_id.
+- **Edge Function `stripe-webhook`** (verify_jwt=false, pinned in `config.toml`). Stripe cannot
+  present a Supabase JWT, so auth is `Stripe-Signature` HMAC verification — the same shape as
+  `notify`'s `x-cron-secret`. **Gotcha: in Deno you must use
+  `stripe.webhooks.constructEventAsync()`**; the sync `constructEvent()` needs Node crypto and
+  will fail on Edge. Handles `checkout.session.completed`, idempotent on event id, writes
+  `crown_until`.
+- **`generate-cheat-sheet` gains the paywall.** Three outcomes: Crown → full sheet; no Crown but
+  guide's free generation unused → generate, mark used, return with `watermark: true`; otherwise
+  → 402. Entitlement stays server-side and provider-agnostic so a future iOS IAP path can grant
+  the same entitlement.
+
+### Package B — paywall + watermark UI
+- `CheatSheetView` gains a `watermarked` prop → tiled diagonal PREVIEW layer + footer CTA.
+  It is already the shared component behind both the real and sample sheets, so this is one
+  change covering every surface.
+- **Sheets are stored unwatermarked.** The watermark is applied at render time only, so
+  unlocking is instant with no regeneration and no second AI charge.
+- PDF export carries the watermark. Clipboard copy cannot be visually watermarked — it gets a
+  text footer line instead.
+- `UnlockCrownScreen`: price, what you get, checkout button, and a "refresh entitlement" path
+  for when the webhook lands after the user returns.
+- Stripe success/cancel returns ride the existing Loop 3 deep-link infrastructure.
+- **Honest limitation:** the watermark is a conversion nudge, not DRM. A determined user can
+  strip it client-side. That is acceptable and not worth engineering against.
+
+### Package C — trust and legal pages
+Four public screens, reachable **without login** (Stripe's reviewer has no account), linked
+from `LandingScreen`:
+- **About Us** — the in-universe staff page already specced in §2 (Clark, Lillee, Dana, Tim).
+- **Privacy** — must state the token-substitution model explicitly: home access codes and WiFi
+  passwords are replaced with placeholders before any prompt leaves our infrastructure, so the
+  AI provider never receives them. This is a genuine differentiator, not boilerplate.
+- **Terms** and **Refund** — for a $5 one-time digital purchase, a plain 14-day
+  no-questions refund is simplest and reduces dispute risk.
+- ⚠️ Drafted from common patterns, **not legal advice** — worth a real review given the app
+  stores home access codes.
+
+### Package D — verification
+tsc, web build, RLS probes on the new tables, and a full Stripe **test-mode** purchase →
+webhook → entitlement → watermark-disappears run before anything goes live.
+
+### Human-gated (Tim)
+1. Create the Stripe account and complete the business profile.
+2. Create the product + $5 price; hand me the price ID.
+3. Paste `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` into Supabase secrets.
+4. Point the Stripe webhook endpoint at the deployed function URL.
+5. Activate live mode once the legal pages are deployed.
+
+### Deferred to Loop 7
+Google OAuth (independent; its consent screen has its own verification lag) and the first
+affiliate integration (blocked on the research run plus an approval timeline outside our
+control). **Reminder for whichever affiliate lands: Amazon prohibits affiliate links in
+email**, which directly constrains the `notify` pipeline.
 
 ## 5. Deferred / minor
 

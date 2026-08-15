@@ -4,25 +4,14 @@ import { StatusBar } from 'expo-status-bar';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { todayLocal } from '../lib/dates';
 import { displayablePhotoUrl } from '../lib/petPhotos';
-import { Button, SectionHeader, ScreenContainer } from '../components';
+import { Button, SectionHeader, ScreenContainer, Icon, speciesIconName } from '../components';
 import { useData } from '../contexts';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Pet } from '../types';
+import type { Guide, Household, Pet } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PetDetail'>;
-
-const speciesEmoji: Record<string, string> = {
-  dog: '🐕',
-  cat: '🐱',
-  bird: '🐦',
-  fish: '🐟',
-  reptile: '🦎',
-  rabbit: '🐰',
-  hamster: '🐹',
-  other: '🐾',
-};
 
 /** Label/value row matching the GuideDetail/SharedGuideView style. */
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -59,11 +48,26 @@ function titleCase(value: string): string {
 
 export function PetDetailScreen({ navigation, route }: Props) {
   const { petId } = route.params;
-  const { activePets, deceasedPets, loadingPets, deletePet, markPetDeceased, restorePet } =
-    useData();
+  const {
+    activePets,
+    deceasedPets,
+    loadingPets,
+    petsError,
+    deletePet,
+    markPetDeceased,
+    restorePet,
+    guides,
+    updatePet,
+    updateGuide,
+    households,
+  } = useData();
 
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [movingHousehold, setMovingHousehold] = useState(false);
+  // Destination list expanded — only ever used when there's more than one
+  // household to move to; a single destination moves straight away.
+  const [choosingTarget, setChoosingTarget] = useState(false);
 
   useEffect(() => {
     const allPets = [...activePets, ...deceasedPets];
@@ -119,6 +123,162 @@ export function PetDetailScreen({ navigation, route }: Props) {
     }
   };
 
+  // Guides that describe this pet. 0007's guides_validate_pet_ids trigger
+  // requires every pet a guide lists to live in the GUIDE's household, so
+  // these two rows must stay on the same side of a move.
+  const attachedGuides = guides.filter((g) => g.pet_ids.includes(petId));
+  // Only reachable after a move was interrupted between the pet write and the
+  // guide writes: the guide now points across the household boundary, its
+  // sitters stop seeing this pet (resolve_share filters pets by the guide's
+  // household) and its next save would be rejected. Offer the repair.
+  const strayGuides = pet
+    ? attachedGuides.filter((g) => g.household_id && g.household_id !== pet.household_id)
+    : [];
+
+  // guides.pet_ids keeps the ids of DELETED pets: no migration adds a cleanup
+  // trigger and deletePet only drops the row, which is why GuideFormScreen
+  // prunes on hydrate. A ghost id must not read as a pet staying behind —
+  // that refuses the move for a guide which visibly covers only this pet, and
+  // this screen is the only way to un-strand one. If the pets load FAILED,
+  // prune nothing and treat every id as live: refusing a move is recoverable,
+  // wiping a healthy guide's pet list is not.
+  //
+  // Component scope, not per-handler: BOTH write paths need it. 0007's trigger
+  // fires on `update of pet_ids, household_id`, so even a household-only PATCH
+  // revalidates the STORED pet_ids against the destination — meaning the
+  // "Finish the move" repair below would be rejected by the same ghost that
+  // handleMoveHousehold prunes, leaving an interrupted move unrepairable.
+  const livePetIds = petsError
+    ? null
+    : new Set([...activePets, ...deceasedPets].map((p) => p.id));
+  const survivingPetIds = (guide: Guide) =>
+    livePetIds ? guide.pet_ids.filter((id) => livePetIds.has(id)) : guide.pet_ids;
+
+  /**
+   * Move this pet — and the guides that describe only this pet — into another
+   * household the user belongs to. This is the ONLY way to un-strand a pet
+   * that was created while the default household pointed at the wrong place:
+   * migration 0011 fixes where NEW rows land, it moves none of the old ones.
+   */
+  const handleMoveHousehold = async (target: Household) => {
+    if (!pet || movingHousehold) return;
+    const from = pet.household_id;
+    const fromName = households.find((h) => h.id === from)?.name ?? 'its current household';
+
+    // A guide that also covers pets staying behind cannot travel with this
+    // pet, and moving the pet out from under it would break it. Say so
+    // instead — refusing is recoverable, a broken guide is not.
+    const blocking = attachedGuides.filter((g) =>
+      survivingPetIds(g).some((id) => id !== petId)
+    );
+    if (blocking.length > 0) {
+      showAlert(
+        `${pet.name} is in a shared guide`,
+        `${blocking.map((g) => g.title).join(', ')} ${
+          blocking.length === 1 ? 'also covers' : 'also cover'
+        } pets that would stay in ${fromName}. Take ${pet.name} out of ${
+          blocking.length === 1 ? 'that guide' : 'those guides'
+        } first, then move them.`
+      );
+      return;
+    }
+
+    const travelling = attachedGuides;
+    const ok = await showConfirm({
+      title: `Move ${pet.name} to ${target.name}?`,
+      message:
+        `Everyone in ${target.name} will see ${pet.name}, and anyone in ${fromName} who isn't in ${target.name} will stop seeing them.` +
+        (travelling.length === 0
+          ? ''
+          : ` ${travelling.length === 1 ? 'Their guide moves' : `Their ${travelling.length} guides move`} too.`),
+      confirmLabel: 'Move',
+    });
+    if (!ok) return;
+
+    setMovingHousehold(true);
+    let petMoved = false;
+    const moved: Guide[] = [];
+    try {
+      // Pet first: moving a guide while its pet is still in the old household
+      // is exactly what the validation trigger rejects.
+      await updatePet(petId, { household_id: target.id });
+      petMoved = true;
+      for (const guide of travelling) {
+        // pet_ids travels pruned: the trigger revalidates every id against the
+        // guide's NEW household, and a ghost id resolves in neither, so sending
+        // the stored list verbatim would have the move rejected here.
+        await updateGuide(guide.id, {
+          household_id: target.id,
+          pet_ids: survivingPetIds(guide),
+        });
+        moved.push(guide);
+      }
+      showAlert('Moved', `${pet.name} is now shared with ${target.name}.`);
+    } catch (error: any) {
+      const message = error?.message || 'Something went wrong. Please try again.';
+      if (!petMoved || !from) {
+        showAlert('Could not move', message);
+        return;
+      }
+      // Half done. Put it back — pet first again, since a guide can only
+      // return to a household that already holds its pets.
+      let rolledBackPet = false;
+      try {
+        await updatePet(petId, { household_id: from });
+        rolledBackPet = true;
+        for (const guide of moved) {
+          await updateGuide(guide.id, { household_id: from, pet_ids: survivingPetIds(guide) });
+        }
+        showAlert('Could not move', `${message} Nothing was changed.`);
+      } catch {
+        // Both directions failed — almost always because the connection is
+        // gone. Either the pet never came back and its guides didn't follow it
+        // out, or the rollback's pet write landed and some guides are stranded
+        // in the target; `rolledBackPet` says which, because the alert must not
+        // send the user to the wrong household to look for their pet. Either
+        // way pet and guides disagree, which is exactly the state the "Finish
+        // the move" control below detects: it appears on this screen as soon as
+        // this alert is dismissed, because the pet's household already landed
+        // in context state and the guides' did not. Never a dead end.
+        showAlert(
+          'Move only half finished',
+          rolledBackPet
+            ? `${pet.name} is back in ${fromName}, but some guides are still in ${target.name}. Tap "Finish the move" when you're back online.`
+            : `${pet.name} is in ${target.name} now, but not every guide could follow. Tap "Finish the move" when you're back online.`
+        );
+      }
+    } finally {
+      setMovingHousehold(false);
+    }
+  };
+
+  /** Repair for an interrupted move: bring the stragglers to the pet. */
+  const handleFinishMove = async () => {
+    if (!pet || movingHousehold) return;
+    const destination = pet.household_id;
+    if (!destination) return;
+    setMovingHousehold(true);
+    try {
+      for (const guide of strayGuides) {
+        // Pruned for the same reason the outbound move prunes: the trigger
+        // revalidates the stored pet_ids against `destination`, so a ghost id
+        // would have the repair rejected and strand the guide permanently.
+        await updateGuide(guide.id, {
+          household_id: destination,
+          pet_ids: survivingPetIds(guide),
+        });
+      }
+      showAlert(
+        'Move finished',
+        `${pet.name}'s ${strayGuides.length === 1 ? 'guide is' : 'guides are'} back with them.`
+      );
+    } catch (error: any) {
+      showAlert('Could not finish', error?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setMovingHousehold(false);
+    }
+  };
+
   // Hold the spinner on a deep-link hard reload: the effect runs against
   // empty pet arrays before DataContext's initial fetch resolves, and the
   // not-found state must wait for real data.
@@ -139,14 +299,33 @@ export function PetDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  const emoji = speciesEmoji[pet.species] || '🐾';
   const photoUrl = displayablePhotoUrl(pet.photo_url);
+
+  // Which household actually holds this pet. Worth saying out loud only once
+  // the user belongs to more than one — before that there is nothing to
+  // confuse it with. Without it, a pet created while the default pointed at
+  // the wrong household looks identical to a shared one, and the owner is
+  // left guessing why their family can't see it.
+  const owningHousehold = households.find((h) => h.id === pet.household_id);
+  // Every household this pet could move TO. The rule used to be "the default,
+  // and only if the pet isn't already in it", which left the exact cohort
+  // migration 0011 hands to the UI with no way out: a stranded user whose pet
+  // landed in their own household and whose family's household is the other
+  // one. The header named the problem and offered no button. Any household
+  // that isn't the current one is a legitimate destination.
+  const moveTargets = pet.household_id
+    ? households.filter((h) => h.id !== pet.household_id)
+    : [];
+  // One destination needs no choosing; several open the picker below.
+  const soleMoveTarget = moveTargets.length === 1 ? moveTargets[0] : undefined;
 
   // Section gating — only render sections that actually have content.
   const hasBasics = !!(
     (pet.sex && pet.sex !== 'unknown') ||
     pet.is_neutered ||
-    pet.weight ||
+    // != null, matching the Weight row below: a weight of 0 is a real value,
+    // and a truthiness gate would skip the section that renders it.
+    pet.weight != null ||
     pet.color_markings ||
     pet.nicknames
   );
@@ -187,7 +366,10 @@ export function PetDetailScreen({ navigation, route }: Props) {
               />
             ) : (
               <View className="w-28 h-28 rounded-full bg-tan-100 items-center justify-center">
-                <Text className="text-5xl">{emoji}</Text>
+                {/* 60, not 68: the delivered masters top out at 96px, and the
+                    brand inventory specs these avatars for 48-60px renders.
+                    68pt would upsample the source at @2x and above. */}
+                <Icon name={speciesIconName(pet.species)} size={60} />
               </View>
             )}
             <Text className="text-2xl font-bold text-brown-800 mt-4">{pet.name}</Text>
@@ -201,6 +383,101 @@ export function PetDetailScreen({ navigation, route }: Props) {
             {pet.status === 'deceased' && (
               <View className="bg-tan-100 px-3 py-1 rounded-full mt-2">
                 <Text className="text-tan-500 text-sm">In Memorial</Text>
+              </View>
+            )}
+
+            {/* Who can see this pet, and how to change it. Nothing else in the
+                app says which household an EXISTING pet belongs to, so a pet
+                that landed in the wrong one is invisible until someone asks
+                why their family can't see it. */}
+            {(owningHousehold || strayGuides.length > 0) && households.length > 1 && (
+              <View className="items-center mt-2">
+                {owningHousehold && (
+                  <Text className="text-tan-500 text-sm">
+                    {`Shared with ${owningHousehold.name}`}
+                  </Text>
+                )}
+                {strayGuides.length > 0 ? (
+                  <Pressable
+                    onPress={handleFinishMove}
+                    disabled={movingHousehold}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Finish the move: bring ${pet.name}'s guides to ${
+                      owningHousehold?.name ?? 'this household'
+                    }`}
+                    accessibilityState={{ disabled: movingHousehold, busy: movingHousehold }}
+                    className="bg-primary-50 px-3 py-1.5 rounded mt-2"
+                    style={{ opacity: movingHousehold ? 0.5 : 1 }}
+                  >
+                    {movingHousehold ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Text className="text-primary-600 text-sm font-medium">
+                        {`Finish the move${
+                          strayGuides.length === 1 ? '' : ` (${strayGuides.length} guides)`
+                        }`}
+                      </Text>
+                    )}
+                  </Pressable>
+                ) : moveTargets.length > 0 ? (
+                  <>
+                    <Pressable
+                      onPress={() =>
+                        soleMoveTarget
+                          ? handleMoveHousehold(soleMoveTarget)
+                          : setChoosingTarget((open) => !open)
+                      }
+                      disabled={movingHousehold}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        soleMoveTarget
+                          ? `Move ${pet.name} to ${soleMoveTarget.name}`
+                          : `Move ${pet.name} to another household`
+                      }
+                      accessibilityState={{
+                        disabled: movingHousehold,
+                        busy: movingHousehold,
+                        expanded: !soleMoveTarget ? choosingTarget : undefined,
+                      }}
+                      className="bg-primary-50 px-3 py-1.5 rounded mt-2"
+                      style={{ opacity: movingHousehold ? 0.5 : 1 }}
+                    >
+                      {movingHousehold ? (
+                        <ActivityIndicator size="small" color={COLORS.primary} />
+                      ) : (
+                        <Text className="text-primary-600 text-sm font-medium">
+                          {soleMoveTarget ? `Move to ${soleMoveTarget.name}` : 'Move to…'}
+                        </Text>
+                      )}
+                    </Pressable>
+
+                    {/* Destination list, expanded in place rather than in a
+                        Modal of its own: picking one goes straight into
+                        handleMoveHousehold's confirm dialog, and dismissing
+                        one native Modal to present another in the same commit
+                        is exactly how a dialog gets dropped on iOS. */}
+                    {choosingTarget && !movingHousehold && (
+                      <View className="self-stretch gap-2 mt-2">
+                        {moveTargets.map((target) => (
+                          <Pressable
+                            key={target.id}
+                            onPress={() => {
+                              setChoosingTarget(false);
+                              handleMoveHousehold(target);
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Move ${pet.name} to ${target.name}`}
+                            className="bg-cream-50 border border-primary-200 px-3 py-1.5 rounded"
+                          >
+                            <Text className="text-primary-600 text-sm font-medium text-center">
+                              {target.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </>
+                ) : null}
               </View>
             )}
           </View>

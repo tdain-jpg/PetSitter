@@ -1,5 +1,6 @@
 import { View, Text, Image, Pressable } from 'react-native';
 import { displayablePhotoUrl } from '../lib/petPhotos';
+import { Icon, speciesIconName } from './Icon';
 import type { Pet } from '../types';
 
 interface PetCardProps {
@@ -7,19 +8,7 @@ interface PetCardProps {
   onPress: () => void;
 }
 
-const speciesEmoji: Record<string, string> = {
-  dog: '🐕',
-  cat: '🐱',
-  bird: '🐦',
-  fish: '🐟',
-  reptile: '🦎',
-  rabbit: '🐰',
-  hamster: '🐹',
-  other: '🐾',
-};
-
 export function PetCard({ pet, onPress }: PetCardProps) {
-  const emoji = speciesEmoji[pet.species] || '🐾';
   const photoUrl = displayablePhotoUrl(pet.photo_url);
 
   return (
@@ -38,7 +27,7 @@ export function PetCard({ pet, onPress }: PetCardProps) {
         />
       ) : (
         <View className="w-16 h-16 rounded-full bg-tan-100 items-center justify-center">
-          <Text className="text-3xl">{emoji}</Text>
+          <Icon name={speciesIconName(pet.species)} size={40} />
         </View>
       )}
 
@@ -53,7 +42,7 @@ export function PetCard({ pet, onPress }: PetCardProps) {
         </View>
         <Text className="text-tan-500 capitalize">
           {pet.breed || pet.species}
-          {pet.age && ` • ${pet.age} ${pet.age === 1 ? 'year' : 'years'} old`}
+          {pet.age != null && ` • ${pet.age} ${pet.age === 1 ? 'year' : 'years'} old`}
         </Text>
       </View>
 

@@ -19,10 +19,27 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 
 export function SettingsScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
-  const { settings, updateSettings, exportAllData, importData, clearAllData, deceasedPets } =
-    useData();
+  const {
+    settings,
+    updateSettings,
+    exportAllData,
+    importData,
+    clearAllData,
+    deceasedPets,
+    households,
+    primaryHouseholdId,
+  } = useData();
 
   const [isImporting, setIsImporting] = useState(false);
+
+  // Import and Clear All Data target the DEFAULT household, whichever one that
+  // is — and since migration 0011 that is often the SHARED family household,
+  // not the personal one. "your household" was safe copy only while the default
+  // was always the user's own: to someone who belongs to two, it reads like the
+  // one literally named "My Household". Name the real target instead.
+  const targetHouseholdName =
+    households.find((household) => household.id === primaryHouseholdId)?.name ?? null;
+  const targetHousehold = targetHouseholdName ?? 'your household';
 
   const handleSignOut = async () => {
     try {
@@ -70,10 +87,10 @@ export function SettingsScreen({ navigation }: Props) {
       const reader = new FileReader();
       reader.onload = async () => {
         const confirmed = await showConfirm({
-          title: 'Replace Household Data?',
+          title: `Replace Data in ${targetHousehold}?`,
           message:
-            "Importing a backup REPLACES every pet, guide, and share link in your household with the backup's contents — " +
-            'including pets and guides that other household members added, for everyone in the household. ' +
+            `Importing a backup REPLACES every pet, guide, and share link in ${targetHousehold} with the backup's contents — ` +
+            'including pets and guides that other members of it added, for everyone in it. ' +
             "Other households you've joined are not affected. " +
             'Share links stored in the backup keep working after the import.',
           confirmLabel: 'Import & Replace',
@@ -100,11 +117,11 @@ export function SettingsScreen({ navigation }: Props) {
 
   const handleClearData = async () => {
     const confirmed = await showConfirm({
-      title: 'Delete Your Household Data?',
+      title: `Delete Everything in ${targetHousehold}?`,
       message:
-        'This permanently deletes every pet, guide, and share link in your household — ' +
-        'including any that other household members added and still use. It affects everyone ' +
-        "in the household. Other households you've joined are not affected. " +
+        `This permanently deletes every pet, guide, and share link in ${targetHousehold} — ` +
+        'including any that other members of it added and still use. It affects everyone ' +
+        "in that household. Other households you've joined are not affected. " +
         'There is no undo — once deleted, this data cannot be recovered.',
       confirmLabel: 'Delete Everything',
       destructive: true,
@@ -244,7 +261,13 @@ export function SettingsScreen({ navigation }: Props) {
 
         {/* Data Management */}
         <Card className="mb-4">
-          <Text className="text-lg font-semibold text-brown-800 mb-4">Data Management</Text>
+          <Text className="text-lg font-semibold text-brown-800 mb-1">Data Management</Text>
+          {/* Named before the tap, not only in the confirm dialog. */}
+          <Text className="text-tan-500 text-sm mb-4">
+            {targetHouseholdName
+              ? `These apply to ${targetHouseholdName} — your default household.`
+              : 'These apply to your default household.'}
+          </Text>
 
           <View className="gap-3">
             <Button title="📤 Export Data" onPress={handleExport} variant="outline" />
