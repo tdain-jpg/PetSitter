@@ -344,11 +344,13 @@ fallback; expo-image-picker MediaTypeOptions deprecation.
 
 ## Round 4 — gated on Tim
 
-- [ ] **Three secret pastes** to activate Loop 3's server features (Supabase → Edge Functions →
-  Secrets): `ANTHROPIC_API_KEY` (Claude powers the cheat sheets — Tim's call, replacing the
-  original Gemini plan), `BREVO_API_KEY` ✅ (pasted 2026-08-15, drain verified end-to-end),
-  `CRON_SECRET` ✅ (pasted 2026-08-15, cron auth verified; GitHub twin `NOTIFY_CRON_SECRET`
-  set earlier).
+- [x] **Three secret pastes — ALL DONE 2026-08-15, every Loop 3 server feature is live.**
+  `CRON_SECRET` ✅ (cron auth verified), `BREVO_API_KEY` ✅ (first real notification email
+  delivered), `ANTHROPIC_API_KEY` ✅ (Claude `claude-opus-5` — Tim's call, replacing Gemini;
+  full Crown path verified end-to-end: temp crown on the QA household, real generation in
+  13s, door code redacted, wifi/address/meds intact, row persisted, fixtures cleaned, crown
+  revoked). Granting a founder's Crown to Tim's household is a one-line update whenever he
+  says the word.
 - [ ] **Manual photo-upload check** (~1 min): edit a pet, add a real photo, reload — it should
   persist. QA's browser harness cannot drive the OS file dialog.
 - [ ] **Confirm wifi-password stance**: the cheat-sheet prompt sends wifi name/password (and
