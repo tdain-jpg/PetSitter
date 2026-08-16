@@ -22,6 +22,7 @@ import type {
   PendingInvite,
   SitterConnection,
   PendingSitterInvite,
+  Checkin,
   SitterInviteRow,
   AppSettings,
   JourneyEntry,
@@ -105,6 +106,12 @@ interface DataContextType {
   getSitterConnections: (householdId: string) => Promise<SitterInviteRow[]>;
   /** Owner revokes a sitter's access. Takes effect immediately. */
   revokeSitter: (connectionId: string) => Promise<void>;
+  /** Check-in feed for a household, newest first. */
+  getCheckins: (householdId: string, limit?: number) => Promise<Checkin[]>;
+  /** Post a check-in. The server pins authorship to the caller. */
+  addCheckin: (input: { householdId: string; note: string; guideId?: string | null }) => Promise<void>;
+  /** Delete one of MY OWN check-ins; the policy allows no others. */
+  deleteCheckin: (checkinId: string) => Promise<void>;
   inviteToHousehold: (householdId: string, email: string) => Promise<void>;
   /**
    * Accept or decline an invite, including (on accept) the data refreshes and
@@ -598,6 +605,22 @@ export function DataProvider({ children }: DataProviderProps) {
   const revokeSitter = useCallback(async (connectionId: string) => {
     await dataService.revokeSitter(connectionId);
   }, []);
+
+  const getCheckins = useCallback(
+    (householdId: string, limit?: number) => dataService.getCheckins(householdId, limit),
+    []
+  );
+
+  const addCheckin = useCallback(
+    (input: { householdId: string; note: string; guideId?: string | null }) =>
+      dataService.addCheckin(input),
+    []
+  );
+
+  const deleteCheckin = useCallback(
+    (checkinId: string) => dataService.deleteCheckin(checkinId),
+    []
+  );
 
   const inviteToHousehold = useCallback(async (householdId: string, email: string) => {
     // Server throws 'invalid email' / 'that email already belongs to a
@@ -1173,6 +1196,9 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
+      getCheckins,
+      addCheckin,
+      deleteCheckin,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,
@@ -1260,6 +1286,9 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
+      getCheckins,
+      addCheckin,
+      deleteCheckin,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,

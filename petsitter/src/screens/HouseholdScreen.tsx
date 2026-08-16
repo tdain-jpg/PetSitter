@@ -6,6 +6,7 @@ import { useAuth, useData } from '../contexts';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { announceJoinDestination } from '../lib/inviteDestination';
 import { SitterSection } from '../components/SitterSection';
+import { CheckinFeed } from '../components/CheckinFeed';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
 import type { Household, HouseholdInviteRow, HouseholdMember, PendingInvite } from '../types';
@@ -631,6 +632,11 @@ export function HouseholdScreen() {
             and tick tasks, and can change nothing. Kept in its own section so
             the distinction is visible where the owner grants it. */}
         <SitterSection householdId={household.id} isOwner={isOwner} />
+
+        {/* The owner's side of the same feed. Members can post too: a household
+            with two people usually has one travelling and one at home, and the
+            one at home has exactly the same thing to say. */}
+        <CheckinFeed householdId={household.id} canPost />
         </View>
       </Card>
     );

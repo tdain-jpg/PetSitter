@@ -79,6 +79,25 @@ export interface PendingSitterInvite {
   created_at: string;
 }
 
+/**
+ * One check-in: a sitter (or a housemate) saying what happened. Read through
+ * the household_checkins RPC, which resolves the author's email — auth.users is
+ * not readable by API roles, so a client-side join cannot.
+ *
+ * Deliberately immutable: 0017 ships no UPDATE policy. A log a worried owner
+ * can rewrite is worth nothing to them.
+ */
+export interface Checkin {
+  id: string;
+  household_id: string;
+  guide_id: string | null;
+  author_email: string | null;
+  is_mine: boolean;
+  note: string;
+  photo_path: string | null;
+  created_at: string;
+}
+
 /** A sitter invitation as the HOUSEHOLD sees it, for the owner's manage list. */
 export interface SitterInviteRow {
   id: string;

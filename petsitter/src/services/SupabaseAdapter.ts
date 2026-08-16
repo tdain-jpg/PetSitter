@@ -9,6 +9,7 @@ import type {
   PendingInvite,
   SitterConnection,
   PendingSitterInvite,
+  Checkin,
   SitterInviteRow,
   TaskCompletion,
   ShareableLink,
@@ -724,6 +725,44 @@ export class SupabaseAdapter implements DataService {
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as SitterInviteRow[];
+  }
+
+  /** The check-in feed for a household, newest first. */
+  async getCheckins(householdId: string, limit = 50): Promise<Checkin[]> {
+    const { data, error } = await supabase.rpc('household_checkins', {
+      h: householdId,
+      limit_count: limit,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Checkin[];
+  }
+
+  /**
+   * Post a check-in. author_user_id is sent because the INSERT policy pins it
+   * to auth.uid() in WITH CHECK — without it a sitter could post under someone
+   * else's name, so the server refuses anything that does not match.
+   */
+  async addCheckin(input: {
+    householdId: string;
+    note: string;
+    guideId?: string | null;
+  }): Promise<void> {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) throw new Error('Not authenticated');
+    const { error } = await supabase.from('sitter_checkins').insert({
+      household_id: input.householdId,
+      author_user_id: uid,
+      note: input.note,
+      guide_id: input.guideId ?? null,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  /** Remove one of MY OWN check-ins. The policy allows no others. */
+  async deleteCheckin(checkinId: string): Promise<void> {
+    const { error } = await supabase.from('sitter_checkins').delete().eq('id', checkinId);
+    if (error) throw new Error(error.message);
   }
 
   /** Owner invites a sitter by email. Server rejects a non-owner. */

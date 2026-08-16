@@ -4,6 +4,7 @@ import { View, ScrollView, Text, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
+import { CheckinFeed } from '../components/CheckinFeed';
 import { formatDate } from '../lib/dates';
 import { speciesIconName } from '../components';
 import { Icon } from '../components/Icon';
@@ -67,6 +68,10 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
                 variant="primary" 
               />
             </Card>
+            {/* The point of the sitter account for the OWNER: ticking a task is
+                invisible, a note is not. */}
+            <CheckinFeed householdId={householdId} canPost />
+
           </ScreenContainer>
         </ScrollView>
       </View>
