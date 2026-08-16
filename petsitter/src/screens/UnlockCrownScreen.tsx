@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Platform, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -285,9 +285,41 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   // checkout for a household the guide isn't in — the buyer would pay and the
   // sheet would stay watermarked. Resolve to null and wait instead.
   const resolvingGuide = guideId != null && !guide && loadingGuides;
+
+  // WHICH HOUSEHOLD A CHECKOUT RETURN IS ABOUT.
+  //
+  // The Stripe return URL is deliberately CONSTANT — no guideId — because the
+  // idempotency key can only replay a session when the create parameters do not
+  // vary, and guideId used to ride in success_url. So on the way back there is
+  // nothing in the URL saying which household was being bought for.
+  //
+  // Falling through to primaryHouseholdId is right for someone with one
+  // household and WRONG for anyone with two: start checkout from a guide in the
+  // family household while your default is your personal one, and the return
+  // would poll the wrong household forever — Crown genuinely granted, screen
+  // stuck on "not showing yet".
+  //
+  // The pending record already knows: it is filed under `${userId}:${household}`
+  // at the moment the buyer leaves. Recover the household from the key rather
+  // than putting it back in the URL, which would break the idempotency key
+  // again. Only consulted when the URL gave us nothing.
+  const recoveredHouseholdId = useMemo(() => {
+    if (guideId != null || !user?.id || !pendingCheckouts) return null;
+    const prefix = `${user.id}:`;
+    const live = Object.entries(pendingCheckouts)
+      .filter(([slot, startedAt]) =>
+        slot.startsWith(prefix) && Date.now() - startedAt < PENDING_CHECKOUT_TTL_MS
+      )
+      // Most recent wins if somehow two are live.
+      .sort((a, b) => b[1] - a[1])[0];
+    return live ? live[0].slice(prefix.length) : null;
+  }, [guideId, user?.id, pendingCheckouts]);
+
   // Guides written before households existed may carry no household_id; the
   // primary household is the same fallback the server default uses for them.
-  const householdId = resolvingGuide ? null : (guide?.household_id ?? primaryHouseholdId);
+  const householdId = resolvingGuide
+    ? null
+    : (guide?.household_id ?? recoveredHouseholdId ?? primaryHouseholdId);
   const household = households.find((h) => h.id === householdId) ?? null;
   const householdLabel = household?.name ?? 'your household';
 

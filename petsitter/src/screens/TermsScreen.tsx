@@ -73,9 +73,9 @@ export function TermsScreen(_props: TermsScreenProps) {
       <TrustSection heading="Sharing guides">
         <TrustText>
           A share link is a key. Anyone holding it can open that guide without signing in,
-          including the sensitive home values in it. You decide who gets a link, and you can turn
-          any link off, or set it to expire, at any time. What happens to a link after you send
-          it is on you, not us.
+          including the sensitive home values in it. You decide who gets a link, you choose how
+          long it lasts when you create it, and you can turn any link off at any time. What
+          happens to a link after you send it is on you, not us.
         </TrustText>
       </TrustSection>
 
