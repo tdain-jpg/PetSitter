@@ -6,6 +6,10 @@ import { MainNavigator } from './MainNavigator';
 import { SharedGuideViewScreen } from '../screens/SharedGuideViewScreen';
 import { InstallScreen } from '../screens/InstallScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
+import { AboutScreen } from '../screens/AboutScreen';
+import { PrivacyScreen } from '../screens/PrivacyScreen';
+import { TermsScreen } from '../screens/TermsScreen';
+import { RefundScreen } from '../screens/RefundScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
 import { COLORS } from '../constants';
@@ -39,9 +43,9 @@ const guideParams: ParamParser = (query) => {
   return guideId ? { params: { guideId } } : null;
 };
 
-// Only parameterized detail routes (plus their list/settings anchors) are
-// worth restoring after a hard reload. Anything else under /Main/
-// (Onboarding, TripWizard, ...) falls through to Home as before.
+// Only parameterized detail routes (plus their list/settings anchors and the
+// Stripe checkout return) are worth restoring after a hard reload. Anything
+// else under /Main/ (Onboarding, TripWizard, ...) falls through to Home.
 const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamParser>> = {
   Pets: noParams,
   Guides: noParams,
@@ -57,6 +61,24 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   ShareGuide: guideParams,
   PDFPreview: guideParams,
   AICheatSheet: guideParams,
+  // Where Stripe sends the buyer back to. On web that return is a hard page
+  // load, so this entry is the only thing standing between a paid customer and
+  // being dumped on Home with no confirmation — hence it ALWAYS returns params
+  // rather than following guideParams and dropping the route when there is no
+  // guideId: a purchase started from Settings legitimately has none. `checkout`
+  // is matched against the two values create-checkout-session can send instead
+  // of being forwarded verbatim, so arbitrary query text never reaches
+  // route.params.
+  UnlockCrown: (query) => {
+    const checkout = query.get('checkout');
+    const guideId = query.get('guideId');
+    return {
+      params: {
+        ...(checkout === 'success' || checkout === 'cancelled' ? { checkout } : {}),
+        ...(guideId ? { guideId } : {}),
+      },
+    };
+  },
   PetForm: (query) => {
     const mode = query.get('mode');
     if (mode === 'create') return { params: { mode } };
@@ -148,9 +170,23 @@ export function RootNavigator() {
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       )}
-      {/* Publicly accessible regardless of auth state */}
+      {/* Publicly accessible regardless of auth state.
+          Sitters open share links without an account, and anyone can read the
+          install instructions. The four trust pages sit here for a related
+          reason: Stripe will not activate a live account until its reviewer
+          can reach a service description, terms, privacy policy and refund
+          policy, and that reviewer has no login. Registering them outside the
+          isAuthenticated branch is what makes /about, /privacy, /terms and
+          /refunds resolve for a signed-out visitor. Signed-in users reach the
+          same screens from Settings.
+          The titles feed NavigationContainer's documentTitle formatter, so
+          each page gets a real browser-tab name instead of the route name. */}
       <Stack.Screen name="SharedGuideView" component={SharedGuideViewScreen} />
       <Stack.Screen name="Install" component={InstallScreen} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About Us' }} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy Policy' }} />
+      <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms of Service' }} />
+      <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund Policy' }} />
     </Stack.Navigator>
   );
 }

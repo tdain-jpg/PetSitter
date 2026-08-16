@@ -1,5 +1,5 @@
-# Per-function deployment config. The two Edge Functions have OPPOSITE JWT
-# requirements, and deploying either one with the wrong setting bricks it:
+# Per-function deployment config. The Edge Functions have OPPOSITE JWT
+# requirements, and deploying any of them with the wrong setting bricks it:
 #
 #   notify              verify_jwt = false  The GitHub Actions cron sends only
 #                                           the x-cron-secret header (no
@@ -7,9 +7,20 @@
 #                                           verification would 401 every call
 #                                           before the function's own auth
 #                                           check runs.
+#   stripe-webhook      verify_jwt = false  Stripe cannot present a Supabase
+#                                           JWT either. Authentication is the
+#                                           Stripe-Signature HMAC the function
+#                                           verifies itself, before it trusts
+#                                           one byte of the payload — same
+#                                           shape as notify's cron secret.
 #   generate-cheat-sheet verify_jwt = true  Browser-invoked with the user's
-#                                           JWT; all queries run under the
-#                                           caller's RLS.
+#                                           JWT; caller-facing queries run
+#                                           under the caller's RLS.
+#   create-checkout-session
+#                        verify_jwt = true  Browser-invoked. The JWT is what
+#                                           identifies the buyer, and household
+#                                           membership is checked on top of it
+#                                           before any Stripe call.
 #
 # Any deploy path (CLI, MCP deploy_edge_function, dashboard) must honor these.
 
@@ -18,3 +29,9 @@ verify_jwt = false
 
 [functions.generate-cheat-sheet]
 verify_jwt = true
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false

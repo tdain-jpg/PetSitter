@@ -44,6 +44,10 @@ export type MainStackParamList = {
   AICheatSheet: { guideId: string };
   SampleCheatSheet: undefined;
 
+  // Crown purchase. guideId is optional so the screen can send the user back
+  // to the sheet they were trying to unlock; entering from Settings has none.
+  UnlockCrown: { guideId?: string } | undefined;
+
   // Settings
   Settings: undefined;
   Memorial: undefined;
@@ -91,9 +95,24 @@ export type RootStackParamList = {
   Main: undefined;
   SharedGuideView: { code: string };
   Install: undefined;
+
+  // Public trust pages. On the ROOT stack, not Main, because they must render
+  // for a signed-OUT visitor: Stripe will not activate a live account without
+  // reaching a service description, terms, privacy and refund policy, and
+  // their reviewer has no login. Signed-in users reach them from Settings.
+  About: undefined;
+  Privacy: undefined;
+  Terms: undefined;
+  Refund: undefined;
 };
 
 export type InstallScreenProps = NativeStackScreenProps<RootStackParamList, 'Install'>;
+
+export type UnlockCrownScreenProps = NativeStackScreenProps<MainStackParamList, 'UnlockCrown'>;
+export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
+export type PrivacyScreenProps = NativeStackScreenProps<RootStackParamList, 'Privacy'>;
+export type TermsScreenProps = NativeStackScreenProps<RootStackParamList, 'Terms'>;
+export type RefundScreenProps = NativeStackScreenProps<RootStackParamList, 'Refund'>;
 
 declare global {
   namespace ReactNavigation {

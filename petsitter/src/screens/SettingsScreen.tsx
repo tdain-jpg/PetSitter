@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,26 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, ScreenContainer } from '../components';
 import { useAuth, useData } from '../contexts';
+import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
+
+// The same public pages the landing page links to. They live on the ROOT stack
+// (they must render for signed-out visitors), so a signed-in user would
+// otherwise have to sign out to read their own refund policy.
+const POLICY_LINKS = [
+  { route: 'About', label: 'About Us', description: 'Who builds Pawstructions, and why' },
+  { route: 'Privacy', label: 'Privacy Policy', description: 'What we store, and what never reaches the AI' },
+  { route: 'Terms', label: 'Terms of Service', description: 'What we promise, and what we ask of you' },
+  { route: 'Refund', label: 'Refund Policy', description: '14 days, no questions asked' },
+] as const;
 
 export function SettingsScreen({ navigation }: Props) {
   const { user, signOut } = useAuth();
@@ -31,6 +43,34 @@ export function SettingsScreen({ navigation }: Props) {
   } = useData();
 
   const [isImporting, setIsImporting] = useState(false);
+
+  // Crown is bought per HOUSEHOLD, so this card is about the default household
+  // — the same one Data Management targets. null = no answer yet (still
+  // reading, no household, or the read failed) and is deliberately distinct
+  // from false: offering "Unlock — $5" to someone who has already paid is the
+  // one mistake worth designing around, so an unknown answer keeps the neutral
+  // wording. Read only through has_crown(h), the membership-gated RPC, never a
+  // households column.
+  const [hasCrown, setHasCrown] = useState<boolean | null>(null);
+
+  // On focus, not on mount: returning from UnlockCrown after a purchase (native
+  // goes back to this screen) changes nothing this component renders from, so
+  // without this the card would keep offering Crown to a household that now
+  // owns it. Also picks up a purchase made by another household member.
+  useFocusEffect(
+    useCallback(() => {
+      if (!primaryHouseholdId) return;
+      let cancelled = false;
+      (async () => {
+        const { data, error } = await supabase.rpc('has_crown', { h: primaryHouseholdId });
+        if (cancelled || error) return;
+        setHasCrown(data === true);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [primaryHouseholdId])
+  );
 
   // Import and Clear All Data target the DEFAULT household, whichever one that
   // is — and since migration 0011 that is often the SHARED family household,
@@ -173,14 +213,38 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* Crown teaser */}
+        {/* Crown */}
         <Card className="mb-4 bg-warm-50 border-warm-300">
-          <Text className="text-lg font-semibold text-brown-800 mb-1">
-            👑 Crown — coming soon
-          </Text>
-          <Text className="text-brown-600 text-sm mb-3">
-            AI-written cheat sheets for your sitters, while supporting Pawstructions.
-          </Text>
+          {hasCrown === true ? (
+            <>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                👑 Crown is active
+              </Text>
+              <Text className="text-brown-600 text-sm mb-3">
+                {`Every AI cheat sheet in ${targetHousehold} is unlocked — no PREVIEW watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay.`}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                👑 Pawstructions Crown
+              </Text>
+              {/* Stated the same way everywhere Crown is sold: one payment, per
+                  household, no watermark. */}
+              <Text className="text-brown-600 text-sm mb-3">
+                AI-written cheat sheets for your sitter, with no PREVIEW
+                watermark — $5 once for a whole household, not a subscription.
+              </Text>
+              <View className="mb-3">
+                <Button
+                  // No guideId: this purchase isn't tied to a sheet, and
+                  // UnlockCrown falls back to the default household.
+                  title={hasCrown === false ? '👑 Unlock Crown — $5' : '👑 About Crown'}
+                  onPress={() => navigation.navigate('UnlockCrown')}
+                />
+              </View>
+            </>
+          )}
           <Button
             title="👀 See a Sample Cheat Sheet"
             onPress={() => navigation.navigate('SampleCheatSheet')}
@@ -280,6 +344,30 @@ export function SettingsScreen({ navigation }: Props) {
             />
             <Button title="🗑️ Clear All Data" onPress={handleClearData} variant="outline" />
           </View>
+        </Card>
+
+        {/* About & policies */}
+        <Card className="mb-4">
+          <Text className="text-lg font-semibold text-brown-800 mb-3">About & Policies</Text>
+          {POLICY_LINKS.map((link, index) => (
+            <Pressable
+              key={link.route}
+              // Root-stack routes: navigate bubbles up from the Main stack at
+              // runtime, but MainStackParamList cannot see them, hence the cast.
+              onPress={() => (navigation as any).navigate(link.route)}
+              accessibilityRole="button"
+              accessibilityLabel={link.label}
+              className={`flex-row justify-between items-center py-2 ${
+                index > 0 ? 'border-t border-tan-100' : ''
+              }`}
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-brown-800 font-medium">{link.label}</Text>
+                <Text className="text-tan-500 text-sm">{link.description}</Text>
+              </View>
+              <Text className="text-tan-400 text-xl">›</Text>
+            </Pressable>
+          ))}
         </Card>
 
         {/* Sign Out */}

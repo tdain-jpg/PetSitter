@@ -629,12 +629,41 @@ from `LandingScreen`:
 tsc, web build, RLS probes on the new tables, and a full Stripe **test-mode** purchase →
 webhook → entitlement → watermark-disappears run before anything goes live.
 
-### Human-gated (Tim)
-1. Create the Stripe account and complete the business profile.
-2. Create the product + $5 price; hand me the price ID.
-3. Paste `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` into Supabase secrets.
-4. Point the Stripe webhook endpoint at the deployed function URL.
-5. Activate live mode once the legal pages are deployed.
+### Stripe account facts (settled 2026-08-15)
+- **Legal entity: Dana's sole proprietorship**, using the EIN already associated with
+  Castles and Currents. A sole proprietor gets ONE EIN covering all their businesses, so
+  nothing new is filed. MouseTech Studios is a 4-founder LLC and is deliberately NOT the
+  entity here — that would commingle with three other people's business.
+- Stripe login is `tcdain@gmail.com` (Tim is the developer); **Dana is the account owner and
+  must be the responsible party at activation** — her identity verification, her bank account.
+  Add her as an Administrator; disputes and payout failures go to account users.
+- **Sandbox product id: `prod_V4zp7GWD8ggqhM`** ($5.00 USD one-off, "Pawstructions Crown").
+  Sandbox objects do NOT carry to live — the live product gets a different id, so this is a
+  config value (`STRIPE_PRODUCT_ID`), never baked into code. `STRIPE_PRICE_ID` is supported as
+  a direct override; when unset the function resolves the product's default price.
+- ⚠️ **UNRESOLVED:** the account is named "Castles and Cruise…" and holds an `Annual
+  Subscription` ($49.99/yr) created 2025-11-09 — nine months before the account was supposedly
+  created. Either a fossil of the original annual-fee Crown plan (§2 still describes Crown that
+  way) or evidence this is a PRE-EXISTING account, in which case Pawstructions revenue shares a
+  balance and payout with Castles and Currents and the separation goal fails. Must be settled
+  before any live payment. Also rename the public business name + statement descriptor to
+  PAWSTRUCTIONS — an unrecognised descriptor is the top cause of chargebacks, and a $15
+  chargeback on a $5 sale costs 3x the sale.
+- **Venmo was considered and rejected**: no checkout API and no webhooks, so nothing can tell
+  the app a payment happened — it would mean granting Crown by hand. Venmo is reachable via
+  PayPal Checkout, but that costs ~$0.66/sale vs Stripe's ~$0.45 and drops Apple/Google Pay.
+  Revisit only if real customers ask.
+
+### Human-gated (Tim / Dana)
+1. ~~Create the Stripe account~~ DONE (sandbox).
+2. ~~Create the product + $5 price~~ DONE — `prod_V4zp7GWD8ggqhM`.
+3. Resolve the Annual Subscription / account-provenance question above; archive the stray product.
+4. Rename business name + statement descriptor to PAWSTRUCTIONS.
+5. Paste `STRIPE_SECRET_KEY` (sandbox `sk_test_…`) and `STRIPE_WEBHOOK_SECRET` into Supabase secrets.
+6. Point the Stripe webhook endpoint at the deployed function URL.
+7. Tell me Dana's exact registered business name for the legal pages — Stripe's reviewer
+   compares the site against the account, and a mismatch is a rejection.
+8. Activate live mode once the legal pages are deployed, then redo 2/5/6 with live values.
 
 ### Deferred to Loop 7
 Google OAuth (independent; its consent screen has its own verification lag) and the first

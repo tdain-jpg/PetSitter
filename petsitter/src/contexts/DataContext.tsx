@@ -11,6 +11,8 @@ import {
 import { AppState } from 'react-native';
 import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
+import { confirmSessionLost } from '../lib/sessionExpired';
+import { SessionExpiredNotice } from '../components/SessionExpiredNotice';
 import type {
   Pet,
   Guide,
@@ -191,7 +193,7 @@ interface DataProviderProps {
 }
 
 export function DataProvider({ children }: DataProviderProps) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const userId = user?.id;
 
   // Pets state
@@ -270,9 +272,45 @@ export function DataProvider({ children }: DataProviderProps) {
   const deceasedPets = useMemo(() => pets.filter((p) => p.status === 'deceased'), [pets]);
 
   // ============================================
+  // Dead-session guard
+  // ============================================
+  // Latched when a load fails AND the auth server confirms the sign-in is
+  // gone. An auth failure that lands after mount is indistinguishable from a
+  // wiped account from the user's side: every load returns nothing, so Home
+  // renders "Welcome, <name>!" above 0 Pets, 0 Guides and the "Add your first
+  // pet" empty state. Nothing is actually lost, but there is no way for the
+  // user to know that.
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  /**
+   * Called from every load's catch block.
+   *
+   * Runs the probe on ANY load failure rather than on a guessed-at subset:
+   * SupabaseAdapter throws bare `new Error(error.message)`, so the HTTP status
+   * never reaches us and the message wording differs by cause (see
+   * lib/sessionExpired.ts). Missing one costs the user the empty-but-happy
+   * dashboard, while an extra probe costs one request on a path where a
+   * request has already failed. The probe itself is deduped, so five loads
+   * failing together ask once.
+   */
+  const noteLoadFailure = useCallback(async (uid: string | undefined) => {
+    if (!uid) return;
+    if (!(await confirmSessionLost())) return;
+    // Same staleness discipline as the loads themselves. supabase-js may sign
+    // out on its own while we are asking, in which case the app is already on
+    // its way to the sign-in screen and must not be interrupted by an expiry
+    // notice aimed at the user who just left.
+    if (userIdRef.current !== uid) return;
+    setSessionExpired(true);
+  }, []);
+
+  // ============================================
   // Load Initial Data
   // ============================================
   useEffect(() => {
+    // Any change of signed-in user clears the latch: signing out is the fix
+    // for an expired session, so the notice must not survive it.
+    setSessionExpired(false);
     if (userId) {
       refreshPets();
       refreshGuides();
@@ -318,12 +356,15 @@ export function DataProvider({ children }: DataProviderProps) {
       setPetsError(null);
     } catch (err: any) {
       console.error('Failed to load pets:', err);
+      // Fire-and-forget: it decides on its own whether this was the session
+      // dying, and does its own staleness check.
+      void noteLoadFailure(userId);
       if (userIdRef.current !== userId) return;
       setPetsError(err?.message || 'Failed to load pets');
     } finally {
       if (userIdRef.current === userId) setLoadingPets(false);
     }
-  }, [userId]);
+  }, [userId, noteLoadFailure]);
 
   const createPet = useCallback(
     async (pet: Omit<Pet, 'id' | 'created_at' | 'updated_at'>) => {
@@ -371,12 +412,13 @@ export function DataProvider({ children }: DataProviderProps) {
       setGuidesError(null);
     } catch (err: any) {
       console.error('Failed to load guides:', err);
+      void noteLoadFailure(userId);
       if (userIdRef.current !== userId) return;
       setGuidesError(err?.message || 'Failed to load guides');
     } finally {
       if (userIdRef.current === userId) setLoadingGuides(false);
     }
-  }, [userId]);
+  }, [userId, noteLoadFailure]);
 
   const getGuide = useCallback(async (guideId: string) => {
     return dataService.getGuide(guideId);
@@ -425,13 +467,14 @@ export function DataProvider({ children }: DataProviderProps) {
         setPrimaryHouseholdMemberCount(members.length);
       } catch (err) {
         console.error('Failed to load household member count:', err);
+        void noteLoadFailure(userId);
         if (userIdRef.current !== userId) return;
         // Fail open as "solo" so journeys still render instead of waiting
         // forever on a count that will not arrive.
         setPrimaryHouseholdMemberCount(1);
       }
     },
-    [userId]
+    [userId, noteLoadFailure]
   );
 
   const refreshHouseholds = useCallback(async () => {
@@ -450,12 +493,13 @@ export function DataProvider({ children }: DataProviderProps) {
       setHouseholdsError(null);
     } catch (err: any) {
       console.error('Failed to load households:', err);
+      void noteLoadFailure(userId);
       if (userIdRef.current !== userId) return;
       setHouseholdsError(err?.message || 'Failed to load households');
     } finally {
       if (userIdRef.current === userId) setHouseholdsLoading(false);
     }
-  }, [userId]);
+  }, [userId, noteLoadFailure]);
 
   // PWA-first sessions stay signed in for days, so invites sent while the app
   // was backgrounded would otherwise never appear until a full reload. On web
@@ -763,13 +807,14 @@ export function DataProvider({ children }: DataProviderProps) {
       setSettingsError(null);
     } catch (err: any) {
       console.error('Failed to load settings:', err);
+      void noteLoadFailure(userId);
       if (userIdRef.current === userId) {
         setSettingsError(err?.message || 'Failed to load settings');
       }
     } finally {
       if (userIdRef.current === userId) setLoadingSettings(false);
     }
-  }, [userId]);
+  }, [userId, noteLoadFailure]);
 
   const updateSettings = useCallback(
     async (updates: Partial<AppSettings>) => {
@@ -950,8 +995,9 @@ export function DataProvider({ children }: DataProviderProps) {
       setOnboardingState(state);
     } catch (err) {
       console.error('Failed to load onboarding state:', err);
+      void noteLoadFailure(userId);
     }
-  }, [userId]);
+  }, [userId, noteLoadFailure]);
 
   const updateOnboardingStateCallback = useCallback(
     async (state: Partial<OnboardingState>) => {
@@ -1151,7 +1197,31 @@ export function DataProvider({ children }: DataProviderProps) {
     ]
   );
 
-  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+  // The way out of an expired session. Clearing the dead credentials is what
+  // actually unblocks the user: AuthContext flips to signed-out, RootNavigator
+  // swaps in the Auth stack, and the load effect above resets this provider —
+  // including the latch. Errors propagate so the notice can say so; supabase-js
+  // drops the local session even when the server rejects the logout, so in
+  // practice only being offline gets that far.
+  const handleExpiredSignIn = useCallback(async () => {
+    await signOut();
+  }, [signOut]);
+
+  // A confirmed-dead session replaces the whole app UI rather than setting a
+  // flag for screens to honour. The bug being fixed was Home rendering a
+  // cheerful zero-state over an auth failure, so the requirement is that the
+  // zero-state be UNREACHABLE in that condition — and a flag each screen has
+  // to remember to check is not that. Every screen with an "add your first
+  // thing" empty state sits inside these children.
+  return (
+    <DataContext.Provider value={value}>
+      {sessionExpired ? (
+        <SessionExpiredNotice onSignIn={handleExpiredSignIn} />
+      ) : (
+        children
+      )}
+    </DataContext.Provider>
+  );
 }
 
 export function useData() {

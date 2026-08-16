@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   Pressable,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
+import { supabase } from '../lib/supabase';
 import { COLORS } from '../constants';
 import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
 import { showAlert } from '../lib/showAlert';
@@ -44,6 +46,25 @@ const PRINT_READY_TIMEOUT_MS = 4000;
 const PRINT_CLEANUP_TIMEOUT_MS = 120000;
 /** Grace period before revoking a Blob URL handed off to a new browser tab. */
 const BLOB_HANDOFF_REVOKE_MS = 60000;
+
+/**
+ * The exported cheat sheet's PREVIEW wash.
+ *
+ * An SVG <pattern> rather than a laid-out grid of tiles: `patternUnits` of
+ * userSpaceOnUse repeats the tile across the whole fill region, so coverage is
+ * a property of the geometry and cannot run out on a long sheet. (A fixed tile
+ * count did run out — and because the grid was rotated about its own centre,
+ * a tall block swung it out of the frame entirely.)
+ */
+const PDF_WATERMARK_WASH =
+  '<div class="preview-frame" aria-hidden="true">' +
+  '<svg class="preview-wash" xmlns="http://www.w3.org/2000/svg">' +
+  '<defs><pattern id="pawstructions-preview-wash" width="300" height="120"' +
+  ' patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">' +
+  '<text x="10" y="71">PREVIEW</text>' +
+  '</pattern></defs>' +
+  '<rect width="100%" height="100%" fill="url(#pawstructions-preview-wash)"></rect>' +
+  '</svg></div>';
 
 /**
  * Script embedded in the exported HTML on web only.
@@ -157,6 +178,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [cheatSheetContent, setCheatSheetContent] = useState<string | null>(null);
+  // The exported PDF is the artifact a sitter is actually handed, so the free
+  // tier's PREVIEW wash matters more here than on screen. Entitlement, not a
+  // stored flag, decides it: sheets are saved unwatermarked so buying Crown
+  // clears the wash from the next export with no regeneration.
+  // Defaults to false — an entitlement read we couldn't complete must never
+  // stamp PREVIEW across a paying household's export.
+  const [cheatSheetWatermarked, setCheatSheetWatermarked] = useState(false);
 
   // Module selection state
   const [sections, setSections] = useState<PDFSections>({
@@ -174,6 +202,23 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   // manual pet selection.
   const selectionSeededForGuide = useRef<string | null>(null);
 
+  // Entitlement decides the wash on an export whose sheet we didn't generate
+  // this session. has_crown is membership-gated, so a non-member simply gets
+  // false. A failed read leaves cheatSheetWatermarked ALONE rather than
+  // setting it — see the state declaration: an entitlement we couldn't read
+  // must never stamp PREVIEW across a paying household's export.
+  const refreshCrown = useCallback(async (householdId: string | null | undefined) => {
+    if (!householdId) return;
+    try {
+      const { data: crown, error: crownError } = await supabase.rpc('has_crown', {
+        h: householdId,
+      });
+      if (!crownError) setCheatSheetWatermarked(crown !== true);
+    } catch {
+      // See above — the export keeps whatever treatment it already had.
+    }
+  }, []);
+
   // `guides`/pets are dependencies because a deep-link restore (hard reload of
   // /Main/PDFPreview?guideId=...) mounts this screen before DataContext's
   // initial fetch resolves — the lookup must retry once the data arrives.
@@ -181,6 +226,18 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   useEffect(() => {
     loadData();
   }, [guideId, guides, activePets, deceasedPets]);
+
+  // Crown can arrive while this screen just sits in the stack: the buyer
+  // returns from UnlockCrown (which changes neither guideId nor guides, so the
+  // effect above doesn't re-run), or another member of the household buys it
+  // on their own device. Nothing else re-reads entitlement here — a foreground
+  // refresh only touches households, not guides. Re-ask on focus so the PDF
+  // the sitter is handed can't carry a wash they already paid to remove.
+  useFocusEffect(
+    useCallback(() => {
+      refreshCrown(guide?.household_id);
+    }, [guide?.household_id, refreshCrown])
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -205,6 +262,12 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
       const cheatSheet = await getCheatSheet(guideId);
       setCheatSheetContent(cheatSheet?.content || null);
+
+      // Read here as well as on focus so the first paint already knows which
+      // side of the paywall this export is on — the focus pass alone would
+      // render the watermark banner a beat late. refreshCrown swallows its own
+      // failures, so a bad entitlement read can never take the preview down.
+      await refreshCrown(foundGuide?.household_id);
     } finally {
       setLoading(false);
     }
@@ -270,6 +333,28 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         ` : ''}
       </div>
     `).join('<hr>');
+
+    // Built out here rather than inline: the free-tier PREVIEW treatment adds
+    // a wash layer and two lines of copy to this one block.
+    let cheatSheetSection = '';
+    if (sections.aiCheatSheet && cheatSheetContent) {
+      const sheetBody = esc(
+        fillCheatSheetTokens(cheatSheetContent, guide.home_info)
+      ).replace(/\n/g, '<br>');
+
+      if (cheatSheetWatermarked) {
+        // Written for the SITTER first, who is the one holding this page: the
+        // watermark explains itself before it can make anyone hesitate over a
+        // dose. The sales line waits for the footer.
+        const note =
+          '<p class="preview-note"><strong>PREVIEW</strong> — the watermark marks a free Pawstructions cheat sheet. The care details below are the real ones from this guide.</p>';
+        const footer =
+          '<p class="preview-footer">Pawstructions Crown ($5, one-time) removes this watermark.</p>';
+        cheatSheetSection = `<div class="cheat-sheet preview">${PDF_WATERMARK_WASH}<div class="cheat-sheet-body"><h2>🤖 AI Cheat Sheet</h2>${note}<div>${sheetBody}</div>${footer}</div></div>`;
+      } else {
+        cheatSheetSection = `<div class="cheat-sheet"><div class="cheat-sheet-body"><h2>🤖 AI Cheat Sheet</h2><div>${sheetBody}</div></div></div>`;
+      }
+    }
 
     const itinerary = guide.travel_itinerary;
     const travelSection = sections.travelItinerary && itinerary ? `
@@ -391,6 +476,77 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             margin: 20px 0;
             white-space: pre-wrap;
           }
+          /* --- Free-tier PREVIEW treatment (cheat sheet only) --------------
+             Scoped to the cheat sheet: the rest of this document is the
+             owner's own guide, a free feature, and stamping PREVIEW across
+             emergency contacts would tell a sitter to distrust a phone
+             number. "Preview" describes the feature state, never the data. */
+          .cheat-sheet.preview {
+            /* Positioning anchor for the wash. Deliberately NOT
+               overflow:hidden — a clipping block can lose content where it
+               breaks across printed pages, and this one carries doses. */
+            position: relative;
+          }
+          .preview-frame {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: 0;
+            white-space: normal;
+            /* Matches .cheat-sheet so the wash can't square off its corners. */
+            border-radius: 8px;
+          }
+          .preview-wash {
+            /* Fills the frame at whatever size the frame happens to be; the
+               tiling itself is the <pattern>'s job, so a 400px sheet and an
+               8000px one are both covered corner to corner. No viewBox, so one
+               SVG user unit stays one CSS pixel and the tile is really 300x120.
+               Absolutely positioned, and NOT via inset/auto sizing: an SVG is a
+               monolithic box, so left in normal flow one taller than a page is
+               pushed whole onto the next one and page 1 of the PDF prints
+               unwatermarked. Out of flow with an explicit 100%/100% it paints
+               across every page. */
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: block;
+            width: 100%;
+            height: 100%;
+          }
+          .preview-wash text {
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: 8px;
+            /* REAL TEXT, not a CSS background image. Browsers drop background
+               graphics from a print unless the reader ticks a box; SVG content
+               is part of the document and always prints. Light enough that
+               every word underneath stays readable — legibility beats the
+               nudge, every time. */
+            fill: rgba(151, 120, 59, 0.22);
+          }
+          .cheat-sheet-body {
+            position: relative;
+            z-index: 1;
+          }
+          .preview-note {
+            white-space: normal;
+            border-left: 4px solid ${COLORS.warm};
+            padding-left: 10px;
+            margin: 0 0 12px 0;
+            font-size: 13px;
+            color: ${COLORS.textLight};
+          }
+          .preview-footer {
+            white-space: normal;
+            margin: 14px 0 0 0;
+            padding-top: 8px;
+            border-top: 1px solid ${COLORS.border};
+            font-size: 12px;
+            color: ${COLORS.textMuted};
+          }
           .footer {
             margin-top: 40px;
             padding-top: 20px;
@@ -449,12 +605,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
         ${travelSection}
 
-        ${sections.aiCheatSheet && cheatSheetContent ? `
-          <div class="cheat-sheet">
-            <h2>🤖 AI Cheat Sheet</h2>
-            <div>${esc(fillCheatSheetTokens(cheatSheetContent, guide?.home_info)).replace(/\n/g, '<br>')}</div>
-          </div>
-        ` : ''}
+        ${cheatSheetSection}
 
         ${sections.additionalNotes && guide.additional_notes ? `
           <div class="section">
@@ -682,6 +833,26 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                 </Pressable>
               ))}
             </View>
+          </Card>
+        )}
+
+        {/* Nobody should discover the watermark after emailing the PDF to
+            their sitter. Only shown when the sheet is actually going in. */}
+        {cheatSheetWatermarked && cheatSheetContent && sections.aiCheatSheet && (
+          <Card className="mb-4 bg-warm-50 border-warm-300">
+            <Text className="text-brown-800 font-semibold mb-1">
+              👑 The cheat sheet will carry a PREVIEW watermark
+            </Text>
+            <Text className="text-brown-600 text-sm mb-3">
+              Everything in this PDF is your own information, and the rest of it
+              exports clean. Crown removes the watermark from the cheat sheet —
+              $5 once for your whole household.
+            </Text>
+            <Button
+              title="👑 Unlock Crown — $5"
+              variant="outline"
+              onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+            />
           </Card>
         )}
 

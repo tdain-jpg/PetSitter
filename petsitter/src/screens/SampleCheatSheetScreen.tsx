@@ -1,6 +1,10 @@
+import { useCallback, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, CheatSheetView, ScreenContainer } from '../components';
+import { useData } from '../contexts';
+import { supabase } from '../lib/supabase';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 
@@ -64,6 +68,31 @@ const SAMPLE_CONTENT = `## ⏰ Daily Schedule
 - Please keep toilet lids down — Marmalade is curious and Banjo is thirsty`;
 
 export function SampleCheatSheetScreen({ navigation }: Props) {
+  const { primaryHouseholdId } = useData();
+  const [hasCrown, setHasCrown] = useState<boolean | null>(null);
+
+  // Read entitlement here rather than taking it as a prop: this screen is
+  // reached from BOTH Settings and the AICheatSheet paywall card, and a
+  // household that already paid must not be shown a $5 buy button from either.
+  // On focus, not mount, so a purchase made meanwhile (or by another household
+  // member) is picked up. A FAILED read leaves hasCrown null and the offer
+  // hidden — showing a buy button to someone who may already own it is the
+  // worse error, and Settings still carries the real entry point.
+  useFocusEffect(
+    useCallback(() => {
+      if (!primaryHouseholdId) return;
+      let cancelled = false;
+      (async () => {
+        const { data, error } = await supabase.rpc('has_crown', { h: primaryHouseholdId });
+        if (cancelled || error) return;
+        setHasCrown(data === true);
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [primaryHouseholdId])
+  );
+
   return (
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
@@ -99,9 +128,40 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
 
           <CheatSheetView content={SAMPLE_CONTENT} />
 
-          <Text className="text-tan-500 text-sm text-center mb-8">
-            Pawstructions Crown — coming soon.
-          </Text>
+          {/* This screen is reached straight from the paywall, so it closes on
+              the same offer the user was just shown rather than sending them
+              back to hunt for it. No guideId: nothing here belongs to a real
+              guide, and UnlockCrown falls back to the default household.
+              Only for households that have NOT bought it — Settings links here
+              too, and selling Crown to someone who already owns it reads as
+              either a bug or a second charge. */}
+          {hasCrown === false && (
+            <Card className="mb-8">
+              <Text className="text-brown-800 font-semibold mb-1">
+                👑 Pawstructions Crown
+              </Text>
+              <Text className="text-brown-600 text-sm mb-3">
+                $5 once for your whole household — not a subscription. Crown
+                writes a sheet like this from your own guide, with no PREVIEW
+                watermark on screen or in the PDF.
+              </Text>
+              <Button
+                title="👑 Unlock Crown — $5"
+                onPress={() => navigation.navigate('UnlockCrown')}
+              />
+            </Card>
+          )}
+          {hasCrown === true && (
+            <Card className="mb-8">
+              <Text className="text-brown-800 font-semibold mb-1">
+                👑 Crown is active
+              </Text>
+              <Text className="text-brown-600 text-sm">
+                Your household already has Crown. Open any guide and generate its
+                cheat sheet — yours comes out with no PREVIEW watermark.
+              </Text>
+            </Card>
+          )}
         </ScreenContainer>
       </ScrollView>
     </View>

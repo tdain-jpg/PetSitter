@@ -33,6 +33,9 @@ export { PDFPreviewScreen } from './PDFPreviewScreen';
 export { AICheatSheetScreen } from './AICheatSheetScreen';
 export { SampleCheatSheetScreen } from './SampleCheatSheetScreen';
 
+// Crown purchase
+export { UnlockCrownScreen } from './UnlockCrownScreen';
+
 // Onboarding
 export { OnboardingScreen } from './OnboardingScreen';
 
@@ -41,3 +44,9 @@ export { TripWizardScreen } from './TripWizardScreen';
 
 // PWA install instructions (public, reachable signed in or out)
 export { InstallScreen } from './InstallScreen';
+
+// Public trust pages (root stack, reachable signed in or out)
+export { AboutScreen } from './AboutScreen';
+export { PrivacyScreen } from './PrivacyScreen';
+export { TermsScreen } from './TermsScreen';
+export { RefundScreen } from './RefundScreen';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, CheatSheetView, ScreenContainer, SecurityNote } from '../components';
 import { useData } from '../contexts';
 import { supabase } from '../lib/supabase';
@@ -20,6 +21,21 @@ import type { Guide, CheatSheet } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
 
+/**
+ * Turns the server's `retry_after_minutes` into something a person would say.
+ *
+ * The number is the SERVER's to decide — the free-tier ceiling and its window
+ * live in the Edge Function and are free to change — so nothing here assumes a
+ * value. With no usable number the wording stays deliberately vague: inventing
+ * "an hour" and being wrong is worse than saying "in a little while".
+ */
+function describeRetryWait(minutes: number | undefined): string {
+  if (minutes === undefined) return 'in a little while';
+  if (minutes <= 1) return 'in a minute';
+  if (minutes < 120) return `in about ${minutes} minutes`;
+  return `in about ${Math.ceil(minutes / 60)} hours`;
+}
+
 export function AICheatSheetScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
   const { guides, loadingGuides, getCheatSheet } = useData();
@@ -30,6 +46,49 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [crownRequired, setCrownRequired] = useState(false);
+  // null = entitlement not established yet: the load hasn't finished, the
+  // has_crown read failed, or the guide carries no household_id. See
+  // `watermarked` below for why that renders CLEAN rather than watermarked.
+  const [hasCrown, setHasCrown] = useState<boolean | null>(null);
+
+  // Sheets are STORED unwatermarked; the wash is a render-time decision keyed
+  // off Crown, so a purchase clears it with no regeneration and no second AI
+  // charge. Unknown entitlement deliberately renders CLEAN: stamping PREVIEW
+  // across a paying household's sheet because an RPC timed out is far worse
+  // than missing a nudge, and the watermark is a nudge, not DRM.
+  const watermarked = hasCrown === false;
+
+  // The 402 that sets crownRequired is a point-in-time refusal, and this screen
+  // OUTLIVES it: the buyer walks to UnlockCrown, pays, and comes back to the
+  // same mounted instance. Entitlement is authoritative over the stale refusal,
+  // so a confirmed Crown retires the paywall. An UNKNOWN entitlement
+  // (hasCrown === null — read failed, or no household_id) does not clear it on
+  // its own; refreshCrown clears the flag outright the moment it sees a real
+  // true, which is what keeps a later failed read from re-raising the paywall
+  // on a household that has already paid.
+  const showCrownPaywall = crownRequired && hasCrown !== true;
+
+  // Entitlement decides the watermark on a sheet we didn't generate this
+  // session. has_crown is membership-gated, so a non-member simply gets false.
+  // A failed read leaves hasCrown ALONE rather than setting false: stamping
+  // PREVIEW across a paying household's sheet because an RPC timed out is the
+  // outcome to avoid.
+  const refreshCrown = useCallback(async (householdId: string | null | undefined) => {
+    if (!householdId) return;
+    try {
+      const { data, error: crownError } = await supabase.rpc('has_crown', { h: householdId });
+      if (!crownError) {
+        const active = data === true;
+        setHasCrown(active);
+        // Clear the stale 402 outright once entitlement confirms Crown. Doing
+        // it here rather than only at render time means a LATER failed read
+        // can never resurrect the paywall for a household that just paid.
+        if (active) setCrownRequired(false);
+      }
+    } catch {
+      // See above — the sheet keeps rendering however it already was.
+    }
+  }, []);
 
   // `guides` is a dependency because a deep-link restore (hard reload of
   // /Main/AICheatSheet?guideId=...) mounts this screen before DataContext's
@@ -38,6 +97,16 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   useEffect(() => {
     loadData();
   }, [guideId, guides]);
+
+  // Crown can arrive while this screen just sits in the stack: the buyer
+  // returns from UnlockCrown (which changes neither guideId nor guides, so
+  // nothing above re-runs), or another member of the household buys it on
+  // their own device. Re-ask on focus so the PREVIEW wash clears.
+  useFocusEffect(
+    useCallback(() => {
+      refreshCrown(guide?.household_id);
+    }, [guide?.household_id, refreshCrown])
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -49,6 +118,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
       const existingSheet = await getCheatSheet(guideId);
       setCheatSheet(existingSheet);
+
+      // Read here as well as on focus so the first paint already knows which
+      // side of the paywall it is on — the focus pass alone would render the
+      // sheet clean for a beat and then wash it. refreshCrown swallows its own
+      // failures, so a bad entitlement read can never surface as "the cheat
+      // sheet couldn't load".
+      await refreshCrown(foundGuide?.household_id);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -72,10 +148,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
         // Non-2xx responses surface as a FunctionsHttpError whose `context`
         // is the raw Response; the JSON body carries the contract error code.
         let code: string | undefined;
+        let retryAfterMinutes: number | undefined;
         if (invokeError instanceof FunctionsHttpError) {
           try {
             const body = await invokeError.context.json();
             code = body?.error;
+            const minutes = Number(body?.retry_after_minutes);
+            if (Number.isFinite(minutes) && minutes > 0) retryAfterMinutes = minutes;
           } catch {
             // Body wasn't JSON — fall through to the generic message.
           }
@@ -83,6 +162,18 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
         if (code === 'crown_required') {
           setCrownRequired(true);
+          return;
+        }
+        if (code === 'free_limit_reached') {
+          // The free-tier RATE ceiling, and the one refusal that must not read
+          // like the paywall: it exists to stop scripted abuse, and the sheet
+          // is still owed — waiting, not paying, is what actually fixes it.
+          // So no Crown pitch here, and no limit numbers either: how many and
+          // how often is the server's business, and the only figure repeated
+          // is the wait it sent us (absent → describeRetryWait stays vague).
+          setError(
+            `That's a lot of cheat sheets in a short time, so our AI helper is catching its breath. Nothing is locked and nothing is wrong with your account — please try again ${describeRetryWait(retryAfterMinutes)}.`
+          );
           return;
         }
         if (code === 'ai_not_configured') {
@@ -99,6 +190,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
         showAlert('Generation Failed', message);
         return;
       }
+
+      // The server tells us which side of the paywall this generation landed
+      // on: `watermark: true` means it spent the guide's one free generation,
+      // anything else means Crown paid for it. Taking the flag here saves a
+      // second round trip to has_crown for the answer the server just gave us.
+      // A response with no flag at all reads as "Crown" — the same
+      // clean-by-default bias as an unknown entitlement above.
+      setHasCrown(data?.watermark !== true);
 
       // Success: the sheet is already persisted server-side. Re-fetch the
       // stored row so we render exactly what was saved (id, timestamps, model).
@@ -139,7 +238,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     try {
       // Copy the FILLED text — the stored content carries [[TOKEN]]
       // placeholders instead of real codes.
-      const filled = fillCheatSheetTokens(cheatSheet.content, guide?.home_info);
+      const body = fillCheatSheetTokens(cheatSheet.content, guide?.home_info);
+      // Plain text can't carry the diagonal wash, so the preview state is
+      // stated in words instead — and stated as a FEATURE state, never as a
+      // doubt about the care details, which are the user's own.
+      const filled = watermarked
+        ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own — Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
+        : body;
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(filled);
       } else {
@@ -194,20 +299,27 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
         {!cheatSheet ? (
-          crownRequired ? (
+          showCrownPaywall ? (
             <Card className="items-center py-8 bg-warm-50 border-warm-300">
               <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
                 👑 Pawstructions Crown
               </Text>
               <Text className="text-brown-600 text-center mb-6">
-                AI cheat sheets are a Crown member feature. Crown covers the cost
-                of the AI that writes them — coming soon.
+                This guide has already had its free cheat sheet. Crown covers the
+                cost of the AI that writes them — $5 once for your whole
+                household, not a subscription.
               </Text>
-              <Button
-                title="👀 See a Sample Cheat Sheet"
-                onPress={() => navigation.navigate('SampleCheatSheet')}
-                variant="outline"
-              />
+              <View className="w-full gap-3">
+                <Button
+                  title="👑 Unlock Crown — $5"
+                  onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+                />
+                <Button
+                  title="👀 See a Sample Cheat Sheet"
+                  onPress={() => navigation.navigate('SampleCheatSheet')}
+                  variant="outline"
+                />
+              </View>
             </Card>
           ) : (
             <Card className="items-center py-8">
@@ -218,6 +330,19 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               <Text className="text-tan-500 text-center mb-6">
                 Use AI to create a quick reference summary of this guide for your pet sitter.
               </Text>
+
+              {/* Set the expectation BEFORE the free generation is spent —
+                  discovering the watermark afterwards feels like a bait.
+                  Phrased without promising THIS sheet is free: the free
+                  allowance is one per guide and lives server-side, so the
+                  client can't honestly claim this guide still has one. */}
+              {watermarked && (
+                <Text className="text-brown-600 text-center mb-6">
+                  Free cheat sheets arrive with a PREVIEW watermark across them.
+                  Crown removes it and lets you rewrite the sheet whenever your
+                  details change — $5 once for your whole household.
+                </Text>
+              )}
 
               {error && (
                 <Text className="text-accent-500 mb-4 text-center">{error}</Text>
@@ -242,17 +367,26 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               content={cheatSheet.content}
               homeInfo={guide?.home_info}
               generatedAt={cheatSheet.generated_at}
+              watermarked={watermarked}
+              onUnlockPress={() => navigation.navigate('UnlockCrown', { guideId })}
             />
 
-            {crownRequired ? (
+            {showCrownPaywall ? (
               <Card className="items-center py-8 mb-8 bg-warm-50 border-warm-300">
                 <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
                   👑 Pawstructions Crown
                 </Text>
-                <Text className="text-brown-600 text-center">
-                  AI cheat sheets are a Crown member feature. Crown covers the cost
-                  of the AI that writes them — coming soon.
+                <Text className="text-brown-600 text-center mb-6">
+                  Your free cheat sheet for this guide is above. Crown covers the
+                  cost of the AI, so you can rewrite it whenever the details
+                  change — $5 once for your whole household, not a subscription.
                 </Text>
+                <View className="w-full">
+                  <Button
+                    title="👑 Unlock Crown — $5"
+                    onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+                  />
+                </View>
               </Card>
             ) : (
               <View className="gap-3 mb-8">

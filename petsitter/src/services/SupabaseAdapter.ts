@@ -1,3 +1,4 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type {
   Pet,
@@ -204,7 +205,36 @@ export class SupabaseAdapter implements DataService {
     // the duplicator's primary household with pet_ids its members can't see.
     const original = await this.getGuide(guideId);
     if (!original) throw new Error('Guide not found');
-    const { id: _id, created_at: _ca, updated_at: _ua, ...copy } = original;
+    // free_generation_used_at is STRIPPED, so the copy starts with its free
+    // cheat sheet unspent. A duplicate is a NEW guide, and the promise stated on
+    // Terms/About is that every guide gets one free sheet. Copying the marker
+    // made the duplicate born already-spent, so the first Generate on a guide
+    // the user had just created answered 402 "this guide has already had its
+    // free cheat sheet" — flatly untrue of a guide that never had one. The
+    // column has no default, so omitting it from the INSERT means NULL.
+    //
+    // It used to be copied because the per-guide marker was the only thing
+    // bounding cost, and a fresh allowance per duplicate meant unlimited free AI
+    // calls. That reason is gone: 0014 added ai_free_generations, a per-ACCOUNT
+    // append-only ledger the client can neither read, write nor delete, and
+    // generate-cheat-sheet enforces the rolling free-tier ceiling from it. The
+    // per-GUIDE marker now carries only the product PROMISE; the per-ACCOUNT
+    // ledger carries the abuse BOUND. Duplicating in a loop therefore buys no
+    // extra generations — it spends the same account ceiling either way.
+    //
+    // importData deliberately does the OPPOSITE (see its own note on this
+    // column, in the guides loop of the restore): a restore
+    // re-creates the guides the user already had, so their recorded state is
+    // what must come back; a duplicate is a guide that did not exist before.
+    // The column is not on the Guide type, so it is named via the cast below in
+    // order to be destructured away.
+    const {
+      id: _id,
+      created_at: _ca,
+      updated_at: _ua,
+      free_generation_used_at: _freeGen,
+      ...copy
+    } = original as Guide & { free_generation_used_at?: string | null };
     // Prune pet ids whose pets row no longer exists: deletePet does no
     // guides.pet_ids cleanup, and 0007's guides_validate_pet_ids trigger
     // would reject the copy's INSERT outright over a ghost id. RLS scopes the
@@ -414,6 +444,87 @@ export class SupabaseAdapter implements DataService {
   // Cheat-sheet WRITES live server-side in the generate-cheat-sheet Edge
   // Function (Crown-gated); deletion rides the guides FK cascade. The client
   // deliberately has no write path that could bypass the Crown gate.
+
+  // ============================================
+  // Crown Purchase
+  // ============================================
+  /**
+   * Open a Stripe Checkout session for the one-time Crown purchase and return
+   * the hosted URL to send the buyer to.
+   *
+   * The client never sees a price, a Stripe key, or an entitlement write:
+   * amount and product live in the Edge Function, and `crown_until` is written
+   * only by the webhook. This call just says "this household wants to buy" —
+   * the function re-checks membership itself before creating the session, so a
+   * guessed household id gets an error, never a checkout page.
+   *
+   * Contract (create-checkout-session):
+   *   POST { householdId?: string, guideId?: string }  with the caller's JWT
+   *   200 { url: string }                    hosted Checkout URL
+   *   400 { error: 'bad_request' }
+   *   400 { error: 'no_household' }          caller has no household to buy for
+   *   401 { error: 'unauthorized' }
+   *   404 { error: 'household_not_found' }   missing OR caller is not a member
+   *   409 { error: 'already_crowned' }
+   *   502 { error: 'stripe_failed' }
+   *   503 { error: 'billing_not_configured' }
+   *
+   * @param householdId The household to crown. Optional in the contract (the
+   * function falls back to my_primary_household), but the UI resolves and
+   * NAMES the household before the buyer commits, so it always sends the one
+   * it showed them.
+   * @param guideId Optional: the sheet the buyer was trying to unlock. It only
+   * rides along in Stripe's return URLs.
+   */
+  async createCrownCheckoutSession(householdId: string, guideId?: string): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: { householdId, guideId },
+    });
+
+    if (error) {
+      // Non-2xx responses surface as a FunctionsHttpError whose `context` is
+      // the raw Response; the JSON body carries the contract error code.
+      let code: string | undefined;
+      if (error instanceof FunctionsHttpError) {
+        try {
+          const body = await error.context.json();
+          code = body?.error;
+        } catch {
+          // Body wasn't JSON — fall through to the generic message.
+        }
+      }
+      // Unknown codes deliberately fall through to the generic message rather
+      // than a guess: this contract is owned by the Edge Function, and
+      // inventing copy for a code we don't recognise risks describing the
+      // wrong failure to someone who is trying to pay us.
+      switch (code) {
+        case 'already_crowned':
+          throw new Error('This household already has Crown — there is nothing to pay.');
+        case 'household_not_found':
+          // The function answers "no such household" and "not your household"
+          // identically on purpose; this copy must not tell them apart either.
+          throw new Error(
+            "We couldn't find that household. You may no longer be a member of it."
+          );
+        case 'no_household':
+          throw new Error(
+            "We couldn't work out which household to unlock. Open Household from Settings, then try again."
+          );
+        case 'unauthorized':
+          throw new Error('Please sign in again, then try once more.');
+        case 'billing_not_configured':
+          throw new Error("Checkout isn't open yet. Please try again soon.");
+        default:
+          throw new Error('Something went wrong starting checkout. Please try again.');
+      }
+    }
+
+    const url = (data as { url?: string } | null)?.url;
+    // A 200 with no URL is a broken session, not a silent no-op: returning
+    // normally here would leave the buyer staring at a button that did nothing.
+    if (!url) throw new Error('Checkout did not open. Please try again.');
+    return url;
+  }
 
   // ============================================
   // Settings Operations
@@ -770,6 +881,34 @@ export class SupabaseAdapter implements DataService {
     // Guides — remap pet_ids. household_id is stripped explicitly: createGuide
     // now forwards it when present, and a backup's household_id may reference
     // a household the user has left (the insert would violate RLS).
+    //
+    // free_generation_used_at is deliberately NOT stripped, and must not be.
+    // The Guide type does not declare it, so it rides through `rest` as an
+    // untyped runtime key and createGuide hands it to the INSERT — which 0013
+    // leaves unguarded on purpose (its trigger is BEFORE UPDATE only). A
+    // restored guide therefore arrives with its free-sheet allowance in the
+    // state the backup recorded.
+    //
+    // Stripping it looks like the anti-farming move and is the opposite of one.
+    // The column has no default, so stripping means every restored guide gets
+    // NULL — a fresh free AI generation — and the three cases decide it:
+    //   * backup says NULL (unspent guide): NULL either way. No difference.
+    //   * backup says a timestamp (spent guide): carrying keeps it spent;
+    //     stripping hands the allowance back, turning one Export + Import tap
+    //     in Settings into a household-wide reset of every guide's free sheet.
+    //   * backup HAND-EDITED to NULL on a spent guide: NULL either way — which
+    //     is the whole point. What an edited file smuggles in IS a NULL, so
+    //     stripping cannot close that path; it only breaks the honest one.
+    //
+    // duplicateGuide DOES strip it, and the two paths genuinely differ: a
+    // duplicate is a guide that did not exist a moment ago, so "every guide gets
+    // one free cheat sheet" applies to it afresh, while a restore re-creates the
+    // guides this household already had — their allowance is part of the state
+    // the backup recorded, exactly like their titles and routines. Neither path
+    // bounds cost any more; 0014's per-account ledger does that.
+    // exportAllData keeps writing the column for the same reason: drop it from
+    // the file and the restore has nothing to carry. Do not "clean up" this
+    // destructure.
     const guideIdMap: Record<string, string> = {};
     for (const g of guidesToRestore) {
       const { id, created_at, updated_at, pet_ids, household_id: _hh, ...rest } = g;

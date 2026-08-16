@@ -17,6 +17,14 @@ const linking = {
       SharedGuideView: 'share/:code',
       // PWA install instructions — public, reachable signed in or out
       Install: 'install',
+      // Trust pages — public and directly addressable. Stripe will not
+      // activate a live account without reaching a service description,
+      // terms, privacy policy and refund policy, and their reviewer has no
+      // login, so these must resolve for a signed-out visitor by URL alone.
+      About: 'about',
+      Privacy: 'privacy',
+      Terms: 'terms',
+      Refund: 'refunds',
     },
   },
 };

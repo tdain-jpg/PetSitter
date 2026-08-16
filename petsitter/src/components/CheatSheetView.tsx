@@ -1,7 +1,10 @@
-import { View, Text, Image } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Image, type LayoutChangeEvent } from 'react-native';
+import { Button } from './Button';
 import { Card } from './Card';
 import { SecurityNote } from './SecurityNote';
 import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
+import { COLORS } from '../constants';
 import type { HomeInfo } from '../types';
 
 const wordmark = require('../../assets/wordmark.png');
@@ -23,6 +26,113 @@ interface CheatSheetViewProps {
    * Real sheets pass cheat_sheet.generated_at; the sample omits it.
    */
   generatedAt?: string;
+  /**
+   * Free-tier treatment: a tiled diagonal PREVIEW wash behind the sheet body
+   * plus a footer unlock line. Sheets are STORED unwatermarked — this is a
+   * render-time decision keyed off Crown entitlement, so buying Crown clears
+   * the wash instantly with no regeneration and no second AI charge.
+   */
+  watermarked?: boolean;
+  /**
+   * Makes the watermark footer a real CTA. Optional so this component stays
+   * navigation-free: each screen supplies its own route to UnlockCrown.
+   */
+  onUnlockPress?: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// PREVIEW wash
+//
+// The word is PREVIEW, never "sample": this sheet carries real medication
+// doses, and a sitter must never be left wondering whether the CONTENT is
+// made up. "Preview" describes what the user has unlocked; "sample" would
+// impugn the data.
+//
+// Geometry and colour are chosen so the wash is unmistakable at a glance —
+// nobody would hand this version to a sitter — while every word stays
+// readable: gold at low opacity behind cream leaves body text (brown-600 on
+// cream-50) near 6:1 contrast, and the layer is absolute + first-in-tree, so
+// it can never paint over a dose.
+// ---------------------------------------------------------------------------
+const WATERMARK_WORD_ROW = 'PREVIEW    PREVIEW    PREVIEW    PREVIEW';
+const WATERMARK_ROW_HEIGHT = 128;
+const WATERMARK_OPACITY = 0.18;
+/** Rows painted before onLayout reports the card's real height. */
+const WATERMARK_INITIAL_ROWS = 5;
+/** One row above and one below, so rotation can't leave the corners bare. */
+const WATERMARK_BLEED_ROWS = 2;
+
+function PreviewWash() {
+  const [rows, setRows] = useState(WATERMARK_INITIAL_ROWS);
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    const needed = Math.ceil(height / WATERMARK_ROW_HEIGHT) + WATERMARK_BLEED_ROWS;
+    // Only ever grow within a render pass: setState in onLayout re-lays-out,
+    // and a shrink-then-grow pair would oscillate.
+    setRows((current) => (needed > current ? needed : current));
+  };
+
+  return (
+    <View
+      // "PREVIEW" read aloud once per tile would bury the sheet a screen-reader
+      // user actually came for. The footer line below says it once, in words.
+      // All three props are needed: accessibilityElementsHidden is iOS-only,
+      // importantForAccessibility Android-only, and react-native-web emits the
+      // DOM aria-hidden only for `aria-hidden` (verified in the browser — the
+      // two native props alone left the tiles exposed on web).
+      aria-hidden
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      onLayout={handleLayout}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        // Matches Card's rounded-xl so the wash can't square off the corners.
+        borderRadius: 12,
+        overflow: 'hidden',
+        opacity: WATERMARK_OPACITY,
+        // Never intercepts touches — the sheet body and the unlock CTA sit
+        // above it and must stay tappable and selectable. As a style, not the
+        // `pointerEvents` prop: react-native-web warns that the prop is
+        // deprecated (seen in the console).
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Pulled up by one row so the first diagonal starts above the card. */}
+      <View style={{ marginTop: -WATERMARK_ROW_HEIGHT }}>
+        {Array.from({ length: rows }, (_, row) => (
+          <View
+            key={row}
+            style={{
+              height: WATERMARK_ROW_HEIGHT,
+              justifyContent: 'center',
+              // Wider than the card, nudged left, so the rotated band still
+              // reaches both edges instead of tapering off at the corners.
+              width: '150%',
+              marginLeft: row % 2 === 0 ? '-25%' : '-15%',
+              transform: [{ rotate: '-24deg' }],
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              style={{
+                color: COLORS.warmDark,
+                fontSize: 34,
+                fontWeight: '800',
+                letterSpacing: 10,
+              }}
+            >
+              {WATERMARK_WORD_ROW}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 // Markdown renderer for cheat sheets: real bold, section rules, callouts,
@@ -145,9 +255,19 @@ const renderMarkdown = (content: string) => {
   });
 };
 
-export function CheatSheetView({ content, homeInfo, generatedAt }: CheatSheetViewProps) {
+export function CheatSheetView({
+  content,
+  homeInfo,
+  generatedAt,
+  watermarked = false,
+  onUnlockPress,
+}: CheatSheetViewProps) {
   return (
     <Card className="mb-4">
+      {/* First in the tree AND absolutely positioned, so every sibling below
+          paints on top of it. Order is what puts the wash behind the words. */}
+      {watermarked && <PreviewWash />}
+
       {/* Branded sheet header */}
       <View className="items-center mb-3">
         <Image
@@ -170,6 +290,41 @@ export function CheatSheetView({ content, homeInfo, generatedAt }: CheatSheetVie
       <View className="border-t border-tan-200 pt-4">
         {renderMarkdown(fillCheatSheetTokens(content, homeInfo))}
       </View>
+
+      {watermarked && (
+        <View className="border-t border-tan-200 mt-4 pt-3">
+          <Text
+            className="text-warm-700 font-bold text-xs mb-1"
+            style={{ letterSpacing: 2 }}
+          >
+            PREVIEW
+          </Text>
+          {/* Says plainly that the CONTENT is real. A sitter reading a dose off
+              a watermarked page must not hesitate, and the owner deciding
+              whether to pay deserves to know exactly what the $5 changes —
+              which is BOTH halves: the watermark and the regeneration paywall.
+              Naming only the watermark would sell Crown as cosmetic and leave
+              the user to discover the 402 after they change a dose. */}
+          <Text className="text-brown-600 text-sm">
+            This is your own sheet, written from your guide. Crown clears the
+            watermark here and in the PDF, and lets you rewrite the sheet
+            whenever your details change.
+          </Text>
+          {onUnlockPress && (
+            <View className="mt-3">
+              {/* Deliberately not "…to remove this watermark": that label was
+                  the same cosmetic-only claim as the line above, restated as
+                  the last thing read before the decision. Matches
+                  AICheatSheetScreen's Crown CTA. */}
+              <Button
+                title="👑 Unlock Crown — $5"
+                onPress={onUnlockPress}
+                variant="outline"
+              />
+            </View>
+          )}
+        </View>
+      )}
     </Card>
   );
 }

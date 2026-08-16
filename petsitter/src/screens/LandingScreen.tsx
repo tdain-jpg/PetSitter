@@ -52,6 +52,18 @@ const features = [
   },
 ];
 
+// Public pages every visitor can reach without signing in. They live on the
+// ROOT stack — see RootNavigator — because Stripe's reviewer reads them
+// without an account, and because a footer that demands a login to explain
+// your refund policy is not a footer anyone trusts.
+const FOOTER_LINKS = [
+  { route: 'About', label: 'About Us' },
+  { route: 'Privacy', label: 'Privacy' },
+  { route: 'Terms', label: 'Terms' },
+  { route: 'Refund', label: 'Refunds' },
+  { route: 'Install', label: 'Install the app' },
+] as const;
+
 function FeatureCard({ icon, title, description, color, bgClass }: {
   icon: string;
   title: string;
@@ -77,6 +89,14 @@ function FeatureCard({ icon, title, description, color, bgClass }: {
 }
 
 export function LandingScreen({ navigation }: Props) {
+  // The footer targets sit on the ROOT stack, so they are absent from
+  // AuthStackParamList. React Navigation resolves an unhandled route name on
+  // the parent navigator at runtime; the cast only satisfies the child stack's
+  // typing, which cannot see its parent's routes.
+  const openRootScreen = (name: string) => {
+    (navigation as any).navigate(name);
+  };
+
   const navigateToLogin = () => {
     navigation.navigate('Login');
   };
@@ -278,22 +298,23 @@ export function LandingScreen({ navigation }: Props) {
         {/* Footer */}
         <View className="px-6 py-6 bg-cream-100">
           <ScreenContainer variant="content" className="items-center">
-            <View className="flex-row items-center">
-              <Text className="text-tan-500 text-sm">
-                © 2026 Pawstructions
-              </Text>
-              <Text className="text-tan-400 text-sm mx-2">·</Text>
-              <Pressable
-                onPress={() => (navigation as any).navigate('Install')}
-                accessibilityRole="button"
-                accessibilityLabel="How to install the app"
-                hitSlop={8}
-              >
-                <Text className="text-primary-600 text-sm font-semibold">
-                  Install the app
-                </Text>
-              </Pressable>
+            {/* flex-wrap: five links do not fit on one line on a 375px phone,
+                and a footer that runs off the edge is a footer nobody reads. */}
+            <View className="flex-row flex-wrap items-center justify-center">
+              {FOOTER_LINKS.map((link) => (
+                <Pressable
+                  key={link.route}
+                  onPress={() => openRootScreen(link.route)}
+                  accessibilityRole="button"
+                  accessibilityLabel={link.label}
+                  hitSlop={8}
+                  className="px-2 py-1"
+                >
+                  <Text className="text-primary-600 text-sm font-semibold">{link.label}</Text>
+                </Pressable>
+              ))}
             </View>
+            <Text className="text-tan-500 text-sm mt-2">© 2026 Pawstructions</Text>
             <Text className="text-tan-400 text-xs mt-1">
               Made with love for pet parents everywhere
             </Text>
