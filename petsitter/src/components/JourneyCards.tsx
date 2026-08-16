@@ -7,22 +7,31 @@ import { Button } from './Button';
 import { useData } from '../contexts';
 import { showAlert } from '../lib/dialogs';
 import { getActiveJourney, isCardComplete } from '../lib/journeys';
-import type { JourneyCard, JourneyData, JourneyDef } from '../lib/journeys';
+import type { JourneyCard, JourneyData, JourneyDef, JourneySurface } from '../lib/journeys';
 import type { JourneyEntry } from '../types';
 import type { MainStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
+interface JourneyCardsProps {
+  /**
+   * Which home screen is rendering this — see JourneySurface. Defaults to the
+   * owner's Home, so the existing call site keeps its exact behaviour.
+   */
+  surface?: JourneySurface;
+}
+
 /**
- * Renders at most ONE active journey (contract C4) as a dismissible Card on
- * Home: founder-welcome as a live checklist, joiner-welcome as a one-at-a-time
- * card sequence. Renders null when no journey is active.
+ * Renders at most ONE active journey (contract C4) as a dismissible Card on a
+ * home screen: founder-welcome as a live checklist, joiner-welcome and
+ * sitter-welcome as one-at-a-time card sequences. Renders null when no journey
+ * is active for this surface.
  *
  * Evaluation is pure and render-time; settings writes happen ONLY on explicit
  * user action (CTA tap / Dismiss / Got it) or the one-time silent auto-done,
  * each guarded by refs so a write can never re-trigger itself into a loop.
  */
-export function JourneyCards() {
+export function JourneyCards({ surface = 'owner' }: JourneyCardsProps) {
   const {
     activePets,
     guides,
@@ -54,7 +63,10 @@ export function JourneyCards() {
   const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dismissing, setDismissing] = useState(false);
 
-  const active = useMemo(() => getActiveJourney(journeysState), [journeysState]);
+  const active = useMemo(
+    () => getActiveJourney(journeysState, surface),
+    [journeysState, surface]
+  );
 
   // Never evaluate predicates against half-loaded data: a settled evaluation
   // needs pets, guides, settings, AND the member count (which DataContext
@@ -75,7 +87,12 @@ export function JourneyCards() {
     !householdsLoading &&
     !householdsError;
   const memberCount = primaryHouseholdId == null ? 1 : primaryHouseholdMemberCount;
-  const evaluable = dataSettled && memberCount != null;
+  // Only a founder-welcome predicate ever reads the member count, and
+  // DataContext fetches it lazily only while an OWNER journey is pending — on
+  // the sitter surface it therefore stays null forever, and waiting for it
+  // would mean sitter-welcome never renders. Keyed on the surface rather than
+  // on the active journey's cards so the owner path's timing is untouched.
+  const evaluable = dataSettled && (surface === 'sitter' || memberCount != null);
 
   const journeyData: JourneyData = useMemo(
     () => ({ activePets, guides, householdMemberCount: memberCount ?? 1 }),
@@ -183,7 +200,7 @@ export function JourneyCards() {
     }
   };
 
-  const handleJoinerFinish = async (def: JourneyDef) => {
+  const handleTourFinish = async (def: JourneyDef) => {
     try {
       await setJourneyState(def.key, 'done');
     } catch (err: any) {
@@ -222,14 +239,14 @@ export function JourneyCards() {
   // state and the cached member count stay populated, so ticks stay correct
   // and the card doesn't blink.
 
-  if (active.key === 'joiner-welcome') {
+  if (active.key === 'joiner-welcome' || active.key === 'sitter-welcome') {
     return (
-      <JoinerJourneyCard
+      <TourJourneyCard
         key={active.key}
         def={active}
         dismissing={dismissing}
         onDismiss={() => handleDismiss(active)}
-        onFinish={() => handleJoinerFinish(active)}
+        onFinish={() => handleTourFinish(active)}
       />
     );
   }
@@ -338,8 +355,11 @@ function FounderJourneyCard({ def, entry, data, dismissing, onCta, onDismiss }: 
   );
 }
 
-/** joiner-welcome: informational cards shown one at a time with Next/Got it. */
-function JoinerJourneyCard({ def, dismissing, onDismiss, onFinish }: {
+/**
+ * joiner-welcome / sitter-welcome: informational cards shown one at a time
+ * with Next/Got it. Neither has a predicate card, so nothing here ticks.
+ */
+function TourJourneyCard({ def, dismissing, onDismiss, onFinish }: {
   def: JourneyDef;
   dismissing: boolean;
   onDismiss: () => void;

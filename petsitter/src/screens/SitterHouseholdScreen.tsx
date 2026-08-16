@@ -68,9 +68,6 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
                 variant="primary" 
               />
             </Card>
-            {/* The point of the sitter account for the OWNER: ticking a task is
-                invisible, a note is not. */}
-            <CheckinFeed householdId={householdId} canPost />
 
           </ScreenContainer>
         </ScrollView>
@@ -133,6 +130,12 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
               </View>
             )}
           </Card>
+          {/* The point of the sitter account for the OWNER: ticking a task is
+              invisible, a note is not. On the HAPPY path — an earlier edit put
+              this inside the guidesError early-return, so a sitter could only
+              post a check-in when loading the guides had failed. */}
+          <CheckinFeed householdId={householdId} canPost />
+
         </ScreenContainer>
       </ScrollView>
     </View>

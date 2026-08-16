@@ -349,11 +349,19 @@ export function DataProvider({ children }: DataProviderProps) {
       refreshPets();
       refreshGuides();
       refreshHouseholds();
+      // At sign-in, NOT only when SitterHomeScreen mounts. Loading these lazily
+      // from that screen created a loop with no entrance: Settings gates the
+      // "My Clients" link on this data, so the only way to see the link was to
+      // have already reached the screen it links to. QA found the whole sitter
+      // side unreachable for a real user because of it.
+      refreshSitterConnections();
       loadSettings();
       loadOnboardingState();
     } else {
       setPets([]);
       setGuides([]);
+      setSitterConnections([]);
+      setPendingSitterInvites([]);
       setHouseholds([]);
       setPendingInvites([]);
       setPrimaryHouseholdId(null);

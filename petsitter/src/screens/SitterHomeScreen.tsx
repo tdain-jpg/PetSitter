@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../contexts';
-import { Button, Card, ScreenContainer } from '../components';
+import { Button, Card, JourneyCards, ScreenContainer } from '../components';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import { formatDate } from '../lib/dates';
@@ -183,8 +183,14 @@ export function SitterHomeScreen({ navigation }: Props) {
   };
 
   const clientCount = activeClients.length;
+  // A pending invitation is not "no clients" — saying so directly above one is
+  // the app arguing with itself.
   const subtitle = clientCount === 0
-    ? 'No clients yet'
+    ? pendingInvites.length > 0
+      ? pendingInvites.length === 1
+        ? 'One invitation waiting'
+        : `${pendingInvites.length} invitations waiting`
+      : 'No clients yet'
     : clientCount === 1
       ? '1 household'
       : `${clientCount} households`;
@@ -194,6 +200,11 @@ export function SitterHomeScreen({ navigation }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="mt-4">
+            <View className="flex-row items-center justify-between mb-2">
+              {/* On web the browser back button rescues you; in the installed
+                  PWA and on native there is nothing else off this screen. */}
+              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            </View>
             <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
             <Text className="text-tan-500">{subtitle}</Text>
           </View>
@@ -201,6 +212,10 @@ export function SitterHomeScreen({ navigation }: Props) {
       </View>
       <ScrollView className="flex-1">
         <ScreenContainer variant="content" className="py-4">
+          {/* sitter-welcome (contract C4). The sitter surface only ever offers
+              that one journey — the founder checklist and the joiner tour are
+              about a household of your own, which is not what a sitter has. */}
+          <JourneyCards surface="sitter" />
           {renderContent()}
           {/* Sitter-only by construction: this screen is only reachable from a
               sitter connection or invitation, so an owner never lands here and

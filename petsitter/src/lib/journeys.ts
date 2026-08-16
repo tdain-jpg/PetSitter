@@ -34,11 +34,19 @@ export interface JourneyCard {
 }
 
 export interface JourneyDef {
-  key: 'founder-welcome' | 'joiner-welcome';
+  key: 'founder-welcome' | 'joiner-welcome' | 'sitter-welcome';
   version: number;
   title: string;
   cards: JourneyCard[];
 }
+
+/**
+ * Which home screen is asking for a journey. The two sets never mix:
+ * founder-welcome and joiner-welcome belong to the owner's Home, sitter-welcome
+ * to SitterHome — a sitter has no pets of their own to add, and an owner has no
+ * clients to visit.
+ */
+export type JourneySurface = 'owner' | 'sitter';
 
 export const JOURNEYS: Record<string, JourneyDef> = {
   'founder-welcome': {
@@ -104,6 +112,30 @@ export const JOURNEYS: Record<string, JourneyDef> = {
       },
     ],
   },
+  'sitter-welcome': {
+    key: 'sitter-welcome',
+    version: 1,
+    title: 'Getting started as a sitter',
+    cards: [
+      {
+        id: 'clients',
+        title: 'Your clients live here',
+        body: 'Every household you help care for is on this screen. Open one to see its pets and care guides.',
+      },
+      {
+        id: 'tick-tasks',
+        title: 'Tick tasks as you go',
+        body: "Open a guide's daily routine and mark each task done as you do it.",
+      },
+      {
+        id: 'check-in',
+        // Deliberately not "send a photo": check-ins are text notes, and 0017
+        // ships no image upload at all.
+        title: 'Post a check-in',
+        body: 'Open a household and leave a short note, so the owner knows how things are going.',
+      },
+    ],
+  },
 };
 
 /**
@@ -119,16 +151,30 @@ export function isJourneyPending(def: JourneyDef, entry: JourneyEntry | undefine
 /**
  * The single journey that may currently show (at most one — C4), or null.
  *
- * founder-welcome always takes priority. joiner-welcome is gated on
- * founder-welcome being SKIPPED, because that's the marker the accept flow
- * (C5) writes when a user accepts an invite instead of founding their own
- * household ("joiner-welcome left unset so it shows"). A founder whose
- * checklist finishes as 'done' must never see "You've joined a household".
+ * `surface` says which home screen is asking, and it decides the whole answer
+ * rather than adding a third tier to the owner rules: SitterHome only ever
+ * offers sitter-welcome, Home only ever offers the owner pair. That keeps the
+ * sitter journey off Home (where "your clients live here" is meaningless) and
+ * the founder checklist off SitterHome (where "add your first pet" is wrong).
+ * The sitter accept flow settles BOTH owner journeys, so a sitter who does
+ * visit Home is offered neither.
+ *
+ * On the owner surface founder-welcome always takes priority. joiner-welcome
+ * is gated on founder-welcome being SKIPPED, because that's the marker the
+ * accept flow (C5) writes when a user accepts an invite instead of founding
+ * their own household ("joiner-welcome left unset so it shows"). A founder
+ * whose checklist finishes as 'done' must never see "You've joined a
+ * household".
  */
 export function getActiveJourney(
-  journeys: Record<string, JourneyEntry> | undefined
+  journeys: Record<string, JourneyEntry> | undefined,
+  surface: JourneySurface = 'owner'
 ): JourneyDef | null {
   const state = journeys ?? {};
+  if (surface === 'sitter') {
+    const sitter = JOURNEYS['sitter-welcome'];
+    return isJourneyPending(sitter, state[sitter.key]) ? sitter : null;
+  }
   const founder = JOURNEYS['founder-welcome'];
   const joiner = JOURNEYS['joiner-welcome'];
   if (isJourneyPending(founder, state[founder.key])) return founder;

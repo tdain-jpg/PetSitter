@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,27 @@ type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
 export function GuideDetailScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, loadingGuides, deleteGuide, duplicateGuide } =
+  const { guides, activePets, deceasedPets, loadingGuides, deleteGuide, duplicateGuide, households } =
     useData();
+
+  /**
+   * A CONNECTED SITTER can reach this screen — they can read a client's guides,
+   * and the sitter household view links straight here. They are not a household
+   * member, so every write below is refused by RLS ("household member can crud"
+   * on guides and pets). Showing them Edit, Duplicate and Delete anyway offers
+   * buttons that can only ever produce a permission error, and Delete Guide is
+   * an alarming thing to dangle in front of someone looking after your animals.
+   *
+   * `households` holds only households the user BELONGS to, so a guide whose
+   * household is absent from it means the caller is reading it as a sitter.
+   * Defaults to editable while guides are still loading, so an owner never sees
+   * their own controls flicker away.
+   */
+  const canEdit = useMemo(() => {
+    const found = guides.find((g) => g.id === guideId);
+    if (!found?.household_id) return true; // pre-household guide, or not loaded yet
+    return households.some((h) => h.id === found.household_id);
+  }, [guides, guideId, households]);
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
@@ -113,7 +132,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
               <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
               <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
             </View>
-            <Button title="Edit" onPress={handleEdit} variant="primary" />
+            {canEdit ? <Button title="Edit" onPress={handleEdit} variant="primary" /> : null}
           </View>
 
           <View className="px-4 pb-4">
@@ -134,10 +153,9 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           <SectionHeader
             title={`Pets (${guidePets.length})`}
             icon="🐾"
-            rightAction={{
-              label: 'Edit Pets',
-              onPress: handleEdit,
-            }}
+            rightAction={
+                canEdit ? { label: 'Edit Pets', onPress: handleEdit } : undefined
+            }
           >
             {guidePets.length === 0 ? (
               <Text className="text-tan-500">No pets assigned to this guide.</Text>
@@ -156,10 +174,9 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           <SectionHeader
             title={`Emergency Contacts (${guide.emergency_contacts.length})`}
             icon="🚨"
-            rightAction={{
-              label: 'Edit',
-              onPress: handleEdit,
-            }}
+            rightAction={
+                canEdit ? { label: 'Edit', onPress: handleEdit } : undefined
+            }
           >
             {guide.emergency_contacts.length === 0 ? (
               <Text className="text-tan-500">No emergency contacts added.</Text>
@@ -174,10 +191,9 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           <SectionHeader
             title="Home Information"
             icon="🏠"
-            rightAction={{
-              label: 'Edit',
-              onPress: handleEdit,
-            }}
+            rightAction={
+                canEdit ? { label: 'Edit', onPress: handleEdit } : undefined
+            }
           >
             <View className="gap-2">
               {guide.home_info.address && (
@@ -302,8 +318,12 @@ export function GuideDetailScreen({ navigation, route }: Props) {
             <Button title="🤖 Generate AI Cheat Sheet" onPress={handleAICheatSheet} variant="primary" />
             <Button title="🔗 Share Guide" onPress={handleShare} variant="outline" />
             <Button title="📄 Export as PDF" onPress={handleExportPDF} variant="outline" />
-            <Button title="📋 Duplicate Guide" onPress={handleDuplicate} variant="secondary" />
-            <Button title="🗑️ Delete Guide" onPress={handleDelete} variant="outline" />
+            {canEdit ? (
+              <>
+                <Button title="📋 Duplicate Guide" onPress={handleDuplicate} variant="secondary" />
+                <Button title="🗑️ Delete Guide" onPress={handleDelete} variant="outline" />
+              </>
+            ) : null}
           </View>
         </ScreenContainer>
       </ScrollView>

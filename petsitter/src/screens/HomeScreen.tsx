@@ -2,9 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View, Text, ScrollView, Image } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { showAlert } from '../lib/showAlert';
+import { showConfirm } from '../lib/dialogs';
 import { announceJoinDestination } from '../lib/inviteDestination';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, InviteGate, JourneyCards, PetCard, ScreenContainer } from '../components';
+import {
+  Button,
+  Card,
+  InviteGate,
+  JourneyCards,
+  PetCard,
+  ScreenContainer,
+  SitterInviteGate,
+} from '../components';
 import { COLORS } from '../constants';
 
 // @ts-ignore
@@ -14,7 +23,7 @@ const wordmark = require('../../assets/wordmark.png');
 import { useAuth, useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { PendingInvite } from '../types';
+import type { PendingInvite, PendingSitterInvite } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Home'>;
 
@@ -55,6 +64,13 @@ export function HomeScreen({ navigation }: Props) {
     refreshGuides,
     completeOnboarding,
     setJourneyState,
+    setJourneyStates,
+    pendingSitterInvites,
+    sitterConnections,
+    loadingSitterConnections,
+    sitterConnectionsError,
+    refreshSitterConnections,
+    respondToSitterInvite,
   } = useData();
 
   // Re-check pending invites whenever Home regains focus: sessions persist for
@@ -86,6 +102,23 @@ export function HomeScreen({ navigation }: Props) {
   // across that window.
   const [acceptingGateInvite, setAcceptingGateInvite] = useState<PendingInvite | null>(null);
 
+  // The sitter invitation currently being accepted or declined through the
+  // first-run gate, and which of the two is running. Holds the invite ROW for
+  // the same reason as acceptingGateInvite above: responding refreshes the
+  // pending list before settings catch up, and this snapshot keeps the gate
+  // rendered (and the Onboarding replace suppressed) across that window.
+  const [sitterGateResponse, setSitterGateResponse] = useState<{
+    invite: PendingSitterInvite;
+    accept: boolean;
+  } | null>(null);
+
+  // True once the sitter-invitation read has completed at least once. Needed
+  // because loadingSitterConnections starts FALSE and nothing else on Home
+  // fetches sitter data: without this, "not asked yet" is indistinguishable
+  // from "asked, none waiting", and the routing effect would replace a
+  // brand-new sitter into the founder wizard before their invitation arrived.
+  const [sitterInvitesChecked, setSitterInvitesChecked] = useState(false);
+
   // A household this user belongs to but did NOT create — durable proof they
   // joined via an invite, surviving reloads and failed writes (unlike any
   // in-memory latch). Used to repair a join whose onboarding tail never
@@ -93,6 +126,16 @@ export function HomeScreen({ navigation }: Props) {
   const joinedHousehold = useMemo(
     () => households.some((h) => h.created_by != null && h.created_by !== user?.id),
     [households, user?.id]
+  );
+
+  // An ACCEPTED sitter connection — durable proof this user came in to look
+  // after somebody else's pets, surviving reloads and failed writes. Used to
+  // repair a sitter accept whose onboarding tail never landed; see the routing
+  // effect. Only 'active' counts: 'invited' is still just an offer, and
+  // 'revoked'/'declined' are over.
+  const hasActiveSitterConnection = useMemo(
+    () => sitterConnections.some((c) => c.status === 'active'),
+    [sitterConnections]
   );
 
   // Runs at most once per session: completes the setup a failed/skipped
@@ -116,6 +159,45 @@ export function HomeScreen({ navigation }: Props) {
     }
   }, [setJourneyState, completeOnboarding, refreshSettings]);
 
+  // The first-run tail for a SITTER, shared by the gate's accept and the
+  // repair below so the two can never drift apart.
+  //
+  // The order matches the household path, for the same reason: settle the
+  // journeys BEFORE completing onboarding, so a process that dies between the
+  // two leaves a recoverable un-onboarded user rather than an "onboarded
+  // founder" whose founder-welcome checklist then silently auto-completes.
+  // BOTH owner journeys are settled here: a sitter is not a household member,
+  // so "You've joined a household" is untrue of them, and joiner-welcome would
+  // otherwise become active the instant founder-welcome was skipped.
+  // sitter-welcome is deliberately left unset, so it shows on SitterHome.
+  const settleSitterFirstRun = useCallback(async () => {
+    await setJourneyStates({
+      'founder-welcome': 'skipped',
+      'joiner-welcome': 'skipped',
+    });
+    await completeOnboarding();
+  }, [setJourneyStates, completeOnboarding]);
+
+  // Same shape as finishInterruptedJoin, for a sitter whose accept tail died
+  // after the connection went active.
+  const repairingSitterJoin = useRef(false);
+  const finishInterruptedSitterJoin = useCallback(async () => {
+    if (repairingSitterJoin.current) return;
+    repairingSitterJoin.current = true;
+    try {
+      await settleSitterFirstRun();
+      // completeOnboarding resolves even if its follow-up settings read fails
+      // (loadSettings swallows), which would leave this latched while the UI
+      // still believes the user is un-onboarded — a permanent spinner.
+      // Verify, and unlatch so a later focus retries.
+      await refreshSettings();
+    } catch (err) {
+      console.error('Failed to finish an interrupted sitter join:', err);
+    } finally {
+      repairingSitterJoin.current = false;
+    }
+  }, [settleSitterFirstRun, refreshSettings]);
+
   // Prefer a real name; otherwise derive something human from the address.
   // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
   // ("tcdain+qapaws", "first.last"), which reads like a bug to the user.
@@ -129,10 +211,34 @@ export function HomeScreen({ navigation }: Props) {
     return base.charAt(0).toUpperCase() + base.slice(1);
   })();
 
+  const isFocused = useIsFocused();
+
+  // First run only: load the sitter invitations the gate needs. Nothing else
+  // on Home fetches them, and DataContext does not load them at startup.
+  // Scoped to an un-onboarded user so an established owner never pays for the
+  // extra round trip on every focus, and re-run on focus because sessions
+  // persist for days (PWA-first) — an invitation that arrives while Home sits
+  // in a background tab still appears when the user comes back.
+  useEffect(() => {
+    if (!isFocused || loadingSettings || !settings || settings.onboarding_completed) return;
+    let cancelled = false;
+    // refreshSitterConnections swallows its own failure into
+    // sitterConnectionsError, so "checked" means asked-and-answered, not
+    // succeeded — the routing effect and the error card read the error itself.
+    void refreshSitterConnections().finally(() => {
+      if (!cancelled) setSitterInvitesChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isFocused, loadingSettings, settings, refreshSitterConnections]);
+
   // Invite-aware first run (contract C5). Replace to Onboarding ONLY after
   // the pending-invites fetch has settled with zero invites — routing while
   // invites were still loading was the observed failure: a brand-new invitee
-  // got pushed into the founder pet-wizard and never saw their invite.
+  // got pushed into the founder pet-wizard and never saw their invite. The
+  // same is true of sitter invitations, which arrive from a different RPC and
+  // get the same treatment.
   //
   // A FAILED invites read blocks routing entirely (it can't be told apart
   // from "no invites"): Home renders the firstRunBlockedByError retry card
@@ -146,7 +252,6 @@ export function HomeScreen({ navigation }: Props) {
   // user who had just JOINED a household. Deferring until Home regains focus
   // lets the accept flow finish first; useIsFocused re-runs the effect on
   // focus changes.
-  const isFocused = useIsFocused();
   useEffect(() => {
     if (!isFocused || loadingSettings || !settings || settings.onboarding_completed) return;
 
@@ -162,6 +267,19 @@ export function HomeScreen({ navigation }: Props) {
       return;
     }
 
+    // The same durable check for the sitter side: an ACTIVE sitter connection
+    // proves this user already accepted, so their setup only needs finishing.
+    // Checked after joinedHousehold, because someone who is both belongs to a
+    // household first and should get that repair's journey bookkeeping.
+    //
+    // Skipped while the gate is mid-response: accepting turns the connection
+    // active BEFORE its own tail runs, and repairing in that window would
+    // duplicate the very writes that tail is making.
+    if (hasActiveSitterConnection && !sitterGateResponse) {
+      void finishInterruptedSitterJoin();
+      return;
+    }
+
     if (
       !householdsLoading &&
       // A FAILED invites fetch leaves pendingInvites empty, which is
@@ -173,7 +291,15 @@ export function HomeScreen({ navigation }: Props) {
       !acceptingGateInvite &&
       // Set by DataContext the instant any accept succeeds — covers accepts
       // made on other screens, whose onboarding tail may still be in flight.
-      !joinedViaInvite
+      !joinedViaInvite &&
+      // Sitter invitations, same rules as household ones. "Checked" rather
+      // than "not loading" because the sitter read starts un-run, not
+      // in-flight; a failed read blocks routing for the same reason as above.
+      sitterInvitesChecked &&
+      !loadingSitterConnections &&
+      !sitterConnectionsError &&
+      pendingSitterInvites.length === 0 &&
+      !sitterGateResponse
     ) {
       navigation.replace('Onboarding');
     }
@@ -188,6 +314,13 @@ export function HomeScreen({ navigation }: Props) {
     joinedViaInvite,
     joinedHousehold,
     finishInterruptedJoin,
+    sitterInvitesChecked,
+    loadingSitterConnections,
+    sitterConnectionsError,
+    pendingSitterInvites,
+    sitterGateResponse,
+    hasActiveSitterConnection,
+    finishInterruptedSitterJoin,
     navigation,
   ]);
 
@@ -210,6 +343,29 @@ export function HomeScreen({ navigation }: Props) {
       pendingInvites.length > 0);
   const gateExtraCount = gateInvite
     ? pendingInvites.filter((i) => i.id !== gateInvite.id).length
+    : 0;
+
+  // The sitter equivalent, on the same terms — kept mounted through the whole
+  // response (sitterGateResponse) so it doesn't flicker away mid-refresh.
+  // A household invite outranks a sitter invitation: membership is the
+  // stronger relationship, and !showInviteGate keeps the two gates from ever
+  // fighting over the screen.
+  const sitterGateInvite = sitterGateResponse?.invite ?? pendingSitterInvites[0] ?? null;
+  const showSitterGate =
+    !showInviteGate &&
+    (sitterGateResponse !== null ||
+      (!loadingSettings &&
+        !!settings &&
+        !settings.onboarding_completed &&
+        // Someone who has already joined a household, or already accepted a
+        // sitter invitation, is past first run — their repair is running in
+        // the routing effect and this choice is no longer theirs to make.
+        !joinedViaInvite &&
+        !joinedHousehold &&
+        !hasActiveSitterConnection &&
+        pendingSitterInvites.length > 0));
+  const sitterGateExtraCount = sitterGateInvite
+    ? pendingSitterInvites.filter((i) => i.id !== sitterGateInvite.id).length
     : 0;
 
   // Un-onboarded, or not yet known to be onboarded: hold back the interactive
@@ -242,9 +398,14 @@ export function HomeScreen({ navigation }: Props) {
   // user would sit on a bare spinner forever. Offer a retry instead.
   const firstRunBlockedByError =
     firstRunSettling &&
+    !showSitterGate &&
     !loadingSettings &&
     !householdsLoading &&
-    (!!householdsError || !!settingsError || !settings);
+    !loadingSitterConnections &&
+    // sitterConnectionsError blocks routing the same way householdsError does
+    // — a failed sitter read cannot be told apart from "nobody invited you" —
+    // so it needs the same retry card, or the user sits on a bare spinner.
+    (!!householdsError || !!settingsError || !settings || !!sitterConnectionsError);
 
   const handleGateAccept = async () => {
     const invite = pendingInvites[0];
@@ -281,6 +442,57 @@ export function HomeScreen({ navigation }: Props) {
     // NEVER auto-decline — the invite stays pending, and after the founder
     // wizard the standard Home invite banner offers it again.
     navigation.replace('Onboarding');
+  };
+
+  const handleSitterGateAccept = async () => {
+    const invite = sitterGateInvite;
+    if (!invite || sitterGateResponse) return;
+    setSitterGateResponse({ invite, accept: true });
+    try {
+      const accepted = await respondToSitterInvite(invite.id, true);
+      if (!accepted) {
+        // The server answers "no such connection" and "that one isn't yours"
+        // with the same result, so this is as specific as we can honestly be.
+        // The refreshed list drops the row, and the routing effect takes over.
+        showAlert('Could not accept', 'This invitation is no longer available.');
+        return;
+      }
+      // Only now is the user onboarded: the connection is live first, so a
+      // failure here leaves an active sitter the routing effect can repair.
+      await settleSitterFirstRun();
+      // Land on the sitter's own home rather than the owner dashboard: they
+      // have no pets of their own, and the households they came for are here.
+      navigation.replace('SitterHome');
+    } catch (error: any) {
+      showAlert('Error', error?.message || 'Could not accept the invitation.');
+    } finally {
+      setSitterGateResponse(null);
+    }
+  };
+
+  const handleSitterGateDecline = async () => {
+    const invite = sitterGateInvite;
+    if (!invite || sitterGateResponse) return;
+    const confirmed = await showConfirm({
+      title: 'Decline invitation?',
+      message: `${invite.household_name} will not see you as their sitter. They can invite you again later.`,
+      confirmLabel: 'Decline',
+    });
+    if (!confirmed) return;
+    setSitterGateResponse({ invite, accept: false });
+    try {
+      await respondToSitterInvite(invite.id, false);
+      // No navigation here on purpose. Declining leaves the routing effect to
+      // decide, exactly as it does for the household gate: with another
+      // invitation still waiting the gate offers that one instead, and only a
+      // genuinely empty list sends this user into the founder wizard.
+    } catch (error: any) {
+      // Stay on the gate — the invitation may well still be pending, and
+      // dropping the user into the founder wizard would abandon it.
+      showAlert('Error', error?.message || 'Could not decline the invitation.');
+    } finally {
+      setSitterGateResponse(null);
+    }
   };
 
   const handleSignOut = async () => {
@@ -391,6 +603,17 @@ export function HomeScreen({ navigation }: Props) {
             onAccept={handleGateAccept}
             onStartFresh={handleGateStartFresh}
           />
+        ) : showSitterGate && sitterGateInvite ? (
+          /* The same first run for someone invited as a SITTER: they have no
+             pets to add, so the founder wizard is the wrong screen entirely. */
+          <SitterInviteGate
+            invite={sitterGateInvite}
+            extraCount={sitterGateExtraCount}
+            responding={sitterGateResponse !== null}
+            respondingAccept={sitterGateResponse?.accept === true}
+            onAccept={handleSitterGateAccept}
+            onDecline={handleSitterGateDecline}
+          />
         ) : firstRunBlockedByError ? (
           <Card className="mt-4">
             <Text className="text-brown-800 font-semibold mb-1">
@@ -398,14 +621,15 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
             <Text className="text-tan-500 mb-4">
               We couldn&apos;t load your account or check whether anyone has
-              invited you to their household. Check your connection and try
-              again.
+              invited you to their household or asked you to pet sit. Check
+              your connection and try again.
             </Text>
             <Button
               title="Try Again"
               onPress={() => {
                 refreshHouseholds();
                 refreshSettings();
+                refreshSitterConnections();
               }}
             />
           </Card>

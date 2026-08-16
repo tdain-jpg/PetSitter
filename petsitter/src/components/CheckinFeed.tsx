@@ -150,8 +150,12 @@ export function CheckinFeed({ householdId, canPost = true }: CheckinFeedProps) {
             <Text className="text-gray-800">{checkin.note}</Text>
             <View className="flex-row justify-between items-center mt-2">
               <Text className="text-xs text-gray-500">
-                {checkin.author_email 
-                  ? checkin.author_email 
+                {/* is_mine FIRST: seeing your own address quoted back at you
+                    reads like somebody else wrote it. */}
+                {checkin.is_mine
+                  ? 'You'
+                  : checkin.author_email
+                  ? checkin.author_email
                   : checkin.is_mine 
                     ? 'You' 
                     : 'Someone in this household'}

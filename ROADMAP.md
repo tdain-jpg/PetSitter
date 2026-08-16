@@ -856,6 +856,20 @@ Live account is already activated, branded (icon + white wordmark, brand `#3C677
 `#1E3A5F` — the exact colours of the Brevo email button and headings), descriptor
 `PAWSTRUCTIONS`, legal entity Timathy Dain sole proprietorship trading as Pawstructions.
 
+### [ ] Date picker everywhere a date is entered (Tim, 2026-08-16)
+Dates are free-text inputs today. Tim asked for a real picker "here and everywhere else a date
+might be required". Sites to cover: guide start/end, trip wizard, memorial date, sitter access
+window (starts_on / ends_on, new in 0015), travel itinerary departure/return, and anywhere
+DailyRoutine surfaces a date.
+
+Two things that must not regress, both already paid for in bugs:
+  * The stored format is 'YYYY-MM-DD' and the app parses it with parseLocalDate. A picker that
+    hands back a Date and gets serialised with toISOString() reintroduces the memorial bug —
+    the date rendered a day early for every user west of UTC.
+  * todayLocal() exists for the same reason; a picker defaulting to `new Date()` in UTC can
+    preselect tomorrow for someone late in the evening.
+Prefer one shared component so the timezone handling is written once, not per screen.
+
 ## 5. Deferred / minor
 
 - **Share-link Copy button (Loop 3 QA):** "Failed to copy link" alert in the QA browser pane —

@@ -305,11 +305,15 @@ export function SettingsScreen({ navigation }: Props) {
         {/* Only for people who actually sit for someone. A user with no
             connections is an owner, and showing them an empty "My Clients"
             screen would just raise a question the app then fails to answer.
+            Only ACTIVE connections count: a revoked one still comes back from
+            my_sitter_connections, and gating on mere presence would leave a
+            former sitter a door into an empty screen.
             A PENDING invitation counts too — it comes from a different source
             (my_pending_sitter_invites, since an unaccepted row has no
             sitter_user_id), and without it a freshly invited sitter would sign
             up and find no way in at all. */}
-        {(sitterConnections.length > 0 || pendingSitterInvites.length > 0) && (
+        {(sitterConnections.some((c) => c.status === 'active') ||
+          pendingSitterInvites.length > 0) && (
           <Card className="mb-4">
             <Text className="text-lg font-semibold text-brown-800 mb-1">Sitting</Text>
             <Text className="text-tan-500 text-sm mb-4">
