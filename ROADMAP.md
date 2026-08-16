@@ -210,6 +210,51 @@ Audit the export/print path first and design around it. Rate is **3.00% on Pets 
 (verified on Amazon's fee schedule, no printed effective date — Amazon revises unilaterally).
 Cookie window was not researched. Insurance click-out links carry no equivalent constraint.
 
+### [ ] Direct gear partnerships instead of Amazon (Tim, 2026-08-16)
+Three items Tim names as the must-haves for a pet that might get loose while the owner is away:
+**Furbo** (pet camera), **Fi collar** (GPS tracker), **microchip**. He asks whether to go direct
+for referral/reseller terms rather than through Amazon Associates.
+
+**Go direct — the case is stronger than "better rates".**
+1. Amazon pays **3% on Pets Products** (verified). A Furbo is ~$200 and a Fi ~$150 plus a
+   subscription; a direct hardware program in the 5-10% range, or a flat bounty, is several
+   times Amazon on the same sale.
+2. 🔴 **Amazon's printed-material prohibition is a live problem for THIS app specifically.**
+   Their Program Policies bar Special Links "in connection with any printed material, ebook,
+   mailing" — and Pawstructions' core artifact is a printable, shareable care guide. Direct
+   programs carry no equivalent constraint. This alone probably decides it.
+3. Three hand-picked items we actually believe in is defensible editorially in a way a
+   generated storefront is not, and a direct relationship can become a real partnership.
+
+**These three are NOT the same kind of thing — do not build one flow for all of them.**
+Furbo and Fi are hardware with real affiliate/referral programs (check Impact and ShareASale
+first, then their own sites). A **microchip is a vet procedure**, not a product: there is no
+one to affiliate with. It is still the single most valuable of the three to a lost pet, so it
+belongs as CONTENT, not a link — and there is a natural home for it, since `microchip_id` is
+already a field on the pet profile. An empty one is an honest moment to say why it matters.
+(Chip REGISTRY services do have affiliate programs; that is a different thing from the implant
+and worth a look separately.)
+
+**IMPORTANT — the legal constraint that killed the personalised insurance idea does NOT apply
+here.** That was insurance-specific: producer licensing, solicitation, per-policy commission.
+Recommending retail hardware carries none of it. What still applies is **FTC disclosure**
+(16 CFR § 255.0(f), § 255.5(a)): adjacent to the link, in-flow, unavoidable — and it must
+render in the **sitter view of a shared guide** too, which is a separate code path and easy to
+miss.
+
+### [ ] Future ideas (Tim, 2026-08-16) — parked, not scheduled
+- **Pet-friendly hotels along a drive route or at a destination.** BringFido is the obvious
+  partner (affiliate programme plus an API) rather than building a directory. Genuine risk to
+  name: this is a TRAVEL PLANNING product, not a pet-care one, and it is the kind of adjacent
+  idea that quietly doubles a roadmap. Worth doing only once the core is earning.
+- **Donate to a rescue at Crown checkout.** Lovely, on-brand, and Stripe can carry it. ⚠️ Flag
+  before building: collecting money "for" a charity has real rules — who is the merchant of
+  record, is it a donation or a pass-through, what does the customer's receipt say, and what
+  are the tax implications for a sole proprietorship. Cheapest honest version is a LINK to the
+  rescue's own donation page after purchase, which sidesteps all of it. Ask an accountant
+  before taking a cent on someone else's behalf.
+- **Social presence** — already tracked in §3.
+
 ### [ ] Pet insurance affiliate — RESEARCHED 2026-08-15, do NOT build yet
 Full brief in the workflow output; the load-bearing conclusions:
 

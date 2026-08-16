@@ -23,6 +23,7 @@ import type {
   SitterConnection,
   PendingSitterInvite,
   Checkin,
+  CrownReceipt,
   SitterInviteRow,
   AppSettings,
   JourneyEntry,
@@ -106,6 +107,8 @@ interface DataContextType {
   getSitterConnections: (householdId: string) => Promise<SitterInviteRow[]>;
   /** Owner revokes a sitter's access. Takes effect immediately. */
   revokeSitter: (connectionId: string) => Promise<void>;
+  /** Crown status for a household: active, and when it was granted. */
+  getCrownReceipt: (householdId: string) => Promise<CrownReceipt | null>;
   /** Check-in feed for a household, newest first. */
   getCheckins: (householdId: string, limit?: number) => Promise<Checkin[]>;
   /** Post a check-in. The server pins authorship to the caller. */
@@ -605,6 +608,11 @@ export function DataProvider({ children }: DataProviderProps) {
   const revokeSitter = useCallback(async (connectionId: string) => {
     await dataService.revokeSitter(connectionId);
   }, []);
+
+  const getCrownReceipt = useCallback(
+    (householdId: string) => dataService.getCrownReceipt(householdId),
+    []
+  );
 
   const getCheckins = useCallback(
     (householdId: string, limit?: number) => dataService.getCheckins(householdId, limit),
@@ -1196,6 +1204,7 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
+      getCrownReceipt,
       getCheckins,
       addCheckin,
       deleteCheckin,
@@ -1286,6 +1295,7 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
+      getCrownReceipt,
       getCheckins,
       addCheckin,
       deleteCheckin,

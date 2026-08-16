@@ -202,6 +202,17 @@ export function SitterHomeScreen({ navigation }: Props) {
       <ScrollView className="flex-1">
         <ScreenContainer variant="content" className="py-4">
           {renderContent()}
+          {/* Sitter-only by construction: this screen is only reachable from a
+              sitter connection or invitation, so an owner never lands here and
+              never sees a $9/month plan for a product they are not buying. */}
+          <View className="mb-8 mt-2">
+            <Button
+              title="What this will cost"
+              onPress={() => navigation.navigate('SitterPlans')}
+              variant="outline"
+            />
+          </View>
+
         </ScreenContainer>
       </ScrollView>
     </View>

@@ -10,6 +10,7 @@ import type {
   SitterConnection,
   PendingSitterInvite,
   Checkin,
+  CrownReceipt,
   SitterInviteRow,
   TaskCompletion,
   ShareableLink,
@@ -725,6 +726,17 @@ export class SupabaseAdapter implements DataService {
       .order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as SitterInviteRow[];
+  }
+
+  /**
+   * Crown status for a household: active, and when. Membership-gated server
+   * side, so a non-member gets no row rather than a false negative.
+   */
+  async getCrownReceipt(householdId: string): Promise<CrownReceipt | null> {
+    const { data, error } = await supabase.rpc('my_crown_receipt', { h: householdId });
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as CrownReceipt[];
+    return rows[0] ?? null;
   }
 
   /** The check-in feed for a household, newest first. */

@@ -98,6 +98,14 @@ export interface Checkin {
   created_at: string;
 }
 
+/** Crown status for one household. granted_at is null for grants predating 0012. */
+export interface CrownReceipt {
+  is_active: boolean;
+  granted_at: string | null;
+  source: string | null;
+  refunded_at: string | null;
+}
+
 /** A sitter invitation as the HOUSEHOLD sees it, for the owner's manage list. */
 export interface SitterInviteRow {
   id: string;

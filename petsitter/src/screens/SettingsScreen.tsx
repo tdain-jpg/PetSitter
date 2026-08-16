@@ -10,6 +10,8 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, ScreenContainer } from '../components';
+import { formatDate } from '../lib/dates';
+import type { CrownReceipt } from '../types';
 import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/showAlert';
@@ -42,6 +44,7 @@ export function SettingsScreen({ navigation }: Props) {
     households,
     primaryHouseholdId,
     sitterConnections,
+    getCrownReceipt,
     pendingSitterInvites,
   } = useData();
 
@@ -54,6 +57,7 @@ export function SettingsScreen({ navigation }: Props) {
   // one mistake worth designing around, so an unknown answer keeps the neutral
   // wording. Read only through has_crown(h), the membership-gated RPC, never a
   // households column.
+  const [crownReceipt, setCrownReceipt] = useState<CrownReceipt | null>(null);
   const [hasCrown, setHasCrown] = useState<boolean | null>(null);
 
   // UnlockCrown puts its $5 button away for a couple of minutes after a
@@ -76,6 +80,14 @@ export function SettingsScreen({ navigation }: Props) {
         const { data, error } = await supabase.rpc('has_crown', { h: primaryHouseholdId });
         if (cancelled || error) return;
         setHasCrown(data === true);
+        // Best-effort: a failed receipt read just hides the date, it must never
+        // change whether Crown reads as active.
+        try {
+          const receipt = await getCrownReceipt(primaryHouseholdId);
+          if (!cancelled) setCrownReceipt(receipt);
+        } catch {
+          /* leave the date off */
+        }
       })();
       (async () => {
         const pending =
@@ -239,6 +251,16 @@ export function SettingsScreen({ navigation }: Props) {
               <Text className="text-brown-600 text-sm mb-3">
                 {`Every AI cheat sheet in ${targetHousehold} is unlocked — no PREVIEW watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay.`}
               </Text>
+              {/* Answers "did I already pay for this?" — the only spend question
+                  a one-time purchase raises. The date is OMITTED rather than
+                  guessed when granted_at is null: grants predating migration
+                  0012 have no timestamp, and inventing one would be worse than
+                  saying nothing. */}
+              {crownReceipt?.granted_at ? (
+                <Text className="text-tan-600 text-sm mb-3">
+                  {`Purchased ${formatDate(crownReceipt.granted_at.slice(0, 10), { dateStyle: 'medium' })}.`}
+                </Text>
+              ) : null}
             </>
           ) : (
             <>

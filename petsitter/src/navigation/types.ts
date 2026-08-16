@@ -52,6 +52,7 @@ export type MainStackParamList = {
   // screens are their own view of the households they help care for.
   SitterHome: undefined;
   SitterHousehold: { householdId: string; householdName: string };
+  SitterPlans: undefined;
 
   // Settings
   Settings: undefined;
@@ -92,6 +93,7 @@ export type HouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'H
 
 export type SitterHomeScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
 export type SitterHouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
+export type SitterPlansScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterPlans'>;
 
 export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
