@@ -20,6 +20,7 @@ import type {
   HouseholdMember,
   HouseholdInviteRow,
   PendingInvite,
+  SitterConnection,
   AppSettings,
   JourneyEntry,
   TaskCompletion,
@@ -85,6 +86,15 @@ interface DataContextType {
    */
   setPrimaryHousehold: (householdId: string) => Promise<void>;
   refreshHouseholds: () => Promise<void>;
+
+  // Sitter connections (0015). A sitter is NOT a household member: these are
+  // households they help care for, read-only plus checklist ticking.
+  sitterConnections: SitterConnection[];
+  loadingSitterConnections: boolean;
+  /** Set when the last load failed — screens must distinguish this from "no clients". */
+  sitterConnectionsError: string | null;
+  refreshSitterConnections: () => Promise<void>;
+  respondToSitterInvite: (connectionId: string, accept: boolean) => Promise<boolean>;
   inviteToHousehold: (householdId: string, email: string) => Promise<void>;
   /**
    * Accept or decline an invite, including (on accept) the data refreshes and
@@ -210,6 +220,9 @@ export function DataProvider({ children }: DataProviderProps) {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdsLoading, setHouseholdsLoading] = useState(true);
   const [householdsError, setHouseholdsError] = useState<string | null>(null);
+  const [sitterConnections, setSitterConnections] = useState<SitterConnection[]>([]);
+  const [loadingSitterConnections, setLoadingSitterConnections] = useState(false);
+  const [sitterConnectionsError, setSitterConnectionsError] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [primaryHouseholdId, setPrimaryHouseholdId] = useState<string | null>(null);
 
@@ -511,6 +524,46 @@ export function DataProvider({ children }: DataProviderProps) {
     });
     return () => subscription.remove();
   }, [userId, refreshHouseholds]);
+
+  /**
+   * Load the households this user sits for. Failure sets the error and leaves
+   * the previous list alone: a sitter whose network blipped must not be shown
+   * an empty client list, which reads as "your clients are gone".
+   */
+  const refreshSitterConnections = useCallback(async () => {
+    if (!userId) return;
+    setLoadingSitterConnections(true);
+    try {
+      const rows = await dataService.getMySitterConnections();
+      if (userIdRef.current !== userId) return; // stale response — user changed
+      setSitterConnections(rows);
+      setSitterConnectionsError(null);
+    } catch (err: any) {
+      console.error('Failed to load sitter connections:', err);
+      if (userIdRef.current !== userId) return;
+      setSitterConnectionsError(err?.message || 'Failed to load your clients');
+    } finally {
+      if (userIdRef.current === userId) setLoadingSitterConnections(false);
+    }
+  }, [userId]);
+
+  const respondToSitterInvite = useCallback(
+    async (connectionId: string, accept: boolean) => {
+      const accepted = await dataService.respondToSitterInvite(connectionId, accept);
+      // Accepting grants read access to that household's pets and guides, so
+      // both lists change underneath the sitter — refresh them alongside the
+      // connection list rather than waiting for the next focus.
+      await refreshSitterConnections();
+      if (accept) {
+        await Promise.all([
+          refreshPets({ background: true }),
+          refreshGuides({ background: true }),
+        ]);
+      }
+      return accepted;
+    },
+    [refreshSitterConnections, refreshPets, refreshGuides]
+  );
 
   const inviteToHousehold = useCallback(async (householdId: string, email: string) => {
     // Server throws 'invalid email' / 'that email already belongs to a
@@ -1077,6 +1130,11 @@ export function DataProvider({ children }: DataProviderProps) {
       households,
       householdsLoading,
       householdsError,
+      sitterConnections,
+      loadingSitterConnections,
+      sitterConnectionsError,
+      refreshSitterConnections,
+      respondToSitterInvite,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,
@@ -1155,6 +1213,11 @@ export function DataProvider({ children }: DataProviderProps) {
       households,
       householdsLoading,
       householdsError,
+      sitterConnections,
+      loadingSitterConnections,
+      sitterConnectionsError,
+      refreshSitterConnections,
+      respondToSitterInvite,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,

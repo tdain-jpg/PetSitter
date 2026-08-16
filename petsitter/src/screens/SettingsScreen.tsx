@@ -41,6 +41,7 @@ export function SettingsScreen({ navigation }: Props) {
     deceasedPets,
     households,
     primaryHouseholdId,
+    sitterConnections,
   } = useData();
 
   const [isImporting, setIsImporting] = useState(false);
@@ -277,6 +278,24 @@ export function SettingsScreen({ navigation }: Props) {
             variant="outline"
           />
         </Card>
+
+        {/* Only for people who actually sit for someone. A user with no
+            connections is an owner, and showing them an empty "My Clients"
+            screen would just raise a question the app then fails to answer.
+            An INVITED-but-not-yet-accepted connection counts, so a new sitter
+            can find the invitation waiting for them. */}
+        {sitterConnections.length > 0 && (
+          <Card className="mb-4">
+            <Text className="text-lg font-semibold text-brown-800 mb-1">Sitting</Text>
+            <Text className="text-tan-500 text-sm mb-4">
+              The households you help care for.
+            </Text>
+            <Button
+              title="🐾 My Clients"
+              onPress={() => navigation.navigate('SitterHome')}
+            />
+          </Card>
+        )}
 
         {/* Preferences */}
         <Card className="mb-4">

@@ -15,6 +15,8 @@ import { ShareGuideScreen } from '../screens/ShareGuideScreen';
 import { PDFPreviewScreen } from '../screens/PDFPreviewScreen';
 import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
 import { SampleCheatSheetScreen } from '../screens/SampleCheatSheetScreen';
+import { SitterHomeScreen } from '../screens/SitterHomeScreen';
+import { SitterHouseholdScreen } from '../screens/SitterHouseholdScreen';
 import { UnlockCrownScreen } from '../screens/UnlockCrownScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
@@ -46,6 +48,8 @@ export function MainNavigator() {
       <Stack.Screen name="PDFPreview" component={PDFPreviewScreen} />
       <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />
       <Stack.Screen name="SampleCheatSheet" component={SampleCheatSheetScreen} />
+      <Stack.Screen name="SitterHome" component={SitterHomeScreen} />
+      <Stack.Screen name="SitterHousehold" component={SitterHouseholdScreen} />
       <Stack.Screen name="UnlockCrown" component={UnlockCrownScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="TripWizard" component={TripWizardScreen} />

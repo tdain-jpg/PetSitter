@@ -48,6 +48,11 @@ export type MainStackParamList = {
   // to the sheet they were trying to unlock; entering from Settings has none.
   UnlockCrown: { guideId?: string } | undefined;
 
+  // Sitter side (0015). A connected sitter is not a household member: these
+  // screens are their own view of the households they help care for.
+  SitterHome: undefined;
+  SitterHousehold: { householdId: string; householdName: string };
+
   // Settings
   Settings: undefined;
   Memorial: undefined;
@@ -84,6 +89,9 @@ export type SampleCheatSheetScreenProps = NativeStackScreenProps<MainStackParamL
 export type SettingsScreenProps = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 export type MemorialScreenProps = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
 export type HouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'Household'>;
+
+export type SitterHomeScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
+export type SitterHouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
 
 export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 

@@ -47,6 +47,35 @@ export interface PendingInvite {
   created_at: string;
 }
 
+/**
+ * A household this user sits for. Returned by the my_sitter_connections RPC,
+ * which is SECURITY DEFINER — a connected sitter cannot SELECT the households
+ * row itself (they are not a member), so the name has to come back through the
+ * function rather than from a join on the client.
+ */
+export interface SitterConnection {
+  id: string;
+  household_id: string;
+  household_name: string;
+  status: 'invited' | 'active' | 'revoked' | 'declined';
+  /** Null means no bound. Access is permanent by default; a window is opt-in. */
+  starts_on: string | null;
+  ends_on: string | null;
+}
+
+/** A sitter invitation as the HOUSEHOLD sees it, for the owner's manage list. */
+export interface SitterInviteRow {
+  id: string;
+  household_id: string;
+  email: string;
+  sitter_user_id: string | null;
+  status: 'invited' | 'active' | 'revoked' | 'declined';
+  starts_on: string | null;
+  ends_on: string | null;
+  created_at: string;
+  responded_at: string | null;
+}
+
 /** A row from household_invites as seen by household members (any status). */
 export interface HouseholdInviteRow {
   id: string;

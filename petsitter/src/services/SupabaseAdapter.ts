@@ -7,6 +7,8 @@ import type {
   HouseholdMember,
   HouseholdInviteRow,
   PendingInvite,
+  SitterConnection,
+  SitterInviteRow,
   TaskCompletion,
   ShareableLink,
   CheatSheet,
@@ -678,6 +680,72 @@ export class SupabaseAdapter implements DataService {
   async revokeInvite(inviteId: string): Promise<void> {
     const { error } = await supabase.rpc('revoke_invite', { invite: inviteId });
     if (error) throw new Error(error.message);
+  }
+
+  // --------------------------------------------------------------------------
+  // Sitter connections (0015)
+  //
+  // A connected sitter is NOT a household member: they read the household's
+  // pets and guides and tick checklist tasks, and can write nothing else. Every
+  // mutation below goes through a SECURITY DEFINER RPC because
+  // sitter_connections has a SELECT policy and no write policies at all — there
+  // is deliberately no client path that writes the table directly.
+  // --------------------------------------------------------------------------
+
+  /** Households this user sits for. The sitter's client list. */
+  async getMySitterConnections(): Promise<SitterConnection[]> {
+    const { data, error } = await supabase.rpc('my_sitter_connections');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as SitterConnection[];
+  }
+
+  /**
+   * Sitter connections ON a household, for the owner who manages them. Read
+   * straight from the table: the SELECT policy already scopes this to the
+   * household's owner, the sitter themselves, and anyone the row is addressed
+   * to by email.
+   */
+  async getSitterConnections(householdId: string): Promise<SitterInviteRow[]> {
+    const { data, error } = await supabase
+      .from('sitter_connections')
+      .select('id, household_id, email, sitter_user_id, status, starts_on, ends_on, created_at, responded_at')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as SitterInviteRow[];
+  }
+
+  /** Owner invites a sitter by email. Server rejects a non-owner. */
+  async inviteSitter(householdId: string, email: string): Promise<string> {
+    const { data, error } = await supabase.rpc('invite_sitter', {
+      h: householdId,
+      sitter_email: email,
+    });
+    if (error) throw new Error(error.message);
+    return data as string;
+  }
+
+  /**
+   * Accept or decline a sitter invitation. The server reports a missing
+   * connection and one addressed to somebody else with the SAME message, so a
+   * connection id is never an existence oracle — surface it as-is.
+   */
+  async respondToSitterInvite(connectionId: string, accept: boolean): Promise<boolean> {
+    const { data, error } = await supabase.rpc('respond_to_sitter_invite', {
+      connection: connectionId,
+      accept,
+    });
+    if (error) throw new Error(error.message);
+    return data === true;
+  }
+
+  /** Owner revokes a sitter's access. Returns false if it was already revoked. */
+  async revokeSitter(connectionId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('revoke_sitter', {
+      connection: connectionId,
+    });
+    if (error) throw new Error(error.message);
+    return data === true;
   }
 
   async leaveHousehold(householdId: string): Promise<void> {
