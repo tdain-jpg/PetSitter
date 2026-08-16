@@ -8,6 +8,7 @@ import type {
   HouseholdInviteRow,
   PendingInvite,
   SitterConnection,
+  PendingSitterInvite,
   SitterInviteRow,
   TaskCompletion,
   ShareableLink,
@@ -691,6 +692,16 @@ export class SupabaseAdapter implements DataService {
   // sitter_connections has a SELECT policy and no write policies at all — there
   // is deliberately no client path that writes the table directly.
   // --------------------------------------------------------------------------
+
+  /**
+   * Sitter invitations addressed to me that I have NOT accepted yet.
+   * getMySitterConnections cannot return these — see PendingSitterInvite.
+   */
+  async getMyPendingSitterInvites(): Promise<PendingSitterInvite[]> {
+    const { data, error } = await supabase.rpc('my_pending_sitter_invites');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as PendingSitterInvite[];
+  }
 
   /** Households this user sits for. The sitter's client list. */
   async getMySitterConnections(): Promise<SitterConnection[]> {

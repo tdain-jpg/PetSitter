@@ -21,6 +21,7 @@ import type {
   HouseholdInviteRow,
   PendingInvite,
   SitterConnection,
+  PendingSitterInvite,
   SitterInviteRow,
   AppSettings,
   JourneyEntry,
@@ -91,6 +92,8 @@ interface DataContextType {
   // Sitter connections (0015). A sitter is NOT a household member: these are
   // households they help care for, read-only plus checklist ticking.
   sitterConnections: SitterConnection[];
+  /** Sitter invitations addressed to me that I have not accepted yet. */
+  pendingSitterInvites: PendingSitterInvite[];
   loadingSitterConnections: boolean;
   /** Set when the last load failed — screens must distinguish this from "no clients". */
   sitterConnectionsError: string | null;
@@ -228,6 +231,7 @@ export function DataProvider({ children }: DataProviderProps) {
   const [householdsLoading, setHouseholdsLoading] = useState(true);
   const [householdsError, setHouseholdsError] = useState<string | null>(null);
   const [sitterConnections, setSitterConnections] = useState<SitterConnection[]>([]);
+  const [pendingSitterInvites, setPendingSitterInvites] = useState<PendingSitterInvite[]>([]);
   const [loadingSitterConnections, setLoadingSitterConnections] = useState(false);
   const [sitterConnectionsError, setSitterConnectionsError] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -541,9 +545,17 @@ export function DataProvider({ children }: DataProviderProps) {
     if (!userId) return;
     setLoadingSitterConnections(true);
     try {
-      const rows = await dataService.getMySitterConnections();
+      // Both, because they answer different questions and only together
+      // describe the sitter's situation: connections need sitter_user_id, which
+      // is null until accept, so a pending invitation is invisible to the first
+      // call and ONLY visible to the second.
+      const [rows, pending] = await Promise.all([
+        dataService.getMySitterConnections(),
+        dataService.getMyPendingSitterInvites(),
+      ]);
       if (userIdRef.current !== userId) return; // stale response — user changed
       setSitterConnections(rows);
+      setPendingSitterInvites(pending);
       setSitterConnectionsError(null);
     } catch (err: any) {
       console.error('Failed to load sitter connections:', err);
@@ -1153,6 +1165,7 @@ export function DataProvider({ children }: DataProviderProps) {
       householdsLoading,
       householdsError,
       sitterConnections,
+      pendingSitterInvites,
       loadingSitterConnections,
       sitterConnectionsError,
       refreshSitterConnections,
@@ -1239,6 +1252,7 @@ export function DataProvider({ children }: DataProviderProps) {
       householdsLoading,
       householdsError,
       sitterConnections,
+      pendingSitterInvites,
       loadingSitterConnections,
       sitterConnectionsError,
       refreshSitterConnections,

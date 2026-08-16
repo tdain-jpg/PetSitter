@@ -42,6 +42,7 @@ export function SettingsScreen({ navigation }: Props) {
     households,
     primaryHouseholdId,
     sitterConnections,
+    pendingSitterInvites,
   } = useData();
 
   const [isImporting, setIsImporting] = useState(false);
@@ -282,13 +283,19 @@ export function SettingsScreen({ navigation }: Props) {
         {/* Only for people who actually sit for someone. A user with no
             connections is an owner, and showing them an empty "My Clients"
             screen would just raise a question the app then fails to answer.
-            An INVITED-but-not-yet-accepted connection counts, so a new sitter
-            can find the invitation waiting for them. */}
-        {sitterConnections.length > 0 && (
+            A PENDING invitation counts too — it comes from a different source
+            (my_pending_sitter_invites, since an unaccepted row has no
+            sitter_user_id), and without it a freshly invited sitter would sign
+            up and find no way in at all. */}
+        {(sitterConnections.length > 0 || pendingSitterInvites.length > 0) && (
           <Card className="mb-4">
             <Text className="text-lg font-semibold text-brown-800 mb-1">Sitting</Text>
             <Text className="text-tan-500 text-sm mb-4">
-              The households you help care for.
+              {pendingSitterInvites.length > 0
+                ? pendingSitterInvites.length === 1
+                  ? 'You have an invitation waiting.'
+                  : `You have ${pendingSitterInvites.length} invitations waiting.`
+                : 'The households you help care for.'}
             </Text>
             <Button
               title="🐾 My Clients"

@@ -63,6 +63,22 @@ export interface SitterConnection {
   ends_on: string | null;
 }
 
+/**
+ * A sitter invitation addressed to ME, before I have accepted it.
+ *
+ * Separate from SitterConnection because the two are found different ways:
+ * my_sitter_connections keys on sitter_user_id, which is NULL until accept, so
+ * it structurally cannot return a pending invitation. This comes from
+ * my_pending_sitter_invites (0016), which matches on confirmed email instead.
+ */
+export interface PendingSitterInvite {
+  id: string;
+  household_id: string;
+  household_name: string;
+  invited_by_email: string | null;
+  created_at: string;
+}
+
 /** A sitter invitation as the HOUSEHOLD sees it, for the owner's manage list. */
 export interface SitterInviteRow {
   id: string;

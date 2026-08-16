@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../contexts';
@@ -10,7 +10,7 @@ import { Icon } from '../components/Icon';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { SitterConnection } from '../types';
+import type { PendingSitterInvite, SitterConnection } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
 
@@ -20,20 +20,23 @@ export function SitterHomeScreen({ navigation }: Props) {
     loadingSitterConnections,
     sitterConnectionsError,
     refreshSitterConnections,
+    pendingSitterInvites,
     respondToSitterInvite
   } = useData();
   
-  const [pendingInvites, setPendingInvites] = useState<SitterConnection[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingSitterInvite[]>([]);
   const [activeClients, setActiveClients] = useState<SitterConnection[]>([]);
   const [loadingResponse, setLoadingResponse] = useState<string | null>(null);
 
-  // Separate connections into pending and active
-  React.useEffect(() => {
-    const invites = sitterConnections.filter(c => c.status === 'invited');
-    const clients = sitterConnections.filter(c => c.status === 'active');
-    setPendingInvites(invites);
-    setActiveClients(clients);
-  }, [sitterConnections]);
+  // Pending invitations come from a DIFFERENT source than active clients, and
+  // this is the whole reason 0016 exists: my_sitter_connections keys on
+  // sitter_user_id, which stays NULL until someone accepts, so an unaccepted
+  // invitation can never appear there. Filtering connections for status
+  // 'invited' — which this screen originally did — matched nothing, ever.
+  useEffect(() => {
+    setPendingInvites(pendingSitterInvites);
+    setActiveClients(sitterConnections.filter((c) => c.status === 'active'));
+  }, [sitterConnections, pendingSitterInvites]);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,10 +84,15 @@ export function SitterHomeScreen({ navigation }: Props) {
     }
   };
 
-  const renderPendingInvite = (invite: SitterConnection) => (
+  const renderPendingInvite = (invite: PendingSitterInvite) => (
     <Card key={invite.id} className="mb-4 bg-warm-50 border border-warm-300">
       <View className="p-4">
         <Text className="text-brown-800 font-semibold">{invite.household_name}</Text>
+        {invite.invited_by_email ? (
+          <Text className="text-tan-600 text-sm mt-1">
+            Invited by {invite.invited_by_email}
+          </Text>
+        ) : null}
         <View className="flex-row justify-end mt-3 space-x-2">
           <Button
             title="Accept"
