@@ -757,6 +757,50 @@ should not hold a door code forever. Owner can revoke at any time. Always-expire
 on a specific failure mode — a sitter locked out mid-trip is a real emergency with an animal
 waiting.
 
+### [ ] Daily digest: "here's what your sitter did today" (Tim's idea, 2026-08-16)
+An end-of-day email to the OWNER listing the checklist tasks the sitter completed. Strong
+because it makes the sitter's work VISIBLE: today ticking a box is invisible labour with no
+payoff, and this turns it into credit. Owner gets the reassurance they actually wanted; sitter
+gets a reason to use the app through the day rather than at the end.
+
+**DEPENDS ON SITTER ACCOUNTS — cannot ship before them.** Verified 2026-08-16: the
+`task_completions` policies cover household MEMBERS (0007) and, once applied, connected sitters
+(0015). Nothing covers an anonymous share-link opener. So checklists are currently an
+owner-only tool and a digest today would report the owner's own ticks back to them.
+
+**Infrastructure is ~80% built:** `notifications_outbox` already has a `kind` check constraint
+(`invite`, `share_opened`, `trip_incomplete`), the `notify` Edge Function drains it, Brevo
+sends, and `.github/workflows/notify-cron.yml` runs it. Adding a kind is a constraint change
+plus a template, not new plumbing.
+
+**Design decisions to settle before building:**
+1. 🔴 **THE "NOTHING LOGGED" CASE — get this right or do not ship it.** A sitter who did
+   everything but never opened the app is indistinguishable from a sitter who did not show up.
+   An email reading "0 of 8 tasks completed" would send an owner into a panicked call from
+   another country about nothing. Copy must describe what was LOGGED, never what was DONE, and
+   a day with no activity should probably send NOTHING rather than an alarming zero.
+2. **Timezone.** "Today" means the pet's day, not the owner's — they may be eight hours away.
+   We do not currently store a household timezone; `travel_itinerary.timezone_difference` is
+   free text and not usable for scheduling. Needs a real field.
+3. **Volume.** Only during a trip (guide start/end dates), never year-round, and opt-out via
+   the existing `notifications_enabled` setting.
+
+**FREE vs CROWN — the split that matters:** the daily digest is FREE. It is the engagement
+loop, and gating it repeats the mistake of paywalling checklists (see below). CROWN gets the
+**history and export** — the durable record across trips, "proof your sitter did every task,
+every day". Additive rather than subtractive: the paid thing is the archive, not the live loop.
+
+### ~~Put Daily Checklists behind Crown~~ — REJECTED 2026-08-16
+Considered and rejected, recorded so it is not re-proposed. Three reasons: (1) the person
+ticking a checklist is the SITTER, so the owner would pay for a tool someone else uses;
+(2) checklists are the only feature that brings a user back DAILY, and gating the sole
+recurring-engagement mechanic behind a one-time $5 gets the incentive backwards; (3) it
+collides with the sitter acquisition loop — if ticking a task needs the owner to have bought
+Crown, the sitter-invites-their-clients flywheel is gated behind a purchase the sitter cannot
+make. Also: $5 is an impulse price that does not need more justification, and no one has yet
+declined to buy Crown because no one has been offered it. Find out whether it converts before
+making the free tier worse to protect it.
+
 ### Going live — the 3-step swap (deferred until the sitter experience ships)
 Everything in Supabase currently points at the SANDBOX and that is correct. When flipping:
 1. Create the $5 one-off product in the LIVE account → new price/product ids.
