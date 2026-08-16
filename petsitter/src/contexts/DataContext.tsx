@@ -21,6 +21,7 @@ import type {
   HouseholdInviteRow,
   PendingInvite,
   SitterConnection,
+  SitterInviteRow,
   AppSettings,
   JourneyEntry,
   TaskCompletion,
@@ -95,6 +96,12 @@ interface DataContextType {
   sitterConnectionsError: string | null;
   refreshSitterConnections: () => Promise<void>;
   respondToSitterInvite: (connectionId: string, accept: boolean) => Promise<boolean>;
+  /** Owner invites a sitter by email. Server rejects a non-owner. */
+  inviteSitter: (householdId: string, email: string) => Promise<void>;
+  /** Sitter connections ON a household, for the owner who manages them. */
+  getSitterConnections: (householdId: string) => Promise<SitterInviteRow[]>;
+  /** Owner revokes a sitter's access. Takes effect immediately. */
+  revokeSitter: (connectionId: string) => Promise<void>;
   inviteToHousehold: (householdId: string, email: string) => Promise<void>;
   /**
    * Accept or decline an invite, including (on accept) the data refreshes and
@@ -564,6 +571,21 @@ export function DataProvider({ children }: DataProviderProps) {
     },
     [refreshSitterConnections, refreshPets, refreshGuides]
   );
+
+  const inviteSitter = useCallback(async (householdId: string, email: string) => {
+    // Server messages here are written for people ("that email already has a
+    // live connection to this household") — surface them as-is.
+    await dataService.inviteSitter(householdId, email);
+  }, []);
+
+  const getSitterConnections = useCallback(
+    (householdId: string) => dataService.getSitterConnections(householdId),
+    []
+  );
+
+  const revokeSitter = useCallback(async (connectionId: string) => {
+    await dataService.revokeSitter(connectionId);
+  }, []);
 
   const inviteToHousehold = useCallback(async (householdId: string, email: string) => {
     // Server throws 'invalid email' / 'that email already belongs to a
@@ -1135,6 +1157,9 @@ export function DataProvider({ children }: DataProviderProps) {
       sitterConnectionsError,
       refreshSitterConnections,
       respondToSitterInvite,
+      inviteSitter,
+      getSitterConnections,
+      revokeSitter,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,
@@ -1218,6 +1243,9 @@ export function DataProvider({ children }: DataProviderProps) {
       sitterConnectionsError,
       refreshSitterConnections,
       respondToSitterInvite,
+      inviteSitter,
+      getSitterConnections,
+      revokeSitter,
       pendingInvites,
       primaryHouseholdId,
       setPrimaryHousehold,

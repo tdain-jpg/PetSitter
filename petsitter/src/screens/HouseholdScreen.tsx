@@ -5,6 +5,7 @@ import { Button, Card, Input, ScreenContainer, ScreenHeader } from '../component
 import { useAuth, useData } from '../contexts';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { announceJoinDestination } from '../lib/inviteDestination';
+import { SitterSection } from '../components/SitterSection';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
 import type { Household, HouseholdInviteRow, HouseholdMember, PendingInvite } from '../types';
@@ -625,6 +626,11 @@ export function HouseholdScreen() {
               })}
             </View>
           )}
+
+        {/* Sitters are NOT members: they read this household's pets and guides
+            and tick tasks, and can change nothing. Kept in its own section so
+            the distinction is visible where the owner grants it. */}
+        <SitterSection householdId={household.id} isOwner={isOwner} />
         </View>
       </Card>
     );
