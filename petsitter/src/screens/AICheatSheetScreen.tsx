@@ -5,6 +5,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Share,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +21,57 @@ import type { MainStackParamList } from '../navigation/types';
 import type { Guide, CheatSheet } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'AICheatSheet'>;
+
+/**
+ * Writes `text` to the clipboard, reporting failure instead of throwing.
+ *
+ * On web the async Clipboard API is missing entirely on insecure origins and
+ * rejects outright when the permission is denied, so a refused write falls back
+ * to the legacy selection-based copy: deprecated, but it runs inside the
+ * button's own user gesture and asks for no permission, which is exactly the
+ * case that fails.
+ *
+ * Deliberately duplicated from ShareGuideScreen: the two screens share no
+ * clipboard module today, and adding one is a wider change than this fix.
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (Platform.OS !== 'web') {
+    try {
+      const Clipboard = require('expo-clipboard');
+      await Clipboard.setStringAsync(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Denied or unavailable — try the legacy path below rather than giving up.
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  // Off-screen rather than hidden: execCommand copies the live selection, and
+  // a display:none element can never hold one. readonly keeps the mobile
+  // keyboard from popping up when it takes focus.
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  try {
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    textarea.remove();
+  }
+}
 
 /**
  * Turns the server's `retry_after_minutes` into something a person would say.
@@ -245,13 +297,31 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       const filled = watermarked
         ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own — Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
         : body;
-      if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(filled);
-      } else {
-        const Clipboard = require('expo-clipboard');
-        await Clipboard.setStringAsync(filled);
+
+      if (await copyToClipboard(filled)) {
+        showAlert('Copied', 'Cheat sheet copied to clipboard!');
+        return;
       }
-      showAlert('Copied', 'Cheat sheet copied to clipboard!');
+
+      // A blocked clipboard must leave a way to get the text OUT. On web the
+      // sheet is already rendered on screen and react-native-web leaves text
+      // selectable, so manual selection is the honest answer. On native it is
+      // not selectable, so the system share sheet — which needs no permission
+      // and hands the same text to Messages, Mail or Notes — is the way out.
+      if (Platform.OS !== 'web') {
+        try {
+          await Share.share({ message: filled });
+          return;
+        } catch {
+          // Share unavailable too — fall through to the message below.
+        }
+      }
+      showAlert(
+        "Couldn't Copy",
+        Platform.OS === 'web'
+          ? 'This browser blocked the clipboard. Your cheat sheet is still on the screen behind this message — select the text and copy it by hand.'
+          : 'This device blocked the clipboard. Your cheat sheet is still on the screen behind this message, and it is included in the guide PDF.'
+      );
     } catch (err) {
       showAlert('Error', 'Failed to copy to clipboard');
     }

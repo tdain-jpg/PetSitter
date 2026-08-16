@@ -4,7 +4,7 @@ import { TrustPage, TrustSection, TrustText, TrustBullet } from '../components/T
 import type { TermsScreenProps } from '../navigation/types';
 
 // Bump when the wording below changes.
-const LAST_UPDATED = '2026-08-15';
+const LAST_UPDATED = '2026-08-16';
 
 export function TermsScreen(_props: TermsScreenProps) {
   return (
@@ -39,11 +39,17 @@ export function TermsScreen(_props: TermsScreenProps) {
           instructions you write. It does not give veterinary or medical advice, it is not a
           medical device, and it is not a monitoring service.
         </Text>
+        {/* Deliberately not a promise that the model never adds advice: we instruct it not
+            to, but an instruction reduces that behaviour, it cannot rule it out. What is
+            promised here is only what the system actually guarantees. */}
         <Text className="text-brown-700 leading-6 mb-3">
-          Crown cheat sheets rewrite your own words into a one-page summary. They do not check
-          your dosages, diagnose anything, or add care advice of their own — and like any AI,
-          they can make mistakes in the rewriting, which is why you should read a sheet before
-          you hand it over.
+          Crown cheat sheets rewrite your own words into a one-page summary. We do not check
+          your dosages and we do not diagnose anything: a sheet is built from what you put in
+          the guide, and nothing in it has been verified against any medical source. The model
+          is instructed to summarise your instructions and add nothing of its own, but like any
+          AI it can make mistakes in the rewriting, and it can slip in a line you never wrote.
+          Read a sheet before you hand it over, and treat anything you do not recognise as
+          something to check with your vet, not something to follow.
         </Text>
         <Text className="text-brown-700 leading-6">
           Nothing here replaces your vet. In an emergency, call your vet or an emergency animal

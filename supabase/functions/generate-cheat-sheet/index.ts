@@ -209,7 +209,39 @@ interface Medication {
   name?: string;
   dosage?: string;
   frequency?: string;
+  // The clock times the dose is actually given (HH:mm). Dropping this from
+  // the local interface is what silently cost a sitter a dosing schedule: the
+  // guide stored 07:30/19:30, the prompt could not name either, and the sheet
+  // said "Evening: second dose" with no time. Keep this in sync with
+  // Medication in petsitter/src/types/index.ts.
+  times?: string[];
   with_food?: boolean;
+  notes?: string;
+}
+
+/** Mirrors HealthProtocol / HealthSymptom in petsitter/src/types/index.ts. */
+interface HealthSymptom {
+  name?: string;
+  is_enabled?: boolean;
+  notes?: string;
+}
+
+interface HealthProtocol {
+  symptoms?: HealthSymptom[];
+  general_notes?: string;
+  vet_call_threshold?: string;
+}
+
+/** Mirrors PetPersonality in petsitter/src/types/index.ts. */
+interface PetPersonality {
+  energy_level?: string;
+  sociability_people?: string;
+  sociability_pets?: string;
+  fears?: string;
+  bad_habits?: string;
+  comfort_items?: string;
+  favorite_toys?: string;
+  known_commands?: string;
 }
 
 interface PetRow {
@@ -220,19 +252,78 @@ interface PetRow {
   age?: number | null;
   weight?: number | null;
   weight_unit?: string | null;
+  // Selected to EXCLUDE memorialised pets, never printed. Nothing filters
+  // guide.pet_ids by status, so a pet moved to Memorial that is still listed on
+  // an old guide would otherwise be written into the sheet as a live animal
+  // with a full feeding and medication schedule.
+  status?: string | null;
+  nicknames?: string | null;
+  sex?: string | null;
+  is_neutered?: boolean | null;
+  color_markings?: string | null;
+  microchip_id?: string | null;
+  license_tag?: string | null;
   feeding_schedule?: FeedingEntry[] | null;
   medications?: Medication[] | null;
+  personality?: PetPersonality | null;
   behavioral_notes?: string | null;
   special_instructions?: string | null;
   medical_notes?: string | null;
-  vet_info?: { name?: string; clinic?: string; phone?: string } | null;
+  health_protocol?: HealthProtocol | null;
+  // emergency_phone and address were missing here, so the after-hours number
+  // never reached a sheet that exists partly for emergencies.
+  vet_info?: {
+    name?: string;
+    clinic?: string;
+    phone?: string;
+    address?: string;
+    emergency_phone?: string;
+  } | null;
+  insurance?: {
+    provider?: string;
+    policy_number?: string;
+    claims_phone?: string;
+    coverage_notes?: string;
+  } | null;
 }
 
 interface EmergencyContact {
   name?: string;
   relationship?: string;
   phone?: string;
+  email?: string;
+  contact_type?: string;
   is_primary?: boolean;
+  // Which neighbour can actually let you in — decision-relevant during an
+  // incident, and previously dropped.
+  has_key?: boolean;
+  notes?: string;
+}
+
+/** Mirrors RoutineTask / DailyRoutine in petsitter/src/types/index.ts. */
+interface RoutineTask {
+  title?: string;
+  time_block?: string;
+  time?: string;
+  description?: string;
+  notes?: string;
+  category?: string;
+}
+
+/** Mirrors the parts of HomeCare a sitter has to act on. */
+interface HomeCareRow {
+  systems?: {
+    name?: string;
+    location?: string;
+    instructions?: string;
+    emergency_shutoff?: string;
+  }[];
+  tasks?: {
+    title?: string;
+    frequency?: string;
+    instructions?: string;
+  }[];
+  supplies?: { name?: string; location?: string; notes?: string }[];
 }
 
 interface GuideRow {
@@ -246,24 +337,135 @@ interface GuideRow {
   end_date: string | null;
   emergency_contacts: EmergencyContact[] | null;
   home_info: Record<string, string | undefined> | null;
+  // The prompt's FIRST requested section is "Daily Schedule", and it was being
+  // synthesised only from feeding and medication times — every walk, litter
+  // change and play session the owner entered was invisible to the model.
+  daily_routine?: { tasks?: RoutineTask[] } | null;
+  home_care?: HomeCareRow | null;
+  travel_itinerary?: {
+    contact_while_away?: string;
+    timezone_difference?: string;
+    notes?: string;
+  } | null;
   additional_notes: string | null;
 }
+
+// Presence test for the owner-authored free-text fields below. Explicit rather
+// than truthiness on the value: these strings are copied verbatim into the
+// prompt, so the only thing worth suppressing is a value with no characters in
+// it — one that would print a separator ("Note: ") introducing nothing.
+const hasText = (value?: string | null): boolean =>
+  value != null && value.trim() !== '';
 
 function buildPrompt(guide: GuideRow, pets: PetRow[]): string {
   const petInfo = pets
     .map((pet) => {
+      // Guarded the same way the medication line is: a schedule entry missing
+      // a time or an amount must not render "undefined: undefined of kibble".
       const feedingInfo = (pet.feeding_schedule ?? [])
-        .map(
-          (f) =>
-            `  - ${f.time}: ${f.amount} of ${f.food_type}${f.notes ? ` (${f.notes})` : ''}`
-        )
+        .map((f) => {
+          const when = hasText(f.time) ? `${f.time}: ` : '';
+          const amount = hasText(f.amount) ? f.amount : '';
+          const food = hasText(f.food_type)
+            ? `${amount ? ' of ' : ''}${f.food_type}`
+            : '';
+          const note = hasText(f.notes) ? ` (${f.notes})` : '';
+          const body = `${amount}${food}`.trim();
+          return `  - ${when}${body || 'See notes'}${note}`;
+        })
         .join('\n');
 
       const medInfo = (pet.medications ?? [])
-        .map(
-          (m) =>
-            `  - ${m.name}: ${m.dosage}, ${m.frequency}${m.with_food ? ' (give with food)' : ''}`
-        )
+        .map((m) => {
+          // times is optional AND may be an empty array, so the " at ..."
+          // clause is emitted only when a time survives — a medication with no
+          // scheduled times must not render a dangling separator.
+          const times = (m.times ?? []).filter(hasText);
+          const at = times.length > 0 ? ` at ${times.join(' and ')}` : '';
+          const withFood = m.with_food === true ? ' (give with food)' : '';
+          // The note is the owner's dosing method and escalation rule ("hide
+          // it in the pate", "call the vet if she brings it back up"). It is
+          // the one part of a medication a sitter cannot reconstruct.
+          const note = hasText(m.notes) ? ` — Note: ${m.notes}` : '';
+          return `  - ${m.name}: ${m.dosage}, ${m.frequency}${at}${withFood}${note}`;
+        })
+        .join('\n');
+
+      // The owner's symptom watch-list and escalation rules (pets.health_protocol).
+      // Disabled symptoms are dropped: the owner switched those off on purpose.
+      // The whole block is omitted when it has nothing in it, so a pet without a
+      // protocol contributes no empty heading for the model to answer with a
+      // generic "call the owner".
+      const health = pet.health_protocol;
+      const symptomInfo = (health?.symptoms ?? [])
+        .filter((s) => s.is_enabled === true)
+        .map((s) => `  - ${s.name}${hasText(s.notes) ? `: ${s.notes}` : ''}`)
+        .join('\n');
+      const healthProtocolInfo = [
+        symptomInfo.length > 0 ? `Watch For:\n${symptomInfo}` : '',
+        hasText(health?.vet_call_threshold)
+          ? `When To Call The Vet: ${health?.vet_call_threshold}`
+          : '',
+        hasText(health?.general_notes)
+          ? `Health Protocol Notes: ${health?.general_notes}`
+          : '',
+      ]
+        .filter((line) => line.length > 0)
+        .join('\n');
+
+      // Temperament the owner recorded FOR a sitter: what scares the pet, what
+      // it does when unsupervised, the words it responds to. Dropping this was
+      // the same interface-drift that cost the dosing schedule.
+      const p = pet.personality;
+      const personalityInfo = [
+        hasText(p?.fears) ? `  - Afraid of: ${p?.fears}` : '',
+        hasText(p?.bad_habits) ? `  - Watch out for: ${p?.bad_habits}` : '',
+        hasText(p?.known_commands) ? `  - Responds to: ${p?.known_commands}` : '',
+        hasText(p?.comfort_items) ? `  - Comforted by: ${p?.comfort_items}` : '',
+        hasText(p?.favorite_toys) ? `  - Favourite toys: ${p?.favorite_toys}` : '',
+        hasText(p?.energy_level) ? `  - Energy level: ${p?.energy_level}` : '',
+        hasText(p?.sociability_people) ? `  - With people: ${p?.sociability_people}` : '',
+        hasText(p?.sociability_pets) ? `  - With other pets: ${p?.sociability_pets}` : '',
+      ]
+        .filter((l) => l.length > 0)
+        .join('\n');
+
+      // The set a sitter needs to describe or reclaim a pet that gets out while
+      // the owner is unreachable.
+      const identityInfo = [
+        hasText(pet.nicknames) ? `Also answers to: ${pet.nicknames}` : '',
+        hasText(pet.color_markings) ? `Colour/markings: ${pet.color_markings}` : '',
+        hasText(pet.sex)
+          ? `Sex: ${pet.sex}${pet.is_neutered === true ? ' (neutered)' : ''}`
+          : '',
+        hasText(pet.microchip_id) ? `Microchip: ${pet.microchip_id}` : '',
+        hasText(pet.license_tag) ? `Licence tag: ${pet.license_tag}` : '',
+      ]
+        .filter((l) => l.length > 0)
+        .join('\n');
+
+      const v = pet.vet_info;
+      const vetLine = v
+        ? [
+            `${v.name ?? ''}${hasText(v.clinic) ? ` at ${v.clinic}` : ''}`.trim(),
+            hasText(v.phone) ? `- ${v.phone}` : '',
+            hasText(v.emergency_phone) ? `(after hours: ${v.emergency_phone})` : '',
+            hasText(v.address) ? `— ${v.address}` : '',
+          ]
+            .filter((s) => s.length > 0)
+            .join(' ')
+        : 'Not specified';
+
+      // Only what is useful at a clinic counter; coverage_notes is the owner's
+      // own summary of what the policy will and will not pay for.
+      const ins = pet.insurance;
+      const insuranceInfo = [
+        hasText(ins?.provider) ? `Insurer: ${ins?.provider}` : '',
+        hasText(ins?.policy_number) ? `Policy: ${ins?.policy_number}` : '',
+        hasText(ins?.claims_phone) ? `Claims: ${ins?.claims_phone}` : '',
+        hasText(ins?.coverage_notes) ? `Coverage notes: ${ins?.coverage_notes}` : '',
+      ]
+        .filter((l) => l.length > 0)
         .join('\n');
 
       return `
@@ -271,6 +473,7 @@ Pet: ${pet.name}
 Species: ${pet.species}${pet.breed ? ` (${pet.breed})` : ''}
 ${pet.age != null ? `Age: ${pet.age} years` : ''}
 ${pet.weight != null ? `Weight: ${pet.weight} ${pet.weight_unit || 'lbs'}` : ''}
+${identityInfo}
 
 Feeding Schedule:
 ${feedingInfo || '  No specific schedule'}
@@ -278,20 +481,100 @@ ${feedingInfo || '  No specific schedule'}
 Medications:
 ${medInfo || '  None'}
 
+${personalityInfo.length > 0 ? `Temperament:\n${personalityInfo}` : ''}
 ${pet.behavioral_notes ? `Behavioral Notes: ${pet.behavioral_notes}` : ''}
 ${pet.special_instructions ? `Special Instructions: ${pet.special_instructions}` : ''}
 ${pet.medical_notes ? `Medical Notes: ${pet.medical_notes}` : ''}
+${healthProtocolInfo}
 
-Veterinarian: ${pet.vet_info ? `${pet.vet_info.name} at ${pet.vet_info.clinic} - ${pet.vet_info.phone}` : 'Not specified'}
+Veterinarian: ${vetLine}
+${insuranceInfo}
 `;
     })
     .join('\n---\n');
 
   const emergencyContacts = (guide.emergency_contacts ?? [])
-    .map(
-      (c) =>
-        `- ${c.name} (${c.relationship}): ${c.phone}${c.is_primary ? ' [PRIMARY]' : ''}`
-    )
+    .map((c) => {
+      // has_key is the one a sitter locked out at 10pm actually needs, and
+      // contact_type separates the emergency vet from a neighbour.
+      const key = c.has_key === true ? ' [HAS A KEY]' : '';
+      const kind = hasText(c.contact_type) ? ` [${c.contact_type}]` : '';
+      const email = hasText(c.email) ? `, ${c.email}` : '';
+      const note = hasText(c.notes) ? ` — ${c.notes}` : '';
+      return `- ${c.name} (${c.relationship}): ${c.phone}${email}${
+        c.is_primary ? ' [PRIMARY]' : ''
+      }${key}${kind}${note}`;
+    })
+    .join('\n');
+
+  // The owner's OWN schedule — walks, litter, play, medication reminders they
+  // wrote by hand. The prompt asks the model for a "Daily Schedule" first, and
+  // until now it had only feeding and medication times to build one from.
+  const routineInfo = (guide.daily_routine?.tasks ?? [])
+    .map((t) => {
+      const when = hasText(t.time)
+        ? t.time
+        : hasText(t.time_block)
+          ? t.time_block
+          : '';
+      const detail = hasText(t.description) ? `: ${t.description}` : '';
+      const note = hasText(t.notes) ? ` (${t.notes})` : '';
+      return `  - ${when ? `${when} — ` : ''}${t.title ?? ''}${detail}${note}`;
+    })
+    .join('\n');
+
+  // Not pet care, but it is what the sitter is standing in the middle of:
+  // where the bins go, which plant needs water, and where the water shutoff is
+  // when something is leaking at midnight.
+  const hc = guide.home_care;
+  const homeCareInfo = [
+    (hc?.tasks ?? []).length > 0
+      ? `Household tasks:\n${(hc?.tasks ?? [])
+          .map(
+            (t) =>
+              `  - ${t.title ?? ''}${hasText(t.frequency) ? ` (${t.frequency})` : ''}${
+                hasText(t.instructions) ? `: ${t.instructions}` : ''
+              }`
+          )
+          .join('\n')}`
+      : '',
+    (hc?.systems ?? []).length > 0
+      ? `Home systems:\n${(hc?.systems ?? [])
+          .map(
+            (s) =>
+              `  - ${s.name ?? ''}${hasText(s.location) ? ` (${s.location})` : ''}${
+                hasText(s.instructions) ? `: ${s.instructions}` : ''
+              }${hasText(s.emergency_shutoff) ? ` — SHUTOFF: ${s.emergency_shutoff}` : ''}`
+          )
+          .join('\n')}`
+      : '',
+    (hc?.supplies ?? []).length > 0
+      ? `Supplies:\n${(hc?.supplies ?? [])
+          .map(
+            (s) =>
+              `  - ${s.name ?? ''}${hasText(s.location) ? ` — ${s.location}` : ''}${
+                hasText(s.notes) ? ` (${s.notes})` : ''
+              }`
+          )
+          .join('\n')}`
+      : '',
+  ]
+    .filter((l) => l.length > 0)
+    .join('\n');
+
+  // Only the reachability fields. Flights and hotels are the owner's business;
+  // how to reach them, and what time it is where they are, is the sitter's.
+  const ti = guide.travel_itinerary;
+  const travelInfo = [
+    hasText(ti?.contact_while_away)
+      ? `Reaching the owner: ${ti?.contact_while_away}`
+      : '',
+    hasText(ti?.timezone_difference)
+      ? `Time difference: ${ti?.timezone_difference}`
+      : '',
+    hasText(ti?.notes) ? `Travel notes: ${ti?.notes}` : '',
+  ]
+    .filter((l) => l.length > 0)
     .join('\n');
 
   // SECURITY: NO credential or house-opening value is ever sent to the AI
@@ -319,6 +602,8 @@ Gate Code: ${token('GATE_CODE', home.gate_code)}
 Mailbox Code: ${token('MAILBOX_CODE', home.mailbox_code)}
 Spare Key: ${token('SPARE_KEY_LOCATION', home.spare_key_location)}
 Trash Day: ${home.trash_day || 'Not specified'}
+${hasText(home.parking_info) ? `Parking: ${home.parking_info}` : ''}
+${hasText(home.notes) ? `Home Notes: ${home.notes}` : ''}
 `;
 
   return `You are creating a quick reference "cheat sheet" for a pet sitter. This should be a concise, easy-to-scan summary that the pet sitter can quickly reference while caring for the pets.
@@ -331,12 +616,13 @@ DATES: ${guide.start_date || 'Not specified'} to ${guide.end_date || 'Not specif
 PETS:
 ${petInfo}
 
+${routineInfo.length > 0 ? `DAILY ROUTINE THE OWNER WROTE (use this as the backbone of the Daily Schedule section, merged with the feeding and medication times above):\n${routineInfo}\n` : ''}
 EMERGENCY CONTACTS:
 ${emergencyContacts || 'None provided'}
 
 HOME INFORMATION:
 ${homeInfo}
-
+${homeCareInfo.length > 0 ? `\nHOME CARE:\n${homeCareInfo}\n` : ''}${travelInfo.length > 0 ? `\nWHILE THE OWNER IS AWAY:\n${travelInfo}\n` : ''}
 ${guide.additional_notes ? `ADDITIONAL NOTES:\n${guide.additional_notes}` : ''}
 
 Build the cheat sheet with these sections in this order, skipping any with nothing to say:
@@ -355,6 +641,12 @@ STRICT FORMATTING RULES:
 - NEVER use horizontal rules — do not output lines of dashes.
 - No HTML. Bold the truly critical values: times, doses, phone numbers.
 - Keep the whole sheet tight — a fridge-door reference that fits on 1-2 printed pages.
+
+STRICT CONTENT RULES — a sitter reading the sheet cannot tell your words from the owner's, so every word has to be the owner's:
+- Everything on the sheet must trace back to the guide information above. Reorganise it, condense it, and make it clearer to act on; do not add to it.
+- Do NOT add care guidance, handling or hygiene precautions, dosing advice, or breed-, species-, or age-specific tips of your own, however sound and however standard. If the owner did not write it, it does not go on the sheet.
+- Do NOT invent a time, amount, dose, route, or reason that is not stated above, and do not turn a general instruction into a specific one.
+- If something essential really is missing, the ONLY place to raise it is "## ❓ Ask the Owner" — and never list something there that the information above already answers.
 
 STRICT PLACEHOLDER RULES:
 - The ONLY placeholders that exist are the exact [[ALL_CAPS]] strings appearing in HOME INFORMATION above. Where such a value belongs, copy its placeholder character for character.
@@ -415,7 +707,7 @@ Deno.serve(async (req) => {
   const { data: guide, error: guideError } = await supabase
     .from('guides')
     .select(
-      'id, household_id, title, pet_ids, start_date, end_date, emergency_contacts, home_info, additional_notes'
+      'id, household_id, title, pet_ids, start_date, end_date, emergency_contacts, home_info, daily_routine, home_care, travel_itinerary, additional_notes'
     )
     .eq('id', guideId)
     .maybeSingle();
@@ -651,7 +943,7 @@ Deno.serve(async (req) => {
     const { data: petRows, error: petsError } = await supabase
       .from('pets')
       .select(
-        'id, name, species, breed, age, weight, weight_unit, feeding_schedule, medications, behavioral_notes, special_instructions, medical_notes, vet_info'
+        'id, name, species, status, nicknames, sex, is_neutered, color_markings, microchip_id, license_tag, breed, age, weight, weight_unit, feeding_schedule, medications, personality, behavioral_notes, special_instructions, medical_notes, health_protocol, vet_info, insurance'
       )
       .in('id', petIds);
     if (petsError) {
@@ -659,7 +951,13 @@ Deno.serve(async (req) => {
       await releaseClaim('the pets load failing');
       return json(500, { error: 'internal' });
     }
-    pets = petRows ?? [];
+    // Memorialised pets are dropped HERE rather than in the query, so a row
+    // with a null/absent status (every pet predating the memorial feature)
+    // still counts as active. Nothing removes a pet from guide.pet_ids when it
+    // is memorialised, so without this an old guide would render a pet that has
+    // died as a living animal with a full feeding and medication schedule — the
+    // cruellest possible output from a document about caring for it.
+    pets = (petRows ?? []).filter((p) => p.status !== 'deceased');
   }
 
   const prompt = buildPrompt(guide as GuideRow, pets);

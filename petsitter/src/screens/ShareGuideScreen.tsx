@@ -17,6 +17,63 @@ import type { Guide, ShareableLink } from '../types';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
+/**
+ * The address a sitter actually opens. Always a web URL — recipients (pet
+ * sitters) may not have the app installed.
+ */
+function shareUrlFor(code: string): string {
+  const origin = Platform.OS === 'web' ? window.location.origin : WEB_BASE_URL;
+  return `${origin}/share/${code}`;
+}
+
+/**
+ * Writes `text` to the clipboard, reporting failure instead of throwing.
+ *
+ * On web the async Clipboard API is missing entirely on insecure origins and
+ * rejects outright when the permission is denied, so a refused write falls back
+ * to the legacy selection-based copy: deprecated, but it runs inside the
+ * button's own user gesture and asks for no permission, which is exactly the
+ * case that fails.
+ */
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (Platform.OS !== 'web') {
+    try {
+      const Clipboard = require('expo-clipboard');
+      await Clipboard.setStringAsync(text);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Denied or unavailable — try the legacy path below rather than giving up.
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  // Off-screen rather than hidden: execCommand copies the live selection, and
+  // a display:none element can never hold one. readonly keeps the mobile
+  // keyboard from popping up when it takes focus.
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  try {
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    textarea.remove();
+  }
+}
+
 export function ShareGuideScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
   const { guides, loadingGuides, getShareLinksForGuide, createShareLink, deactivateShareLink } = useData();
@@ -87,21 +144,17 @@ export function ShareGuideScreen({ navigation, route }: Props) {
   };
 
   const handleCopyLink = async (code: string) => {
-    // Always copy a web URL — recipients (pet sitters) may not have the app installed.
-    const origin = Platform.OS === 'web' ? window.location.origin : WEB_BASE_URL;
-    const url = `${origin}/share/${code}`;
-
-    try {
-      if (Platform.OS === 'web') {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const Clipboard = require('expo-clipboard');
-        await Clipboard.setStringAsync(url);
-      }
+    if (await copyToClipboard(shareUrlFor(code))) {
       showAlert('Copied', 'Link copied to clipboard!');
-    } catch (err) {
-      showAlert('Error', 'Failed to copy link');
+      return;
     }
+    // A blocked clipboard must not strand a link the user just created: the
+    // card shows the whole URL as selectable text, so point at it instead of
+    // reporting a failure with no way out.
+    showAlert(
+      "Couldn't Copy",
+      'This device blocked the clipboard. The full link is shown on the card — select it and copy it by hand.'
+    );
   };
 
   const handlePreview = (code: string) => {
@@ -196,8 +249,16 @@ export function ShareGuideScreen({ navigation, route }: Props) {
                 >
                   <View className="flex-row justify-between items-start mb-2">
                     <View className="flex-1">
-                      <Text className="font-mono text-primary-600 text-lg">
-                        {link.code}
+                      {/* The whole URL, not just the token: this is the one
+                          place the link exists, and it has to survive a failed
+                          clipboard write. `userSelect` (not the `selectable`
+                          prop, which react-native-web has deprecated) keeps it
+                          hand-copyable on web and native alike. */}
+                      <Text
+                        className="font-mono text-primary-600 text-sm mb-1"
+                        style={{ userSelect: 'text' }}
+                      >
+                        {shareUrlFor(link.code)}
                       </Text>
                       <Text className="text-tan-400 text-sm">
                         Created {new Date(link.created_at).toLocaleDateString()}

@@ -7,3 +7,5 @@ brand-drop/
 
 # Supabase CLI scratch
 supabase/.temp/
+
+.DS_Store

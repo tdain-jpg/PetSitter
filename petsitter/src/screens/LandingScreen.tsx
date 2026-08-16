@@ -30,6 +30,16 @@ const features = [
     bgClass: 'bg-secondary-50',
   },
   {
+    // Sits directly after Care Guides because a cheat sheet is generated from a guide,
+    // and because this is the only paid feature — at the end of the list a prospect
+    // scrolls past the one thing they would be asked to pay for.
+    icon: '👑',
+    title: 'AI Cheat Sheets',
+    description: 'A one-page summary your sitter can stick on the fridge, written from the guide you already filled in. Every guide gets one free with a PREVIEW watermark, and Crown unlocks them for your whole household for $5, once.',
+    color: COLORS.warm,
+    bgClass: 'bg-warm-50',
+  },
+  {
     icon: '✅',
     title: 'Daily Checklists',
     description: 'Generate interactive checklists organized by time of day for your pet sitter.',
@@ -244,16 +254,24 @@ export function LandingScreen({ navigation }: Props) {
           </ScreenContainer>
         </View>
 
-        {/* Testimonial / Trust Section */}
+        {/* Why it exists. This slot previously held an invented customer quote
+            attributed to "Happy Pet Parent" — a fabricated testimonial on a
+            public page, which is deceptive whether or not anyone is fooled, and
+            is read by Stripe's reviewer alongside our Terms. Replaced with
+            something true. Put a REAL quote here once a real customer says one,
+            with their name and their permission. */}
         <View className="px-6 py-8 bg-cream-200">
           <ScreenContainer variant="content">
             <Card>
               <View className="items-center py-4">
-                <Text className="text-5xl mb-4">💬</Text>
-                <Text className="text-lg text-brown-700 text-center italic mb-4">
-                  "Finally, a way to give my pet sitter all the info they need without writing a novel!"
+                <Text className="text-5xl mb-4">🐾</Text>
+                <Text className="text-lg text-brown-700 text-center mb-2">
+                  Everything your sitter needs, in one place they can actually find it.
                 </Text>
-                <Text className="text-tan-500">- Happy Pet Parent</Text>
+                <Text className="text-tan-600 text-center">
+                  Feeding times, medications, the vet's number, which neighbour has a key —
+                  written down once, instead of remembered in a hurry on the way to the airport.
+                </Text>
               </View>
             </Card>
           </ScreenContainer>

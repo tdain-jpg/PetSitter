@@ -14,6 +14,7 @@ import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
+import { hasPendingCrownCheckout } from './UnlockCrownScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 
@@ -53,10 +54,18 @@ export function SettingsScreen({ navigation }: Props) {
   // households column.
   const [hasCrown, setHasCrown] = useState<boolean | null>(null);
 
+  // UnlockCrown puts its $5 button away for a couple of minutes after a
+  // checkout is started, so a button here reading "Unlock Crown — $5" during
+  // that window sends the user to a screen with nothing to buy on it. Read the
+  // same record it reads, and offer the same thing it will.
+  const [checkoutPending, setCheckoutPending] = useState(false);
+
   // On focus, not on mount: returning from UnlockCrown after a purchase (native
   // goes back to this screen) changes nothing this component renders from, so
   // without this the card would keep offering Crown to a household that now
-  // owns it. Also picks up a purchase made by another household member.
+  // owns it. Also picks up a purchase made by another household member — and,
+  // for the pending record, a checkout just started or just abandoned.
+  const userId = user?.id ?? null;
   useFocusEffect(
     useCallback(() => {
       if (!primaryHouseholdId) return;
@@ -66,10 +75,15 @@ export function SettingsScreen({ navigation }: Props) {
         if (cancelled || error) return;
         setHasCrown(data === true);
       })();
+      (async () => {
+        const pending =
+          userId != null ? await hasPendingCrownCheckout(userId, primaryHouseholdId) : false;
+        if (!cancelled) setCheckoutPending(pending);
+      })();
       return () => {
         cancelled = true;
       };
-    }, [primaryHouseholdId])
+    }, [primaryHouseholdId, userId])
   );
 
   // Import and Clear All Data target the DEFAULT household, whichever one that
@@ -239,7 +253,19 @@ export function SettingsScreen({ navigation }: Props) {
                 <Button
                   // No guideId: this purchase isn't tied to a sheet, and
                   // UnlockCrown falls back to the default household.
-                  title={hasCrown === false ? '👑 Unlock Crown — $5' : '👑 About Crown'}
+                  //
+                  // Three labels for the three things that screen will
+                  // actually show: a checkout of ours is still settling
+                  // (Refresh and a way to start over), a household that has
+                  // certainly not paid (the $5 button), or an answer we don't
+                  // have yet (the offer, read-only until it does).
+                  title={
+                    checkoutPending
+                      ? '👑 Finish unlocking Crown'
+                      : hasCrown === false
+                        ? '👑 Unlock Crown — $5'
+                        : '👑 About Crown'
+                  }
                   onPress={() => navigation.navigate('UnlockCrown')}
                 />
               </View>

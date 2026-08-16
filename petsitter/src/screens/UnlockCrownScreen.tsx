@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Platform, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, ScreenContainer, ScreenHeader } from '../components';
-import { useData } from '../contexts';
+import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
 import { dataService } from '../services/SupabaseAdapter';
 import { showAlert } from '../lib/showAlert';
@@ -63,16 +63,20 @@ const WEBHOOK_POLL_DELAYS_MS = [1500, 2500, 4000, 6000, 8000];
  *
  * These have to OUTLIVE the screen instance. `?checkout=success` lives on one
  * navigation state: a single Back or Home tap discards it, and the buyer would
- * be looking at a live $5 button with a payment already in flight —
- * create-checkout-session gates only on has_crown and would happily mint a
- * second session. Native never even gets the param (see the focus effect), so
- * there the record is the ONLY thing standing between a slow webhook and a
- * second charge.
+ * be looking at a live $5 button with a payment already in flight. Native never
+ * even gets the param (see the focus effect), so there this record is the only
+ * in-app signal that a checkout was ever started.
  *
- * Keyed by household because Crown is: an entry only speaks for the household
- * it is filed under, so someone who belongs to two can still buy the second
- * while the first is still settling. (A single-record slot would have the
- * second purchase silently erase the first household's in-flight record.)
+ * BELT AND BRACES, NOT THE GUARD. The thing that actually prevents a second
+ * charge is server-side and verified in production: create-checkout-session
+ * hands back the household's already-open session, and creates under the
+ * idempotency key `crown:<household>:<buyer>:<hour>`, so a repeat request is
+ * answered with the SAME session rather than a second one. Because the server
+ * cannot be talked into a second charge, this record is allowed to be lenient
+ * — short-lived, reconciled against the entitlement on return, and escapable in
+ * one tap — and it has to be, because the commonest reasons to come back from
+ * Stripe are looking at the price, a declined card, and second thoughts.
+ *
  * The value is the startedAt millisecond stamp — see PENDING_CHECKOUT_TTL_MS.
  */
 type PendingCheckouts = Record<string, number>;
@@ -80,21 +84,42 @@ type PendingCheckouts = Record<string, number>;
 const PENDING_CHECKOUT_KEY = 'pawstructions.crown.pendingCheckouts';
 
 /**
- * How long a recorded checkout keeps the $5 button hidden.
+ * The slot one in-flight checkout is filed under, scoped exactly the way the
+ * server's idempotency key is.
  *
- * The risk it covers is the gap between tapping buy and the webhook landing,
- * which is dominated by the buyer's own time on Stripe's page — card entry
- * plus a bank 3-D Secure hop is minutes at worst, so fifteen leaves several
- * times over the slack.
+ * The HOUSEHOLD is in it because Crown is bought per household: an entry only
+ * speaks for the household it names, so someone who belongs to two can still
+ * buy the second while the first is settling.
  *
- * It has to EXPIRE because abandonment is silent on native: Stripe's cancel
- * URL is an https://pawstructions.com address that opens in the system
- * browser, so an app that never hears about the cancel would otherwise sit on
- * a hidden purchase button forever. Fifteen minutes turns that into a bounded
- * wait. (On web the cancel return clears that household's record outright the
- * first time it is seen — see `cancelledReturn`.)
+ * The BUYER is in it because nothing clears this storage key at sign-out — it
+ * is plain AsyncStorage/localStorage, untouched by the auth flow. A
+ * household-only slot would therefore hand the next person to sign in on a
+ * shared browser a lockout for a checkout they never started. (Records written
+ * under the older household-only shape simply never match a slot again, and
+ * age out on the next write — see pruneExpired.)
  */
-const PENDING_CHECKOUT_TTL_MINUTES = 15;
+function pendingCheckoutSlot(userId: string, householdId: string): string {
+  return `${userId}:${householdId}`;
+}
+
+/**
+ * How long a recorded checkout keeps the $5 button hidden when nothing else
+ * has retired it.
+ *
+ * SHORT on purpose. All it has to cover is the gap between the buyer landing
+ * back on us and the webhook arriving, which is seconds; the guard against an
+ * actual second charge is the server's session reuse and idempotency key, which
+ * replay the same Checkout Session instead of minting another. A long window
+ * buys nothing on top of that and costs a buyer who merely looked at the price
+ * a wait, which is why this is two minutes and not the fifteen it started as.
+ *
+ * It still has to EXPIRE at all because abandonment can be silent: Stripe's
+ * cancel URL is an https://pawstructions.com address that opens in the system
+ * browser on native, so the app may never hear about the cancel. Expiry is the
+ * last of three ways out, behind the reconcile effect (any return we can read
+ * as unpaid) and the buyer's own "start over".
+ */
+const PENDING_CHECKOUT_TTL_MINUTES = 2;
 const PENDING_CHECKOUT_TTL_MS = PENDING_CHECKOUT_TTL_MINUTES * 60_000;
 
 /**
@@ -126,8 +151,8 @@ async function readPendingCheckouts(): Promise<PendingCheckouts> {
 
 /**
  * Drop entries past the TTL on the way out. They already count for nothing
- * (pendingForThisHousehold applies the same window), so this only keeps the
- * slot from accumulating households the user has long since left.
+ * (pendingForThisBuyer applies the same window), so this only keeps the stored
+ * map from accumulating slots the user has long since finished with.
  */
 function pruneExpired(records: PendingCheckouts, now: number): PendingCheckouts {
   const fresh: PendingCheckouts = {};
@@ -137,12 +162,9 @@ function pruneExpired(records: PendingCheckouts, now: number): PendingCheckouts 
   return fresh;
 }
 
-function withoutHousehold(
-  records: PendingCheckouts | undefined,
-  householdId: string
-): PendingCheckouts {
+function withoutSlot(records: PendingCheckouts | undefined, slot: string): PendingCheckouts {
   const next = { ...(records ?? {}) };
-  delete next[householdId];
+  delete next[slot];
   return next;
 }
 
@@ -150,12 +172,12 @@ function withoutHousehold(
  * Merges into the stored map rather than replacing it, so starting a checkout
  * for one household leaves another household's in-flight record intact.
  */
-async function writePendingCheckout(householdId: string, startedAt: number): Promise<void> {
+async function writePendingCheckout(slot: string, startedAt: number): Promise<void> {
   try {
     const existing = await readPendingCheckouts();
     await AsyncStorage.setItem(
       PENDING_CHECKOUT_KEY,
-      JSON.stringify({ ...pruneExpired(existing, startedAt), [householdId]: startedAt })
+      JSON.stringify({ ...pruneExpired(existing, startedAt), [slot]: startedAt })
     );
   } catch {
     // See above: a purchase must still be startable on a device that won't
@@ -163,12 +185,9 @@ async function writePendingCheckout(householdId: string, startedAt: number): Pro
   }
 }
 
-async function clearPendingCheckout(householdId: string): Promise<void> {
+async function clearPendingCheckout(slot: string): Promise<void> {
   try {
-    const remaining = pruneExpired(
-      withoutHousehold(await readPendingCheckouts(), householdId),
-      Date.now()
-    );
+    const remaining = pruneExpired(withoutSlot(await readPendingCheckouts(), slot), Date.now());
     if (Object.keys(remaining).length === 0) {
       await AsyncStorage.removeItem(PENDING_CHECKOUT_KEY);
     } else {
@@ -180,10 +199,28 @@ async function clearPendingCheckout(householdId: string): Promise<void> {
   }
 }
 
+/**
+ * Whether this buyer has a live checkout record for `householdId` — the same
+ * record this screen hides its $5 button behind.
+ *
+ * Exported so SettingsScreen can offer exactly what UnlockCrown will actually
+ * show when it opens: a Settings button reading "Unlock Crown — $5" that lands
+ * on a screen with no purchase button on it is the two disagreeing.
+ */
+export async function hasPendingCrownCheckout(
+  userId: string,
+  householdId: string
+): Promise<boolean> {
+  const records = await readPendingCheckouts();
+  const startedAt = records[pendingCheckoutSlot(userId, householdId)];
+  return startedAt !== undefined && Date.now() - startedAt < PENDING_CHECKOUT_TTL_MS;
+}
+
 export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps) {
   const guideId = route.params?.guideId;
   const checkoutReturn = readCheckoutReturn(route.params);
 
+  const { user } = useAuth();
   const {
     guides,
     loadingGuides,
@@ -202,7 +239,8 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   // The post-checkout auto-poll has run out of attempts. Only ever set true;
   // the copy softens at that point, it does not re-open the purchase path.
   const [pollExhausted, setPollExhausted] = useState(false);
-  // The persisted in-flight purchases, keyed by household. `undefined` =
+  // The persisted in-flight purchases, keyed by buyer and household
+  // (pendingCheckoutSlot). `undefined` =
   // storage not read yet, and is deliberately distinct from an empty map: the
   // first paint blocks on it rather than guess, because guessing wrong shows a
   // $5 button to someone mid-payment.
@@ -220,6 +258,14 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   // goes stale, so that is where it is spent — see handleCheckout.
   const [cancelConsumed, setCancelConsumed] = useState(false);
   const cancelledReturn = checkoutReturn === 'cancelled' && !cancelConsumed;
+  // The buyer has told us, in as many words, that they did not finish paying —
+  // see handleAbandonCheckout. Spent when a new checkout starts, like the
+  // cancel latch above, so the next purchase is guarded normally.
+  const [abandonedByUser, setAbandonedByUser] = useState(false);
+  // Slots THIS screen instance handed to Stripe. A record that was already in
+  // storage when we mounted was written by an earlier visit, which means the
+  // user has been away and come back — the reconcile effect leans on that.
+  const startedHereRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -245,31 +291,31 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   const household = households.find((h) => h.id === householdId) ?? null;
   const householdLabel = household?.name ?? 'your household';
 
-  // A stored record counts only for the household it is filed under and only
-  // inside its window. A clock that jumped backwards makes the elapsed time
-  // negative, which stays inside the window — the safe direction.
-  const pendingStartedAt = householdId != null ? pendingCheckouts?.[householdId] : undefined;
-  const pendingForThisHousehold =
+  // A stored record counts only for the slot it is filed under — this buyer,
+  // this household — and only inside its window. A clock that jumped backwards
+  // makes the elapsed time negative, which stays inside the window: the safe
+  // direction.
+  const pendingSlot =
+    householdId != null && user?.id != null ? pendingCheckoutSlot(user.id, householdId) : null;
+  const pendingStartedAt = pendingSlot != null ? pendingCheckouts?.[pendingSlot] : undefined;
+  const pendingForThisBuyer =
     pendingStartedAt !== undefined && Date.now() - pendingStartedAt < PENDING_CHECKOUT_TTL_MS;
 
-  // A purchase is in flight and the entitlement is NOT confirmed — covers both
-  // the real false (webhook hasn't landed) and null (the read threw). While
-  // this is true the $5 button must not be on screen: this user has already
-  // been handed to Checkout, create-checkout-session gates only on has_crown
-  // and would happily mint a second session, and a second tap is a second $5
-  // charge.
+  // A purchase may be in flight and the entitlement is NOT confirmed — covers
+  // both the real false (webhook hasn't landed) and null (the read threw).
+  // While this is true the $5 button is put away, so a buyer mid-payment isn't
+  // invited to start a second one.
   //
-  // Two independent sources, because neither covers the other's case: the
-  // success param survives a hard reload of a URL we control but dies on the
-  // first Back or Home tap, while the stored record survives navigation and
-  // app restarts but never learns about a NATIVE abandon. An UNSPENT
-  // `cancelled` return is Stripe telling us outright that no payment was
-  // started, which retires the record's claim on the spot rather than one
-  // render later; once spent it stops speaking for anything, so the next
-  // purchase is guarded normally.
+  // SOFT, and deliberately so. It is a courtesy on top of the server's session
+  // reuse and idempotency key, not the thing preventing a second charge, so
+  // every route out of it is honoured immediately: an unspent `cancelled`
+  // return (Stripe telling us outright that nothing was paid), the buyer's own
+  // "start over" (`abandonedByUser`), the reconcile effect below, and finally
+  // the two-minute expiry. It is never a state a user has to wait out.
   const awaitingWebhook =
+    !abandonedByUser &&
     hasCrown !== true &&
-    (checkoutReturn === 'success' || (!cancelledReturn && pendingForThisHousehold));
+    (checkoutReturn === 'success' || (!cancelledReturn && pendingForThisBuyer));
 
   const checkEntitlement = useCallback(async (): Promise<boolean | null> => {
     if (!householdId) return null;
@@ -350,16 +396,37 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   );
 
   // Retire the stored record once it can no longer mean "a payment might be in
-  // flight": has_crown says the purchase landed, or Stripe returned the buyer
-  // through the cancel URL and that return has not been spent yet. Only this
-  // household's entry is touched, so confirming Crown on one household can't
-  // discard a checkout started for another.
+  // flight". Only this buyer's entry for this household is touched, so
+  // confirming Crown on one household can't discard a checkout started for
+  // another. Three ways it dies here:
+  //
+  //   * has_crown says the purchase landed.
+  //   * Stripe returned the buyer through the cancel URL, unspent.
+  //   * we RECONCILE a return as unpaid: the record was written by an earlier
+  //     visit (so the user has been away and come back), we did not come back
+  //     through the success URL, and has_crown answered a real false. Browser
+  //     Back out of Stripe carries no param at all — only Stripe's own back
+  //     arrow uses the cancel URL — so waiting for a param is exactly how
+  //     someone who tapped through to see the price used to get locked out.
+  //
+  // hasCrown === null (the read threw) is NOT a reconcile: we would be acting
+  // on an entitlement we failed to read. Those buyers get the expiry and the
+  // "start over" action instead.
+  //
+  // The one case this reads wrong is paying on web, navigating away in-app,
+  // and coming back before the webhook lands: the $5 button reappears for
+  // someone who has already paid. That costs a confusing button, not money —
+  // create-checkout-session answers the repeat with the SAME session.
   useEffect(() => {
-    if (householdId == null || pendingCheckouts?.[householdId] === undefined) return;
-    if (hasCrown !== true && !cancelledReturn) return;
-    setPendingCheckouts((prev) => withoutHousehold(prev, householdId));
-    void clearPendingCheckout(householdId);
-  }, [pendingCheckouts, householdId, hasCrown, cancelledReturn]);
+    if (pendingSlot == null || pendingCheckouts?.[pendingSlot] === undefined) return;
+    const returnedUnpaid =
+      !startedHereRef.current.has(pendingSlot) &&
+      checkoutReturn !== 'success' &&
+      hasCrown === false;
+    if (hasCrown !== true && !cancelledReturn && !returnedUnpaid) return;
+    setPendingCheckouts((prev) => withoutSlot(prev, pendingSlot));
+    void clearPendingCheckout(pendingSlot);
+  }, [pendingCheckouts, pendingSlot, hasCrown, cancelledReturn, checkoutReturn]);
 
   // Auto-poll has_crown after a successful return from Stripe so the common
   // case — webhook lands a second or two after the buyer does — resolves
@@ -429,11 +496,21 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) setStarting(false);
+      if (!event.persisted) return;
+      setStarting(false);
+      // The same restore is also the browser BACK button out of Stripe's page,
+      // and it is proof of a return without a payment: a completed payment
+      // comes back as a fresh navigation to the success URL, never as a
+      // restore of the document that left. This is the case the old
+      // param-only logic could not see at all — it left the record standing
+      // and the $5 button hidden for the whole TTL.
+      if (pendingSlot == null) return;
+      setPendingCheckouts((prev) => withoutSlot(prev, pendingSlot));
+      void clearPendingCheckout(pendingSlot);
     };
     window.addEventListener('pageshow', handlePageShow);
     return () => window.removeEventListener('pageshow', handlePageShow);
-  }, []);
+  }, [pendingSlot]);
 
   const handleRefresh = async () => {
     setChecking(true);
@@ -461,10 +538,29 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
     }
   };
 
+  // The way out of the in-flight guard, always on offer while it is up. A
+  // buyer who tapped through to see the price, or whose card was declined, must
+  // never have to wait out a timer to try again — and letting them straight
+  // back to the $5 button costs nothing, because create-checkout-session
+  // answers a repeat with the household's existing session under the same
+  // idempotency key rather than a second charge.
+  const handleAbandonCheckout = () => {
+    // Suppresses `?checkout=success` as well as the stored record: that param
+    // is a claim about where the browser has been, and the person in front of
+    // us has just said they did not pay.
+    setAbandonedByUser(true);
+    if (pendingSlot == null) return;
+    setPendingCheckouts((prev) => withoutSlot(prev, pendingSlot));
+    // Kept in step with storage: this instance no longer has that slot in
+    // flight, which is the only thing the reconcile effect asks the ref.
+    startedHereRef.current.delete(pendingSlot);
+    void clearPendingCheckout(pendingSlot);
+  };
+
   const handleCheckout = async () => {
     if (!householdId) return;
     setStarting(true);
-    let recorded = false;
+    let recordedSlot: string | null = null;
     try {
       const url = await dataService.createCrownCheckoutSession(householdId, guideId);
       // Persist BEFORE handing the user over, on both platforms: the web
@@ -472,14 +568,22 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
       // the instant openURL resolves. Written only once a session actually
       // exists, so a create failure leaves nothing behind.
       const startedAt = Date.now();
-      // Spend any `?checkout=cancelled` return FIRST: it described the session
-      // before this one, and leaving it live would have the effect above
-      // delete the record we are about to write — and keep awaitingWebhook
-      // false — for as long as this screen entry lasts.
+      // Spend any `?checkout=cancelled` return and any earlier "start over"
+      // FIRST: both describe the session before this one. A live cancel would
+      // have the reconcile effect delete the record we are about to write, and
+      // a live "start over" would keep the guard off for the rest of this
+      // screen entry.
       setCancelConsumed(true);
-      setPendingCheckouts((prev) => ({ ...(prev ?? {}), [householdId]: startedAt }));
-      await writePendingCheckout(householdId, startedAt);
-      recorded = true;
+      setAbandonedByUser(false);
+      // No slot without a signed-in buyer (the screen is behind auth, so this
+      // is the type talking). The record is a courtesy either way; the server
+      // is what stops a second charge.
+      if (pendingSlot != null) {
+        startedHereRef.current.add(pendingSlot);
+        setPendingCheckouts((prev) => ({ ...(prev ?? {}), [pendingSlot]: startedAt }));
+        await writePendingCheckout(pendingSlot, startedAt);
+        recordedSlot = pendingSlot;
+      }
       if (Platform.OS === 'web') {
         // Full-page redirect to Stripe's hosted page. Deliberately no
         // setStarting(false): this document is on its way out, and flipping
@@ -495,12 +599,14 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
       setStarting(false);
     } catch (error: any) {
       setStarting(false);
-      if (recorded) {
+      if (recordedSlot != null) {
         // The browser never opened, so no payment page was ever shown and
         // nothing is in flight. Drop the record rather than hide the button
-        // for fifteen minutes over a failure the user just saw an alert for.
-        setPendingCheckouts((prev) => withoutHousehold(prev, householdId));
-        void clearPendingCheckout(householdId);
+        // over a failure the user just saw an alert for.
+        const slot = recordedSlot;
+        setPendingCheckouts((prev) => withoutSlot(prev, slot));
+        startedHereRef.current.delete(slot);
+        void clearPendingCheckout(slot);
       }
       showAlert(
         "Couldn't open checkout",
@@ -679,11 +785,13 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                   </Text>
                 </View>
 
-                {/* The purchase path is REMOVED, not merely disabled, while a
-                    checkout is in flight without a confirmed entitlement — see
-                    awaitingWebhook. A greyed-out button that comes back to life
-                    the moment `checking` ends is exactly the second $5 charge
-                    we are avoiding. */}
+                {/* While a checkout may still be settling, Refresh takes the
+                    $5 button's place rather than sitting next to it — see
+                    awaitingWebhook. The buyer is never STUCK there, though:
+                    "start over" below restores the purchase path on the spot,
+                    because our own record cannot tell "paid" from "walked
+                    away" and the server is what actually prevents a second
+                    charge. */}
                 <View className="mt-4">
                   {awaitingWebhook ? (
                     <>
@@ -697,19 +805,17 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                           same rule the banners above follow. */}
                       <Text className="text-tan-500 text-xs text-center mt-3">
                         You&apos;ve already been through Stripe&apos;s payment
-                        page, so the $5 button is put away until we&apos;ve
-                        confirmed this household. Nothing here can start a
-                        second payment.
+                        page, so the $5 button is put away for a moment while we
+                        confirm this household.
                       </Text>
-                      {/* Without a success return we are going on our own
-                          record of sending them to Stripe, which cannot tell
-                          "paid" from "walked away". Name the way out, so an
-                          abandoned checkout is a wait and not a dead end. */}
-                      {checkoutReturn !== 'success' && (
-                        <Text className="text-tan-500 text-xs text-center mt-2">
-                          {`If you left without paying, the $5 button comes back ${PENDING_CHECKOUT_TTL_MINUTES} minutes after you started — tap Refresh then.`}
-                        </Text>
-                      )}
+                      <View className="mt-3">
+                        <Button
+                          title="I didn't finish paying — start over"
+                          variant="outline"
+                          onPress={handleAbandonCheckout}
+                          disabled={starting}
+                        />
+                      </View>
                     </>
                   ) : (
                     <>

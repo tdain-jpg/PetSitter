@@ -671,6 +671,102 @@ affiliate integration (blocked on the research run plus an approval timeline out
 control). **Reminder for whichever affiliate lands: Amazon prohibits affiliate links in
 email**, which directly constrains the `notify` pipeline.
 
+## Loop 7 — planned
+
+### [ ] Crown status line in Settings (agreed 2026-08-16)
+Tim asked where users see their spend history. Deliberately NOT a history screen: Crown is one
+$5 purchase, once, permanent — a ledger view would render a single row forever, and sitters
+have nothing to spend on yet because that product does not exist. What answers the real
+question ("did I already pay for this?") is one line on the Crown card Settings already shows:
+
+> 👑 **Crown active** — purchased Aug 16, 2026
+
+Implementation is fixed by 0012's own header, which anticipated this: a **membership-gated
+SECURITY DEFINER RPC**, NOT an RLS read policy on `crown_purchases`. A read policy would expose
+purchase dates, amounts and Stripe ids over REST when the app only ever needs a boolean plus a
+date. Shape it like `my_primary_household()` — no arguments, reads `auth.uid()`, revoked from
+anon. Return status + date only; do NOT return who paid: `crown_purchases.user_id` is derived
+as the household OWNER, not the actual buyer, so surfacing it would assert something untrue.
+Must also tell the truth after a refund (0013's `revoke_crown` sets `crown_until` null and
+writes a reversal row) — "Crown was refunded on X", never a stale "active".
+
+**Free wins to take instead of building more:**
+- **Stripe emails receipts automatically** — a toggle in Stripe Settings for successful
+  payments. A real receipt from the processor beats anything we would render. Turn it on.
+- **When the sitter subscription ships, use Stripe's Customer Portal**, not a bespoke billing
+  screen. Subscriptions need cancel / update-card / invoice-download self-service, Stripe hosts
+  all of it, and building it by hand is weeks of work thrown away. Noted now so the billing UI
+  is not built twice.
+
+### [ ] SITTER ACCOUNTS — the second persona (decided 2026-08-16) 🔴 LAUNCH IS GATED ON THIS
+Tim moved this into Loop 7 and made going live conditional on it: *"Once we have the full user
+and petsitter experience in the app we'll go live."*
+
+⚠️ Stated once and accepted: §2 argues this belongs AFTER launch, because building a two-sided
+network before validating side one is how six months disappear. Tim's counter is that a
+pet-care app whose sitter experience is a read-only link is half a product, and you get one
+first impression. Both are reasonable; the mitigation is to build it LEAN — see the four
+decisions below, all of which were chosen to keep this in weeks rather than months.
+
+Architecture is unchanged from §2 and needs no re-litigating: three access levels with the
+anonymous share link surviving untouched, a `sitter_connections` table joining a sitter to a
+HOUSEHOLD (not to pets — that is what makes "all my clients" one query), invites working in
+both directions. Loops 2 and 5 built the household seam this depends on.
+
+**D1 — What a connected sitter can DO:** see every client in one place, tick off checklist
+tasks, and **post a check-in photo + note back to the owner**. The photo is the load-bearing
+part: it is what makes a sitter account valuable to the OWNER, and therefore why an owner
+pushes their sitter to sign up. Ticking boxes alone gives the owner nothing a share link did
+not. Deliberately NOT in v1: two-way messaging (notifications, read state, moderation, support
+burden — add only if asked for), and sitter edit rights on pets/guides (collapses the
+sitter/member distinction, and an owner returning to a rewritten guide is a trust problem).
+
+**D2 — Sitters are FREE in Loop 7, and told plainly that they will not always be.** A sitter
+with twenty clients who invites them is twenty qualified signups from someone with a direct
+financial interest in those clients being organised — worth more right now than subscription
+revenue. Keeps Loop 7 to ONE payment integration.
+
+  * **Price when it lands: $9/month or $90/year** (two months free), **free forever up to 3
+    clients**. Benchmarked deliberately: Time To Pet / Precise Petcare / Scout run $30-50/mo
+    but are full business software (scheduling, invoicing, client billing, staff). Pawstructions
+    is the care-instructions layer their clients already use — a lighter product, and pricing
+    near them would be a promise we would have to keep. At $9 a professional charging $25-75
+    per visit covers it with a third of one visit.
+  * **Founding rate $6/month locked for as long as they stay**, for sitters who join during the
+    free period. Turns "we will charge you eventually" from a warning into a reason to join now.
+  * The 3-client free tier keeps the neighbour and the hobbyist in the app permanently. They
+    will never pay and they are still part of the loop.
+
+**D2b — Disclosure, sitters ONLY.** Owners must never see sitter pricing: someone paying $5
+once should not be reading about a $9/month plan, it makes the product look more expensive
+than it is. Placements: (1) one unmissable card during SITTER onboarding, before they invest
+effort; (2) a "Sitter plans" screen in the sitter navigation, always reachable, never nagging.
+NOT on the landing page, NOT in the owner app, NOT in /terms yet. Include a **feedback link** —
+it is not decoration: launch is gated on this persona and there is currently no sitter telling
+us what they need. Draft copy is in the 2026-08-16 conversation; keep its tone (plain, warm,
+non-coy) rather than rewriting it as marketing.
+
+**D3 — Sensitive data: same as the share link.** Masked, tap to reveal. Consistent with what
+anonymous sitters already get, no second security model to reason about, and the existing
+SecurityNote copy already explains it. Masking is deliberate — it stops codes being
+shoulder-surfed or screenshotted casually while staying one tap from the door.
+
+**D4 — Access is permanent by default, with an OPTIONAL date window.** Matches reality: most
+owners have one regular sitter they do not want to re-invite every trip, but a one-off sitter
+should not hold a door code forever. Owner can revoke at any time. Always-expire was rejected
+on a specific failure mode — a sitter locked out mid-trip is a real emergency with an animal
+waiting.
+
+### Going live — the 3-step swap (deferred until the sitter experience ships)
+Everything in Supabase currently points at the SANDBOX and that is correct. When flipping:
+1. Create the $5 one-off product in the LIVE account → new price/product ids.
+2. Create the LIVE webhook endpoint at the same function URL → new signing secret.
+3. Replace `STRIPE_SECRET_KEY` (sk_live…), `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`,
+   `STRIPE_PRODUCT_ID`. Nothing charges anyone until all three are done.
+Live account is already activated, branded (icon + white wordmark, brand `#3C6779`, accent
+`#1E3A5F` — the exact colours of the Brevo email button and headings), descriptor
+`PAWSTRUCTIONS`, legal entity Timathy Dain sole proprietorship trading as Pawstructions.
+
 ## 5. Deferred / minor
 
 - **Share-link Copy button (Loop 3 QA):** "Failed to copy link" alert in the QA browser pane —
