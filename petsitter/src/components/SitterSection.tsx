@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
+import { friendlyError } from '../lib/errors';
 // Imported from the individual modules rather than the barrel: this file lives
 // in components/, and going through ./index would close an import cycle.
 import { Button } from './Button';
@@ -14,31 +15,6 @@ import type { SitterInviteRow } from '../types';
 interface SitterSectionProps {
   householdId: string;
   isOwner: boolean;
-}
-
-/**
- * The RPCs raise bare lowercase strings ('invalid email'). Map the known ones,
- * sentence-case anything unexpected. Mirrors friendlyRpcError in
- * HouseholdScreen — the two invite paths now raise the SAME text for the same
- * conditions (0019), so one vocabulary covers both.
- */
-function friendlySitterError(raw: unknown, fallback: string): string {
-  const message = typeof raw === 'string' ? raw.trim() : '';
-  if (!message) return fallback;
-  switch (message.toLowerCase()) {
-    case 'invalid email':
-      return "That doesn't look like an email address.";
-    case 'that person is already in this household':
-      return 'That person is already in your household, so they can already see everything a sitter could.';
-    case 'that email already has a live connection to this household':
-      return 'That person is already connected as a sitter here.';
-    case 'not authorized':
-      return 'Only the household owner can invite sitters.';
-    default: {
-      const sentence = message.charAt(0).toUpperCase() + message.slice(1);
-      return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
-    }
-  }
 }
 
 export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
@@ -92,7 +68,7 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
         `${trimmedEmail} will see the invitation on their home screen when they sign in. We don't email sitter invites yet, so let them know it's waiting.`
       );
     } catch (err: any) {
-      showAlert('Could not invite', friendlySitterError((err as Error)?.message, 'Something went wrong. Please try again.'));
+      showAlert('Could not invite', friendlyError((err as Error)?.message, 'Something went wrong. Please try again.'));
     } finally {
       setSending(false);
     }
@@ -114,7 +90,7 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
       const data = await getSitterConnections(householdId);
       setSitters(data.filter(s => s.status === 'invited' || s.status === 'active'));
     } catch (err: any) {
-      showAlert('Could not remove', err.message || 'An unknown error occurred.');
+      showAlert('Could not remove', friendlyError(err, 'An unknown error occurred.'));
     }
   };
 

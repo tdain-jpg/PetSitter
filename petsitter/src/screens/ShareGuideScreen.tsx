@@ -14,6 +14,7 @@ import { showAlert, showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, ShareableLink } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
@@ -115,7 +116,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
       // (possibly a housemate's) never keeps showing as active.
       setLinks((prev) => [...prev.map((l) => ({ ...l, is_active: false })), newLink]);
     } catch (error: any) {
-      const message = error.message || 'Failed to create link';
+      const message = friendlyError(error, 'Failed to create link');
       showAlert('Error', message);
     } finally {
       setCreating(false);
@@ -138,7 +139,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
         prev.map((l) => (l.id === linkId ? { ...l, is_active: false } : l))
       );
     } catch (error: any) {
-      const message = error.message || 'Failed to deactivate link';
+      const message = friendlyError(error, 'Failed to deactivate link');
       showAlert('Error', message);
     }
   };

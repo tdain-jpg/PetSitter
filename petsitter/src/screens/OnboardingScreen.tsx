@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PetSpecies, OnboardingStep } from '../types';
 import { generateId, getCurrentTimestamp } from '../services/DataService';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
@@ -163,7 +164,7 @@ export function OnboardingScreen({ navigation }: Props) {
         await goToStep('create_guide', { first_pet_id: pet.id });
       }
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to create pet');
+      showAlert('Error', friendlyError(error, 'Failed to create pet'));
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +204,7 @@ export function OnboardingScreen({ navigation }: Props) {
       setCreatedGuideId(guide.id);
       await goToStep('completion', { first_guide_id: guide.id });
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to create guide');
+      showAlert('Error', friendlyError(error, 'Failed to create guide'));
     } finally {
       setIsSubmitting(false);
     }
@@ -215,7 +216,7 @@ export function OnboardingScreen({ navigation }: Props) {
       await completeOnboarding();
       navigation.replace('Home');
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to complete onboarding');
+      showAlert('Error', friendlyError(error, 'Failed to complete onboarding'));
     } finally {
       setIsSubmitting(false);
     }
@@ -230,7 +231,7 @@ export function OnboardingScreen({ navigation }: Props) {
       await completeOnboarding();
       navigation.replace('GuideDetail', { guideId: createdGuideId });
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to complete onboarding');
+      showAlert('Error', friendlyError(error, 'Failed to complete onboarding'));
     } finally {
       setIsSubmitting(false);
     }
@@ -248,7 +249,7 @@ export function OnboardingScreen({ navigation }: Props) {
       await completeOnboarding();
       navigation.replace('Home');
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to complete onboarding');
+      showAlert('Error', friendlyError(error, 'Failed to complete onboarding'));
     }
   };
 

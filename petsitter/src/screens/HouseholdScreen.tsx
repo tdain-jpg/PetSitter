@@ -10,29 +10,7 @@ import { CheckinFeed } from '../components/CheckinFeed';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
 import type { Household, HouseholdInviteRow, HouseholdMember, PendingInvite } from '../types';
-
-// The household RPCs raise bare lowercase strings (e.g. 'invalid email').
-// Map the known ones to friendly copy; anything unexpected passes through
-// sentence-cased with a trailing period. Empty/missing falls back.
-function friendlyRpcError(raw: unknown, fallback: string): string {
-  const message = typeof raw === 'string' ? raw.trim() : '';
-  if (!message) return fallback;
-  switch (message.toLowerCase()) {
-    case 'invalid email':
-      return "That doesn't look like an email address.";
-    case 'that email already belongs to a household member':
-      return 'That person is already in your household.';
-    case 'not a member of this household':
-      return 'You are no longer a member of this household.';
-    case 'invite is not pending':
-    case 'invite not found':
-      return 'This invitation is no longer available.';
-    default: {
-      const sentence = message.charAt(0).toUpperCase() + message.slice(1);
-      return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
-    }
-  }
-}
+import { friendlyError } from '../lib/errors';
 
 /**
  * HouseholdScreen — manage the household(s) the signed-in user belongs to.
@@ -128,7 +106,7 @@ export function HouseholdScreen() {
         setInvitesByHousehold(nextInvites);
       } catch (error: any) {
         if (!cancelled) {
-          showAlert('Error', error?.message || 'Could not load household details.');
+          showAlert('Error', friendlyError(error, 'Could not load household details.'));
         }
       } finally {
         if (!cancelled) setLoadingDetails(false);
@@ -171,7 +149,7 @@ export function HouseholdScreen() {
     } catch (error: any) {
       showAlert(
         'Could not rename',
-        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+        friendlyError(error?.message, 'Something went wrong. Please try again.')
       );
     } finally {
       setSavingName(false);
@@ -195,7 +173,7 @@ export function HouseholdScreen() {
       await refreshHouseholds();
       showAlert(
         "Couldn't confirm the change",
-        `${friendlyRpcError(error?.message, 'Something went wrong.')} ` +
+        `${friendlyError(error?.message, 'Something went wrong.')} ` +
           'The Default badge now shows where things actually stand — check it before trying again.'
       );
     } finally {
@@ -224,7 +202,7 @@ export function HouseholdScreen() {
     } catch (error: any) {
       showAlert(
         'Could not invite',
-        friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+        friendlyError(error?.message, 'Something went wrong. Please try again.')
       );
     } finally {
       setInvitingHouseholdId(null);
@@ -258,12 +236,12 @@ export function HouseholdScreen() {
         destinationId,
         households,
         setPrimaryHousehold,
-        formatError: friendlyRpcError,
+        formatError: friendlyError,
       });
     } catch (error: any) {
       showAlert(
         'Error',
-        friendlyRpcError(error?.message, 'Could not respond to the invitation.')
+        friendlyError(error?.message, 'Could not respond to the invitation.')
       );
     } finally {
       setRespondingInvite(null);
@@ -301,7 +279,7 @@ export function HouseholdScreen() {
       } else {
         showAlert(
           'Could not resend',
-          friendlyRpcError(error?.message, 'Something went wrong. Please try again.')
+          friendlyError(error?.message, 'Something went wrong. Please try again.')
         );
       }
     } finally {
@@ -335,7 +313,7 @@ export function HouseholdScreen() {
       await revokeInvite(invite.id);
       await reloadInvites(invite.household_id);
     } catch (error: any) {
-      showAlert('Error', friendlyRpcError(error?.message, 'Could not revoke the invite.'));
+      showAlert('Error', friendlyError(error?.message, 'Could not revoke the invite.'));
     }
   };
 
@@ -352,7 +330,7 @@ export function HouseholdScreen() {
       await removeHouseholdMember(household.id, member.user_id);
       await reloadMembers(household.id);
     } catch (error: any) {
-      showAlert('Error', friendlyRpcError(error?.message, 'Could not remove this member.'));
+      showAlert('Error', friendlyError(error?.message, 'Could not remove this member.'));
     }
   };
 
@@ -369,7 +347,7 @@ export function HouseholdScreen() {
       // The context refreshes households, pets, and guides after leaving.
       await leaveHousehold(household.id);
     } catch (error: any) {
-      showAlert('Error', friendlyRpcError(error?.message, 'Could not leave this household.'));
+      showAlert('Error', friendlyError(error?.message, 'Could not leave this household.'));
     }
   };
 

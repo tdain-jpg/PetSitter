@@ -23,6 +23,7 @@ import { formatDate, todayLocal } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
@@ -645,7 +646,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         }
       }
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to export PDF');
+      showAlert('Error', friendlyError(error, 'Failed to export PDF'));
     } finally {
       setExporting(false);
     }

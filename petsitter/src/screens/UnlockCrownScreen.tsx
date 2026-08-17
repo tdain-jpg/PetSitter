@@ -10,6 +10,7 @@ import { dataService } from '../services/SupabaseAdapter';
 import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { UnlockCrownScreenProps } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 /**
  * UnlockCrownScreen — the one-time Crown purchase.
@@ -562,7 +563,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
     } catch (error: any) {
       showAlert(
         "Couldn't check",
-        error?.message || 'Something went wrong checking your household. Please try again.'
+        friendlyError(error, 'Something went wrong checking your household. Please try again.')
       );
       setCheckFailed(true);
     } finally {
@@ -642,7 +643,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
       }
       showAlert(
         "Couldn't open checkout",
-        error?.message || 'Something went wrong. Please try again.'
+        friendlyError(error, 'Something went wrong. Please try again.')
       );
       // One reason the function refuses is 'already_crowned' — the webhook can
       // land while this screen is open. Re-read entitlement rather than parse

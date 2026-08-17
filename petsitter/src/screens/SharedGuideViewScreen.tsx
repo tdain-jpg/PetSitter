@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, SensitiveValue, ScreenContainer, Icon, speciesIconName } from '../components';
+import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
 const wordmark = require('../../assets/wordmark.png');
@@ -54,7 +55,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
       setGuide(bundle.guide);
       setGuidePets(bundle.pets);
     } catch (err: any) {
-      setError(err.message || 'Failed to load shared guide.');
+      setError(friendlyError(err, 'Failed to load shared guide.'));
     } finally {
       setLoading(false);
     }

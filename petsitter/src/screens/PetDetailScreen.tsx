@@ -10,6 +10,7 @@ import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Household, Pet } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PetDetail'>;
 
@@ -112,7 +113,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
       await deletePet(petId);
       navigation.goBack();
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to delete pet');
+      showAlert('Error', friendlyError(error, 'Failed to delete pet'));
     }
   };
 
@@ -130,7 +131,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
     try {
       await markPetDeceased(petId, today);
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to move pet to memorial');
+      showAlert('Error', friendlyError(error, 'Failed to move pet to memorial'));
     }
   };
 
@@ -138,7 +139,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
     try {
       await restorePet(petId);
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to restore pet');
+      showAlert('Error', friendlyError(error, 'Failed to restore pet'));
     }
   };
 
@@ -235,7 +236,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
       }
       showAlert('Moved', `${pet.name} is now shared with ${target.name}.`);
     } catch (error: any) {
-      const message = error?.message || 'Something went wrong. Please try again.';
+      const message = friendlyError(error, 'Something went wrong. Please try again.');
       if (!petMoved || !from) {
         showAlert('Could not move', message);
         return;
@@ -293,7 +294,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
         `${pet.name}'s ${strayGuides.length === 1 ? 'guide is' : 'guides are'} back with them.`
       );
     } catch (error: any) {
-      showAlert('Could not finish', error?.message || 'Something went wrong. Please try again.');
+      showAlert('Could not finish', friendlyError(error, 'Something went wrong. Please try again.'));
     } finally {
       setMovingHousehold(false);
     }

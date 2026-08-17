@@ -30,6 +30,7 @@ import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PetSpecies, PetSex, EnergyLevel, SociabilityLevel, PetPersonality, FeedingSchedule, Medication, VetInfo, Insurance, HealthProtocol } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PetForm'>;
 
@@ -484,7 +485,7 @@ export function PetFormScreen({ navigation, route }: Props) {
       clearDirty();
       navigation.goBack();
     } catch (error: any) {
-      const message = error.message || 'Failed to save pet';
+      const message = friendlyError(error, 'Failed to save pet');
       showAlert('Error', message);
     } finally {
       setIsSubmitting(false);

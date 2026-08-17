@@ -11,6 +11,7 @@ import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PendingSitterInvite, SitterConnection } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
 
@@ -54,7 +55,7 @@ export function SitterHomeScreen({ navigation }: Props) {
         showAlert('Could not accept', 'Please try again later.');
       }
     } catch (error: any) {
-      showAlert('Could not respond', error.message || 'An unknown error occurred');
+      showAlert('Could not respond', friendlyError(error, 'An unknown error occurred'));
     } finally {
       setLoadingResponse(null);
     }
@@ -78,7 +79,7 @@ export function SitterHomeScreen({ navigation }: Props) {
         showAlert('Could not decline', 'Please try again later.');
       }
     } catch (error: any) {
-      showAlert('Could not respond', error.message || 'An unknown error occurred');
+      showAlert('Could not respond', friendlyError(error, 'An unknown error occurred'));
     } finally {
       setLoadingResponse(null);
     }

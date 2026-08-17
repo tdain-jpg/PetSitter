@@ -14,6 +14,7 @@ import { formatDate } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
@@ -76,7 +77,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
       const newGuide = await duplicateGuide(guideId);
       (navigation as any).navigate('GuideDetail', { guideId: newGuide.id });
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to duplicate guide');
+      showAlert('Error', friendlyError(error, 'Failed to duplicate guide'));
     }
   };
 

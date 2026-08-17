@@ -17,6 +17,7 @@ import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
 
@@ -292,7 +293,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     } catch (err: any) {
       // State is only mutated after a successful write, so the checkbox
       // stays in its pre-tap state — just tell the user why.
-      showAlert('Error', err?.message || 'Failed to update the task. Please try again.');
+      showAlert('Error', friendlyError(err, 'Failed to update the task. Please try again.'));
     } finally {
       pendingTaskIds.current.delete(task.id);
     }

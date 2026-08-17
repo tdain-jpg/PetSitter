@@ -20,6 +20,7 @@ import { isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { EmergencyContact, HomeInfo, TravelItinerary, ContactType } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
 
@@ -345,7 +346,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       clearDirty();
       navigation.goBack();
     } catch (error: any) {
-      const message = error.message || 'Failed to save guide';
+      const message = friendlyError(error, 'Failed to save guide');
       showAlert('Error', message);
     } finally {
       setIsSubmitting(false);

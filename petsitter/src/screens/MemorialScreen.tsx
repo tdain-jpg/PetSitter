@@ -7,6 +7,7 @@ import { Button, Card, Icon, ScreenContainer, speciesIconName } from '../compone
 import { useData } from '../contexts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Memorial'>;
 
@@ -24,7 +25,7 @@ export function MemorialScreen({ navigation }: Props) {
     try {
       await restorePet(petId);
     } catch (error: any) {
-      showAlert('Error', error.message || `Failed to restore ${petName}`);
+      showAlert('Error', friendlyError(error, `Failed to restore ${petName}`));
     }
   };
 
@@ -40,7 +41,7 @@ export function MemorialScreen({ navigation }: Props) {
     try {
       await deletePet(petId);
     } catch (error: any) {
-      showAlert('Error', error.message || `Failed to delete ${petName}`);
+      showAlert('Error', friendlyError(error, `Failed to delete ${petName}`));
     }
   };
 

@@ -27,6 +27,7 @@ import type {
   SupplyCategory,
   HomeTaskCategory,
 } from '../types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'HomeCare'>;
 
@@ -117,7 +118,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
       await updateGuide(guideId, { home_care: updated });
       setHomeCare(updated);
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to save');
+      showAlert('Error', friendlyError(error, 'Failed to save'));
     } finally {
       setSaving(false);
     }

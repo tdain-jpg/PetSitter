@@ -5,6 +5,7 @@ import { Button, Input, ScreenContainer } from '../components';
 import { useAuth } from '../contexts/AuthContext';
 import { showAlert } from '../lib/dialogs';
 import { COLORS } from '../constants';
+import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -52,7 +53,7 @@ export function ResetPasswordScreen() {
       clearPasswordRecovery();
       await showAlert('Password updated', 'Your new password is saved and you are signed in.');
     } catch (error: any) {
-      showAlert('Password update failed', error.message || 'Could not update your password. Please try again.');
+      showAlert('Password update failed', friendlyError(error, 'Could not update your password. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

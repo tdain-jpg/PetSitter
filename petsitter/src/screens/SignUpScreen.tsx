@@ -8,6 +8,7 @@ import { isValidEmail } from '../utils';
 import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { SignUpScreenProps } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -74,7 +75,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
         setConfirmationSentTo(submittedEmail);
       }
     } catch (error: any) {
-      showAlert('Sign Up Failed', error.message || 'An error occurred during sign up');
+      showAlert('Sign Up Failed', friendlyError(error, 'An error occurred during sign up'));
     } finally {
       setIsSubmitting(false);
     }
@@ -86,7 +87,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
       await signInWithGoogle();
       // Web: redirects away. Native: AuthContext throws (surfaced below).
     } catch (error: any) {
-      showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+      showAlert('Google Sign-In Failed', friendlyError(error, 'Could not sign in with Google'));
     } finally {
       // Always re-enable the form — without this, a resolved-but-not-redirected
       // sign-in would leave every button on the screen disabled.

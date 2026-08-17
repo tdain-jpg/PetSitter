@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { showAlert } from '../lib/showAlert';
 import { uploadPetPhoto } from '../lib/petPhotos';
 import { COLORS } from '../constants';
+import { friendlyError } from '../lib/errors';
 
 interface PhotoPickerProps {
   label?: string;
@@ -68,7 +69,7 @@ export function PhotoPicker({
       // Keep the previous value: onChange is not called on failure.
       showAlert(
         'Upload failed',
-        error?.message || 'Could not upload the photo. Please try again.'
+        friendlyError(error, 'Could not upload the photo. Please try again.')
       );
     } finally {
       setPendingUri(undefined);

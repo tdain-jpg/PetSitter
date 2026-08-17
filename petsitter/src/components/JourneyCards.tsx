@@ -10,6 +10,7 @@ import { getActiveJourney, isCardComplete } from '../lib/journeys';
 import type { JourneyCard, JourneyData, JourneyDef, JourneySurface } from '../lib/journeys';
 import type { JourneyEntry } from '../types';
 import type { MainStackParamList } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
 
@@ -194,7 +195,7 @@ export function JourneyCards({ surface = 'owner' }: JourneyCardsProps) {
         await setJourneyState(def.key, 'skipped');
       }
     } catch (err: any) {
-      showAlert('Error', err?.message || 'Could not dismiss this right now.');
+      showAlert('Error', friendlyError(err, 'Could not dismiss this right now.'));
     } finally {
       setDismissing(false);
     }
@@ -204,7 +205,7 @@ export function JourneyCards({ surface = 'owner' }: JourneyCardsProps) {
     try {
       await setJourneyState(def.key, 'done');
     } catch (err: any) {
-      showAlert('Error', err?.message || 'Could not save your progress.');
+      showAlert('Error', friendlyError(err, 'Could not save your progress.'));
     }
   };
 

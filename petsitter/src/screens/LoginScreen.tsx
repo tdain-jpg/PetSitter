@@ -7,6 +7,7 @@ import { isValidEmail } from '../utils';
 import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { LoginScreenProps } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -48,7 +49,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     try {
       await signIn(email.trim(), password);
     } catch (error: any) {
-      showAlert('Login Failed', error.message || 'An error occurred during login');
+      showAlert('Login Failed', friendlyError(error, 'An error occurred during login'));
     } finally {
       setIsSubmitting(false);
     }
@@ -60,7 +61,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       await signInWithGoogle();
       // Web: redirects away. Native: AuthContext throws (surfaced below).
     } catch (error: any) {
-      showAlert('Google Sign-In Failed', error.message || 'Could not sign in with Google');
+      showAlert('Google Sign-In Failed', friendlyError(error, 'Could not sign in with Google'));
     } finally {
       // Always re-enable the form — without this, a resolved-but-not-redirected
       // sign-in would leave every button on the screen disabled.
@@ -78,7 +79,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       await signInWithMagicLink(email.trim());
       setMagicLinkSent(true);
     } catch (error: any) {
-      showAlert('Magic Link Failed', error.message || 'Could not send magic link');
+      showAlert('Magic Link Failed', friendlyError(error, 'Could not send magic link'));
     } finally {
       setIsSubmitting(false);
     }

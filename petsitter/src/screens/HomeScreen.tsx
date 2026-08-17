@@ -15,6 +15,7 @@ import {
   SitterInviteGate,
 } from '../components';
 import { COLORS } from '../constants';
+import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -30,7 +31,7 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Home'>;
 // The invite RPCs raise bare lowercase strings. Map the revoked/answered
 // cases to friendly copy; anything unexpected passes through sentence-cased
 // with a trailing period instead of verbatim (mirrors HouseholdScreen's
-// friendlyRpcError). Empty/missing falls back.
+// friendlyError). Empty/missing falls back.
 function friendlyInviteError(raw: unknown, fallback: string): string {
   const message = typeof raw === 'string' ? raw.trim() : '';
   if (!message) return fallback;
@@ -464,7 +465,7 @@ export function HomeScreen({ navigation }: Props) {
       // have no pets of their own, and the households they came for are here.
       navigation.replace('SitterHome');
     } catch (error: any) {
-      showAlert('Error', error?.message || 'Could not accept the invitation.');
+      showAlert('Error', friendlyError(error, 'Could not accept the invitation.'));
     } finally {
       setSitterGateResponse(null);
     }
@@ -489,7 +490,7 @@ export function HomeScreen({ navigation }: Props) {
     } catch (error: any) {
       // Stay on the gate — the invitation may well still be pending, and
       // dropping the user into the founder wizard would abandon it.
-      showAlert('Error', error?.message || 'Could not decline the invitation.');
+      showAlert('Error', friendlyError(error, 'Could not decline the invitation.'));
     } finally {
       setSitterGateResponse(null);
     }
@@ -499,7 +500,7 @@ export function HomeScreen({ navigation }: Props) {
     try {
       await signOut();
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to sign out');
+      showAlert('Error', friendlyError(error, 'Failed to sign out'));
     }
   };
 

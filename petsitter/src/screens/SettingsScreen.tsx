@@ -19,6 +19,7 @@ import { showConfirm } from '../lib/dialogs';
 import { hasPendingCrownCheckout } from './UnlockCrownScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 
@@ -113,7 +114,7 @@ export function SettingsScreen({ navigation }: Props) {
     try {
       await signOut();
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to sign out');
+      showAlert('Error', friendlyError(error, 'Failed to sign out'));
     }
   };
 
@@ -134,7 +135,7 @@ export function SettingsScreen({ navigation }: Props) {
         showAlert('Export', 'Data exported. In a production app, this would save to device.');
       }
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to export data');
+      showAlert('Error', friendlyError(error, 'Failed to export data'));
     }
   };
 
@@ -172,7 +173,7 @@ export function SettingsScreen({ navigation }: Props) {
           await importData(data);
           showAlert('Success', 'Backup imported successfully!');
         } catch (error: any) {
-          showAlert('Import Failed', error?.message || 'Could not import the backup file.');
+          showAlert('Import Failed', friendlyError(error, 'Could not import the backup file.'));
         } finally {
           setIsImporting(false);
         }
@@ -200,7 +201,7 @@ export function SettingsScreen({ navigation }: Props) {
       await clearAllData();
       showAlert('Success', 'All data has been cleared.');
     } catch (error: any) {
-      showAlert('Error', error.message || 'Failed to clear data');
+      showAlert('Error', friendlyError(error, 'Failed to clear data'));
     }
   };
 

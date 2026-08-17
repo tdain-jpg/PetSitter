@@ -21,6 +21,7 @@ import { showConfirm } from '../lib/dialogs';
 import { formatDate, isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
+import { friendlyError } from '../lib/errors';
 
 
 type Props = NativeStackScreenProps<MainStackParamList, 'TripWizard'>;
@@ -249,7 +250,7 @@ export function TripWizardScreen({ navigation }: Props) {
         ],
       });
     } catch (error: any) {
-      const message = error.message || 'Failed to create guide';
+      const message = friendlyError(error, 'Failed to create guide');
       showAlert('Error', message);
     } finally {
       setIsSubmitting(false);
