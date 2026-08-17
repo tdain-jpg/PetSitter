@@ -719,6 +719,36 @@ affiliate integration (blocked on the research run plus an approval timeline out
 control). **Reminder for whichever affiliate lands: Amazon prohibits affiliate links in
 email**, which directly constrains the `notify` pipeline.
 
+## Launch gate — the only thing left that is not code
+
+**Stripe is still in TEST mode.** Everything about Crown works end to end; it just works
+against test money. The only real row in `crown_purchases` carries a `cs_test_...` session.
+This is invisible from the code — the functions read `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
+`STRIPE_PRODUCT_ID` and `STRIPE_WEBHOOK_SECRET` from Edge Function secrets and neither know
+nor care which mode they name — which is exactly why it is worth writing down. In test mode
+the app looks finished because it *is* finished.
+
+Four actions in Stripe, in this order:
+
+1. **Activate the account.** The reviewer has no login, which is why /about, /terms,
+   /privacy and /refunds are registered outside the authenticated stack.
+2. **Create the live product and the $5 price.** Live mode has its own object ids; the
+   sandbox `prod_`/`price_` do not carry over.
+3. **Create a LIVE webhook endpoint** subscribed to `checkout.session.completed`,
+   `checkout.session.async_payment_succeeded`, `charge.refunded` and
+   `charge.dispute.closed`.
+4. **Update the four secrets** (`supabase secrets set`).
+
+Step 3 before step 4 matters: the signing secret is per-endpoint, so the live endpoint has a
+different `whsec_` than the sandbox one. Swapping the API key without it leaves every live
+event failing signature verification, and Stripe retrying each for about three days.
+
+Also outstanding and not code: the migration-history repair (SETUP §2), and a Lighthouse
+installability run (§4a). `debug-env` is still deployed as an inert 410 stub and can be
+deleted whenever.
+
+---
+
 ## Loop 7 — planned
 
 ### [ ] Crown status line in Settings (agreed 2026-08-16)
