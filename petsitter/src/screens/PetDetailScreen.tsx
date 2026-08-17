@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert, showConfirm } from '../lib/dialogs';
@@ -61,6 +61,25 @@ export function PetDetailScreen({ navigation, route }: Props) {
     updateGuide,
     households,
   } = useData();
+
+  /**
+   * A CONNECTED SITTER reaches this screen from their client view. They are not
+   * a household member, so RLS refuses every write here — and that refusal is
+   * exactly what made this dangerous rather than merely untidy: deletePet's
+   * PostgREST call returns 204 with ZERO rows affected, which reads as success,
+   * so the screen navigated away and the sitter walked off believing they had
+   * deleted their client's animal. Nothing was lost; their confidence in the
+   * app should have been.
+   *
+   * `households` holds only households the user BELONGS to. Defaults to
+   * editable while pets are still loading so an owner never sees their own
+   * controls flicker away.
+   */
+  const canEdit = useMemo(() => {
+    const found = [...activePets, ...deceasedPets].find((p) => p.id === petId);
+    if (!found?.household_id) return true; // pre-household pet, or not loaded yet
+    return households.some((h) => h.id === found.household_id);
+  }, [activePets, deceasedPets, petId, households]);
 
   const [pet, setPet] = useState<Pet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +150,8 @@ export function PetDetailScreen({ navigation, route }: Props) {
   // guide writes: the guide now points across the household boundary, its
   // sitters stop seeing this pet (resolve_share filters pets by the guide's
   // household) and its next save would be rejected. Offer the repair.
-  const strayGuides = pet
+  // canEdit too: the repair issues guide writes, which a sitter cannot make.
+  const strayGuides = pet && canEdit
     ? attachedGuides.filter((g) => g.household_id && g.household_id !== pet.household_id)
     : [];
 
@@ -313,7 +333,12 @@ export function PetDetailScreen({ navigation, route }: Props) {
   // landed in their own household and whose family's household is the other
   // one. The header named the problem and offered no button. Any household
   // that isn't the current one is a legitimate destination.
-  const moveTargets = pet.household_id
+  // canEdit-gated: `households` holds the CALLER's households, so for a sitter
+  // viewing a client's pet every entry is a household the client has nothing to
+  // do with — the screen would offer to move their dog into the sitter's own
+  // home. RLS refuses it (the UPDATE policy tests the pet's CURRENT household),
+  // but the offer should never appear.
+  const moveTargets = canEdit && pet.household_id
     ? households.filter((h) => h.id !== pet.household_id)
     : [];
   // One destination needs no choosing; several open the picker below.
@@ -488,7 +513,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
         <ScreenContainer variant="content">
           {/* Primary action */}
           <View className="mb-4">
-            <Button title="Edit Pet" onPress={handleEdit} variant="primary" />
+            {canEdit ? <Button title="Edit Pet" onPress={handleEdit} variant="primary" /> : null}
           </View>
 
           {/* Basics */}
@@ -723,22 +748,27 @@ export function PetDetailScreen({ navigation, route }: Props) {
           )}
 
           {/* Quiet secondary actions at the bottom */}
-          <View className="gap-3 mt-2 mb-8">
-            {pet.status === 'active' ? (
-              <Button
-                title="Move to Memorial"
-                onPress={handleMemorial}
-                variant="outline"
-              />
-            ) : (
-              <Button
-                title="Restore from Memorial"
-                onPress={handleRestore}
-                variant="secondary"
-              />
-            )}
-            <Button title="Delete Pet" onPress={handleDelete} variant="outline" />
-          </View>
+          {/* Hidden entirely for a sitter — see canEdit. */}
+          {canEdit ? (
+            <View className="gap-3 mt-2 mb-8">
+              {pet.status === 'active' ? (
+                <Button
+                  title="Move to Memorial"
+                  onPress={handleMemorial}
+                  variant="outline"
+                />
+              ) : (
+                <Button
+                  title="Restore from Memorial"
+                  onPress={handleRestore}
+                  variant="secondary"
+                />
+              )}
+              <Button title="Delete Pet" onPress={handleDelete} variant="outline" />
+            </View>
+          ) : (
+            <View className="mb-8" />
+          )}
         </ScreenContainer>
       </ScrollView>
     </View>
