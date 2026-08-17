@@ -536,12 +536,15 @@ export function TripWizardScreen({ navigation }: Props) {
         </View>
       </Card>
 
-      {schedule.special_instructions && (
+      {/* Ternary: step 3 stores a blank instructions box as '', and the `&&`
+          form renders that empty string as a bare text node inside a View —
+          one console error per render of this step, a throw on native. */}
+      {schedule.special_instructions ? (
         <Card className="mb-4">
           <Text className="text-brown-700 font-medium mb-2">Special Instructions</Text>
           <Text className="text-tan-600">{schedule.special_instructions}</Text>
         </Card>
-      )}
+      ) : null}
 
       <View className="bg-primary-50 rounded-xl p-4 border border-primary-200">
         <Text className="text-brown-700 text-center">

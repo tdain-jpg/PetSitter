@@ -719,6 +719,43 @@ affiliate integration (blocked on the research run plus an approval timeline out
 control). **Reminder for whichever affiliate lands: Amazon prohibits affiliate links in
 email**, which directly constrains the `notify` pipeline.
 
+## Known: `Cannot read properties of undefined (reading 'routes')`
+
+An uncaught TypeError that appears in the console a handful of times per long
+session. No functional impact has been observed — three QA passes drove the whole
+app and never saw a screen break — but it is real, and two of them could not
+reproduce it deliberately. What follows is a read of the code, not a repro.
+
+React Navigation's popstate handler ends with:
+
+```js
+const state = getStateFromPathRef.current(path, configRef.current)
+if (state) { ...normal handling... }
+else {
+  // if current path didn't return any state, we should revert to initial state
+  navigation.resetRoot(state)   // state is undefined here
+}
+```
+(`@react-navigation/native@7.1.26`, `src/useLinking.tsx:263`)
+
+`resetRoot(undefined)` reads `state.routes` and throws. `getStateFromPath`
+returns undefined for any path the linking config does not describe — and
+`App.tsx` describes only the six public routes, so **every `/Main/*` URL is
+undefined to it**. Those screens are restored by RootNavigator's
+`RESTORABLE_MAIN_ROUTES` instead, which is why the app keeps working.
+
+The proper fix is to describe the Main routes in the linking config, which would
+also retire `RESTORABLE_MAIN_ROUTES` entirely — deep-link restore would become
+React Navigation's job rather than ours. That is a genuine improvement and a
+genuine risk: it changes URL generation for every screen, and the Stripe return
+URL (`/Main/UnlockCrown?checkout=success`) and share links depend on the current
+shape. Not something to change days before taking payments.
+
+Do it in the next loop, with the Stripe return URL and a hard reload of every
+deep link on the test list.
+
+---
+
 ## Launch gate — the only thing left that is not code
 
 **Stripe is still in TEST mode.** Everything about Crown works end to end; it just works

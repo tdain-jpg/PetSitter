@@ -203,6 +203,7 @@ export function SymptomCheckerEditor({
           onPress={() => setShowAddCustom(true)}
           accessibilityRole="button"
           accessibilityLabel="Add custom symptom"
+          style={{ minHeight: 44, justifyContent: 'center' }}
           className="px-4 py-2 bg-primary-50 rounded-lg self-start mt-3"
         >
           <Text className="text-primary-600 font-medium">+ Add Custom Symptom</Text>

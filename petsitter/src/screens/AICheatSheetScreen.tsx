@@ -471,8 +471,16 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               homeInfo={guide?.home_info}
               generatedAt={cheatSheet.generated_at}
               watermarked={watermarked}
+              isOwner={canEdit}
+              // Suppressed when the Crown card renders directly beneath this
+              // one: the two are identical buttons, one above the other, and a
+              // decision offered twice on one screen reads as a nag rather than
+              // an option. The overlay keeps it only when nothing below repeats
+              // it. Absent entirely for a sitter, which the card also honours.
               onUnlockPress={
-                canEdit ? () => navigation.navigate('UnlockCrown', { guideId }) : undefined
+                canEdit && !showCrownPaywall
+                  ? () => navigation.navigate('UnlockCrown', { guideId })
+                  : undefined
               }
             />
 
@@ -497,19 +505,36 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               </Card>
             ) : (
               <View className="gap-3 mb-8">
-                {error && (
+                {error ? (
                   <Text className="text-accent-500 text-center">{error}</Text>
+                ) : null}
+                {/* Regenerate is a WRITE, and it was the one the gating missed.
+                    It is refused twice over on the server — has_crown is
+                    membership-gated so a sitter always takes the free path and
+                    always finds it spent, and the final upsert goes through the
+                    user-scoped client where RLS refuses it — so nothing was
+                    ever at risk. But a button that can only ever produce a
+                    paywall is the exact thing this pass set out to stop
+                    offering. */}
+                {canEdit ? (
+                  <>
+                    <Button
+                      title="🔄 Regenerate"
+                      onPress={handleGenerate}
+                      loading={generating}
+                      disabled={generating}
+                      variant="outline"
+                    />
+                    <Text className="text-tan-500 text-sm text-center">
+                      Guide contents are summarized by Pawstructions&apos; AI helper.
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-tan-500 text-sm text-center">
+                    This summary was written from the owner&apos;s guide by
+                    Pawstructions&apos; AI helper.
+                  </Text>
                 )}
-                <Button
-                  title="🔄 Regenerate"
-                  onPress={handleGenerate}
-                  loading={generating}
-                  disabled={generating}
-                  variant="outline"
-                />
-                <Text className="text-tan-500 text-sm text-center">
-                  Guide contents are summarized by Pawstructions&apos; AI helper.
-                </Text>
               </View>
             )}
           </>

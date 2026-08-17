@@ -119,18 +119,22 @@ export function TravelItineraryEditor({
           <Text className="text-tan-600 text-sm">
             {flight.departure_airport} → {flight.arrival_airport}
           </Text>
-          {(flight.departure_time || flight.arrival_time) && (
+          {/* Ternary: both times are stored as empty strings when the flight
+              form is left blank, and `'' && …` renders '' as a bare text node
+              inside a View. Same shape already fixed in the share view. */}
+          {(flight.departure_time || flight.arrival_time) ? (
             <Text className="text-tan-500 text-sm">
               {flight.departure_time} - {flight.arrival_time}
             </Text>
-          )}
+          ) : null}
         </View>
         <View className="flex-row gap-2">
           <Pressable
             onPress={() => handleEditFlight(flight)}
             accessibilityRole="button"
             accessibilityLabel={`Edit flight ${flight.flight_number}`}
-            className="px-2 py-1"
+            style={{ minHeight: 44, justifyContent: 'center' }}
+            className="px-3"
           >
             <Text className="text-primary-600 text-xs">Edit</Text>
           </Pressable>
@@ -138,7 +142,8 @@ export function TravelItineraryEditor({
             onPress={() => handleDeleteFlight(flight.id)}
             accessibilityRole="button"
             accessibilityLabel={`Remove flight ${flight.flight_number}`}
-            className="px-2 py-1 bg-accent-50 rounded"
+            style={{ minHeight: 44, justifyContent: 'center' }}
+            className="px-3 bg-accent-50 rounded"
           >
             <Text className="text-accent-600 text-xs">Remove</Text>
           </Pressable>

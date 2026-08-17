@@ -866,24 +866,33 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         )}
 
         {/* Nobody should discover the watermark after emailing the PDF to
-            their sitter. Only shown when the sheet is actually going in. */}
-        {cheatSheetWatermarked && cheatSheetContent && sections.aiCheatSheet && (
+            their sitter. Only shown when the sheet is actually going in.
+            OWNER ONLY. 0023 made the cheat sheet visible to sitters, so this
+            card rendered for them for the first time — offering "$5 once for
+            your whole household" for a household that is not theirs, on
+            information the copy calls "your own". create-checkout-session
+            refuses a non-member, so it was a purchase that could not complete.
+            The watermark is still worth mentioning to them, because they are
+            the person who will be reading it. */}
+        {cheatSheetWatermarked && cheatSheetContent && sections.aiCheatSheet ? (
           <Card className="mb-4 bg-warm-50 border-warm-300">
             <Text className="text-brown-800 font-semibold mb-1">
               👑 The cheat sheet will carry a PREVIEW watermark
             </Text>
             <Text className="text-brown-600 text-sm mb-3">
-              Everything in this PDF is your own information, and the rest of it
-              exports clean. Crown removes the watermark from the cheat sheet —
-              $5 once for your whole household.
+              {canEdit
+                ? 'Everything in this PDF is your own information, and the rest of it exports clean. Crown removes the watermark from the cheat sheet — $5 once for your whole household.'
+                : "The watermark sits over the cheat sheet only — every other page exports clean, and nothing is missing from it. Removing it is the owner's to buy."}
             </Text>
-            <Button
-              title="👑 Unlock Crown — $5"
-              variant="outline"
-              onPress={() => navigation.navigate('UnlockCrown', { guideId })}
-            />
+            {canEdit ? (
+              <Button
+                title="👑 Unlock Crown — $5"
+                variant="outline"
+                onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+              />
+            ) : null}
           </Card>
-        )}
+        ) : null}
 
         {/* Tip for cheat sheet — owner only. A sitter cannot generate one, so
             telling them to "generate one first" is an instruction they cannot

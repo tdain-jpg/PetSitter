@@ -53,6 +53,7 @@ export function ScheduleEditor({
               onPress={() => removeSchedule(schedule.id)}
               accessibilityRole="button"
               accessibilityLabel={`Remove feeding ${index + 1}`}
+              style={{ minHeight: 44, justifyContent: 'center' }}
               className="px-3 py-1 bg-accent-50 rounded"
             >
               <Text className="text-accent-600 text-xs">Remove</Text>
@@ -101,6 +102,7 @@ export function ScheduleEditor({
         onPress={addSchedule}
         accessibilityRole="button"
         accessibilityLabel="Add feeding schedule"
+        style={{ minHeight: 44, justifyContent: 'center' }}
         className="px-4 py-2 bg-secondary-50 rounded-lg self-start"
       >
         <Text className="text-secondary-600 font-medium">

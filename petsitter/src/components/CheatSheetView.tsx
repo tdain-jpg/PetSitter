@@ -38,6 +38,14 @@ interface CheatSheetViewProps {
    * navigation-free: each screen supplies its own route to UnlockCrown.
    */
   onUnlockPress?: () => void;
+  /**
+   * Whether the READER is the owner. Separate from onUnlockPress on purpose:
+   * that prop answers "render a button here", and the caller legitimately
+   * withholds it from an owner when an identical button already renders
+   * directly below. Using its absence to mean "not the owner" would have shown
+   * the owner the sitter's copy in exactly that case.
+   */
+  isOwner?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +269,7 @@ export function CheatSheetView({
   generatedAt,
   watermarked = false,
   onUnlockPress,
+  isOwner = true,
 }: CheatSheetViewProps) {
   return (
     <Card className="mb-4">
@@ -305,12 +314,17 @@ export function CheatSheetView({
               which is BOTH halves: the watermark and the regeneration paywall.
               Naming only the watermark would sell Crown as cosmetic and leave
               the user to discover the 402 after they change a dose. */}
+          {/* Two audiences now read this. 0023 let a connected sitter see the
+              sheet, and the sentence still called it "your own sheet, written
+              from your guide" — neither of which is true for the person it was
+              written FOR. onUnlockPress is absent exactly when the reader
+              cannot buy, so it doubles as "is this the owner". */}
           <Text className="text-brown-600 text-sm">
-            This is your own sheet, written from your guide. Crown clears the
-            watermark here and in the PDF, and lets you rewrite the sheet
-            whenever your details change.
+            {onUnlockPress
+              ? 'This is your own sheet, written from your guide. Crown clears the watermark here and in the PDF, and lets you rewrite the sheet whenever your details change.'
+              : "The content underneath is real and complete — nothing has been left out. The watermark is the owner's to clear."}
           </Text>
-          {onUnlockPress && (
+          {onUnlockPress ? (
             <View className="mt-3">
               {/* Deliberately not "…to remove this watermark": that label was
                   the same cosmetic-only claim as the line above, restated as
@@ -322,7 +336,7 @@ export function CheatSheetView({
                 variant="outline"
               />
             </View>
-          )}
+          ) : null}
         </View>
       )}
     </Card>

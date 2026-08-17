@@ -576,7 +576,23 @@ export function HomeScreen({ navigation }: Props) {
                 resizeMode="contain"
                 accessibilityLabel="Pawstructions"
               />
-              <Text style={{ fontSize: 11, color: COLORS.primary, fontStyle: 'italic', marginTop: 4 }}>
+              {/* numberOfLines + a cap for the same reason as the greeting
+                  opposite it. With a long name the two sat on near-identical
+                  baselines with a 4px gap and optically ran together into one
+                  sentence — "Where Pets Rule the Kingdom! Welcome, Bartholom…".
+                  Clipping the tagline keeps the two phrases visibly separate
+                  instead of letting whichever is longer decide. */}
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{
+                  fontSize: 11,
+                  color: COLORS.primary,
+                  fontStyle: 'italic',
+                  marginTop: 4,
+                  maxWidth: 142,
+                }}
+              >
                 Where Pets Rule the Kingdom!
               </Text>
             </View>
