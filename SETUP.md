@@ -26,28 +26,63 @@ The anon key is safe to ship in the client bundle. Row-Level Security policies
 ## 2. Apply the database migrations
 
 Migrations live in [`supabase/migrations/`](./supabase/migrations) and must be
-applied in order:
+applied in order. There are 22:
 
 | # | File | Purpose |
 |---|------|---------|
-| 1 | `0001_schema.sql` | Tables, indexes, profile-on-signup trigger, updated_at trigger |
-| 2 | `0002_rls.sql` | Row-Level Security policies |
-| 3 | `0003_share_rpc.sql` | `resolve_share(code)` RPC for anonymous share-link viewers |
+| 0001 | `schema.sql` | Tables, indexes, profile-on-signup trigger, updated_at trigger |
+| 0002 | `rls.sql` | Row-Level Security policies |
+| 0003 | `share_rpc.sql` | `resolve_share(code)` for anonymous share-link viewers |
+| 0004 | `fixes.sql` | Task-completion scoping corrections |
+| 0005 | `hardening.sql` | Pinned `search_path` on every function; grants tightened |
+| 0006 | `households.sql` | Households, members, email invites |
+| 0007 | `household_rls.sql` | RLS rewritten around household membership |
+| 0008 | `crown_photos_outbox.sql` | Crown entitlement, pet photos, notification outbox |
+| 0009 | `journeys.sql` | First-run journey state |
+| 0010 | `journeys_backfill.sql` | Backfill for existing accounts |
+| 0011 | `primary_household.sql` | Explicit default household per user |
+| 0012 | `crown_purchases.sql` | Purchase ledger + `grant_crown()` |
+| 0013 | `crown_revoke_and_free_gen_guard.sql` | Refund path; closes a free-Crown INSERT hole |
+| 0014 | `ai_generation_ledger.sql` | Free AI generations keyed on `auth.uid()` |
+| 0015 | `sitter_connections.sql` | The sitter relationship and its RPCs |
+| 0016 | `my_pending_sitter_invites.sql` | Lets an invited sitter find their invitation |
+| 0017 | `sitter_checkins.sql` | Immutable sitter check-in log |
+| 0018 | `my_crown_receipt.sql` | Receipt lookup for the buyer |
+| 0019 | `invite_sitter_guards.sql` | Refuses inviting an existing household member |
+| 0020 | `sitter_task_completions.sql` | Sitters can tick tasks |
+| 0021 | `email_shape.sql` | Rejects `a@b`-shaped addresses |
+| 0022 | `rls_initplan.sql` | Hoists `auth.uid()` out of per-row policy evaluation |
 
-**Easiest path:** Supabase dashboard → **SQL Editor → New query** → paste each
-file in order → **Run**.
+### ⚠️ Do not run `supabase db push` against the existing production project
 
-**Alternative (CLI):**
+Production's migration history does not match this directory, and has not for a
+while. The schema is fully up to date — every file above is applied — but the
+history table records eight of them under CLI-generated timestamp versions
+(`20260813013903` … `20260815192648`) and the remaining fourteen not at all,
+because they were applied directly rather than pushed.
+
+`db push` reads that table, concludes 0001–0022 have never run, and tries to
+replay all of them over a database that already has every object. Use
+`supabase db query --linked -f <file>` to apply a single migration instead — it
+executes the file and touches no history.
+
+**To repair the history** (bookkeeping only — writes to
+`supabase_migrations.schema_migrations`, runs no DDL). Mark this directory as
+applied:
 
 ```bash
-brew install supabase/tap/supabase
-supabase link --project-ref <your-project-ref>
-supabase db push   # if you've initialized a local supabase/ config
-# Or just:
-psql "<your db connection string>" -f supabase/migrations/0001_schema.sql
-psql "<your db connection string>" -f supabase/migrations/0002_rls.sql
-psql "<your db connection string>" -f supabase/migrations/0003_share_rpc.sql
+supabase migration repair --linked --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009 0010 0011 0012 0013 0014 0015 0016 0017 0018 0019 0020 0021 0022
 ```
+
+Then drop the eight duplicate timestamp rows, which record the same work under
+different names:
+
+```bash
+supabase migration repair --linked --status reverted 20260813013903 20260813013937 20260814185153 20260814185328 20260814232114 20260815154805 20260815160618 20260815192648
+```
+
+After both, `supabase migration list --linked` should show every row matched in
+both columns, and `db push` becomes safe (and a no-op) again.
 
 ### Verify
 
@@ -55,11 +90,14 @@ In **SQL Editor**, run:
 
 ```sql
 select table_name from information_schema.tables
- where table_schema = 'public' order by table_name;
+ where table_schema = 'public' and table_type = 'BASE TABLE' order by table_name;
 ```
 
-You should see 8 tables: `cheat_sheets`, `guides`, `onboarding_state`, `pets`,
-`profiles`, `settings`, `share_links`, `task_completions`.
+You should see 16 tables: `ai_free_generations`, `cheat_sheets`,
+`crown_purchases`, `guides`, `household_invites`, `household_members`,
+`households`, `notifications_outbox`, `onboarding_state`, `pets`, `profiles`,
+`settings`, `share_links`, `sitter_checkins`, `sitter_connections`,
+`task_completions`.
 
 ---
 
