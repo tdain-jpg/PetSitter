@@ -42,7 +42,7 @@ export function ScreenHeader({
             onPress={handleBack}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            className="py-2"
+            style={{ minHeight: 44, justifyContent: 'center' }}
           >
             <Text className="text-secondary-600 text-sm">{backLabel}</Text>
           </Pressable>
@@ -60,7 +60,7 @@ export function ScreenHeader({
             onPress={handleHome}
             accessibilityRole="button"
             accessibilityLabel="Go to home"
-            className="py-2"
+            style={{ minHeight: 44, justifyContent: 'center' }}
           >
             <Text className="text-tan-500 text-sm">Home</Text>
           </Pressable>

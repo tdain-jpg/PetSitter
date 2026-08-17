@@ -129,7 +129,11 @@ export function LandingScreen({ navigation }: Props) {
             onPress={navigateToLogin}
             accessibilityRole="button"
             accessibilityLabel="Sign in to existing account"
-            className="px-3 py-1.5"
+            // minHeight 44, not vertical padding: padding has to be recomputed
+            // every time the font size changes, and this is the one control a
+            // returning user reaches for on a phone.
+            style={{ minHeight: 44 }}
+            className="px-3 justify-center"
           >
             <Text style={{ color: COLORS.white }} className="text-base font-semibold">
               Sign In
@@ -303,6 +307,11 @@ export function LandingScreen({ navigation }: Props) {
                 onPress={navigateToLogin}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in to existing account"
+                // This was bare text: a 17px-tall target at the very bottom of
+                // the page, which is exactly where someone who scrolled the
+                // whole landing page is going to be tapping.
+                style={{ minHeight: 44 }}
+                className="px-2 justify-center"
               >
                 <Text style={{ color: COLORS.white }} className="font-semibold underline">
                   Sign in
@@ -326,7 +335,8 @@ export function LandingScreen({ navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel={link.label}
                   hitSlop={8}
-                  className="px-2 py-1"
+                  style={{ minHeight: 44 }}
+                  className="px-3 justify-center"
                 >
                   <Text className="text-primary-600 text-sm font-semibold">{link.label}</Text>
                 </Pressable>

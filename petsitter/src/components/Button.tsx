@@ -39,6 +39,11 @@ export function Button({
         backgroundColor: bgColor,
         paddingVertical: 12,
         paddingHorizontal: 24,
+        // 12 + 12 + a 19px line box lands on 43 — one pixel under every
+        // accessible-tap-target guideline there is, on EVERY button in the app.
+        // A floor is the fix rather than more padding, because padding stops
+        // being right the moment the text scales.
+        minHeight: 44,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
