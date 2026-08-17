@@ -10,6 +10,7 @@ import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import { formatDate } from '../lib/dates';
 import { useData } from '../contexts';
+import { isValidEmail } from '../utils';
 import type { SitterInviteRow } from '../types';
 
 interface SitterSectionProps {
@@ -50,6 +51,12 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       showAlert('Enter an email address', 'Please enter a valid email to invite a sitter.');
+      return;
+    }
+    // See HouseholdScreen.handleInvite: the server accepts anything with an @
+    // in it, which is enough to create an invitation nobody can ever accept.
+    if (!isValidEmail(trimmedEmail)) {
+      showAlert('Enter an email address', `"${trimmedEmail}" doesn't look like an email address.`);
       return;
     }
 

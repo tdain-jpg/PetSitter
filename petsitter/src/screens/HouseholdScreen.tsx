@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenContainer, ScreenHeader } from '../components';
 import { useAuth, useData } from '../contexts';
+import { isValidEmail } from '../utils';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { announceJoinDestination } from '../lib/inviteDestination';
 import { SitterSection } from '../components/SitterSection';
@@ -185,6 +186,14 @@ export function HouseholdScreen() {
     const email = (inviteDrafts[household.id] ?? '').trim();
     if (!email) {
       showAlert('Could not invite', 'Enter an email address to invite.');
+      return;
+    }
+    // The server's shape check is a backstop, not a spellchecker. Something
+    // like "a@b" satisfied it, so the invite row was written and the email was
+    // dispatched to an address that can never receive it — a pending
+    // invitation that will sit there forever looking like it's on its way.
+    if (!isValidEmail(email)) {
+      showAlert('Could not invite', `"${email}" doesn't look like an email address.`);
       return;
     }
     setInvitingHouseholdId(household.id);

@@ -9,36 +9,33 @@ Status legend: **[ ]** not started · **[~]** in progress · **[x]** done
 
 ## 1. Pre-launch blockers
 
-Things that should be fixed before inviting real users.
+All clear. Everything in this section shipped; it is kept as a record rather than
+deleted, because "why does the app look like this" is a question that outlives the
+work. Current punch list lives in §4 and §4b.
 
-### [ ] Responsive layout on wide screens
-Every screen currently stretches edge-to-edge; at 1280px the login inputs and buttons are
-~1248px wide. This is not "add a desktop design" — it is finishing the responsive design.
-Plan: a shared `ScreenContainer` that centers content and caps its width by content type
-(forms ~520px, reading content ~760px, dashboards ~1100px), applied at the screen root.
-On phones the cap never engages, so native builds are unaffected; iPad benefits immediately.
+### [x] Responsive layout on wide screens — SHIPPED 2026-08-14
+`ScreenContainer` caps content width by type (form / content / dashboard) and is applied
+at every screen root. On phones the cap never engages, so native builds are unchanged.
 
-### [ ] Rebuild PetDetail
-Users fill in ~30 fields (feeding schedule, medications, vet info, personality, microchip,
-insurance, health protocol) and the detail screen shows name, breed, age and three buttons.
-Also: "Move to Memorial" is currently the visually heaviest control on the screen — a
-semi-destructive, emotionally loaded action rendered as the primary. Rebuild using the
-collapsible `SectionHeader` pattern already used by GuideDetail, and demote Memorial.
+### [x] Rebuild PetDetail — SHIPPED 2026-08-14
+Rebuilt on the collapsible `SectionHeader` pattern, so all ~30 fields are reachable
+instead of the three that used to show. "Move to Memorial" is demoted out of the primary
+slot — a semi-destructive, emotionally loaded action should not be the heaviest control
+on the screen.
 
-### [ ] Styled confirm/alert modals
-Destructive confirms use raw `window.confirm` on web (native uses `Alert.alert`, which is
-correct but visually unrelated). Build one in-app modal component and route `showAlert` plus
-all confirm sites through it, so web and native match and both are on-brand.
+### [x] Styled confirm/alert modals — SHIPPED 2026-08-14
+`lib/dialogs.ts` routes every alert and confirm through one in-app modal, so web and
+native match and neither falls back to `window.confirm`.
 
-### [ ] Password recovery
-No "forgot password" path exists today — a locked-out user has no way back in. Supabase
-provides `resetPasswordForEmail` and the Brevo SMTP path is working, so this is a screen plus
-a redirect route, not new infrastructure.
+### [x] Password recovery — SHIPPED 2026-08-14
+`ForgotPasswordScreen` + `ResetPasswordScreen` on Supabase's `resetPasswordForEmail`,
+over the working Brevo SMTP path. (This entry read "no forgot-password path exists"
+until 2026-08-17 — it had been shipped for three days.)
 
-### [ ] Google sign-in
-The button exists on both auth screens and errors when clicked ("provider is not enabled").
-Needs a Google Cloud OAuth client and the Supabase provider config (steps in SETUP.md §3).
-Either finish it or hide the button.
+### [x] Google sign-in — SHIPPED 2026-08-17
+The client code has been there since May; what was missing was the Google Cloud OAuth
+client and the Supabase provider config, both done 2026-08-17. Verified working end to
+end. Steps recorded in SETUP.md §3.
 
 ---
 
@@ -49,10 +46,13 @@ Live end to end: DB migrations 0006/0007 (applied to prod, 22 adversarial findin
 RLS verified by role impersonation), merged-view client, Household screen (rename, members,
 invite/revoke/leave with last-owner protection), Home invite banner, Settings entry.
 Follow-ups: member display names need a small definer RPC (profiles are RLS-locked to self,
-so the members list shows roles + dates, not names); share-link create has a narrow
-deactivate-then-insert race (add a partial unique index `on share_links(guide_id) where
-is_active` + retry-on-conflict); invite notification is in-app only — emailing invites via
-Brevo is a natural next step.
+so the members list shows roles + dates, not names); invite notification is in-app only —
+emailing invites via Brevo is a natural next step.
+The share-link create race noted here originally ("deactivate-then-insert") was reordered
+to insert-then-deactivate in slice 7c for a different reason — a caller about to be refused
+was firing the destructive half first. A partial unique index `on share_links(guide_id)
+where is_active` plus retry-on-conflict would still close the concurrent-create window and
+is worth adding; it is not urgent at current traffic.
 
 ### ~~Households (original design notes)~~ (DECIDED: household is the unit of sharing)
 A couple or family share one set of pets and guides; everyone in the household can edit.
