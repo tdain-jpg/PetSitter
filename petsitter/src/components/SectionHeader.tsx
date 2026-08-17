@@ -54,7 +54,8 @@ export function SectionHeader({
             accessibilityRole="button"
             accessibilityLabel={rightAction.label}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            className="bg-primary-50 px-3 py-1 rounded mr-4"
+            style={{ minHeight: 44 }}
+            className="bg-primary-50 px-3 rounded mr-4 justify-center"
           >
             <Text className="text-primary-600 text-xs">{rightAction.label}</Text>
           </Pressable>

@@ -10,9 +10,10 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, SecurityNote, TravelItineraryEditor, Select } from '../components';
+import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, SecurityNote, TravelItineraryEditor, Select, DateField } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
+import { useFormDraft } from '../hooks';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
 import { showAlert, showConfirm } from '../lib/dialogs';
@@ -205,6 +206,23 @@ export function GuideFormScreen({ navigation, route }: Props) {
     setIsDirty(false);
   }, []);
 
+  // Survives what beforeRemove cannot intercept — browser back, a swipe, a
+  // closed tab, a crash. See the note on the beforeRemove listener below.
+  const { clearDraft } = useFormDraft<FormData>({
+    kind: 'guide',
+    userId: user?.id,
+    enabled: guardUnsavedChanges,
+    value: formData,
+    isDirty,
+    noun: 'guide',
+    onRestore: (draft) => {
+      setFormData(draft);
+      // Restored work is unsaved work: without this the guard would treat a
+      // fully repopulated form as pristine and let it be thrown away again.
+      markDirty();
+    },
+  });
+
   // Web: warn before a refresh or tab close discards the form.
   useEffect(() => {
     if (Platform.OS !== 'web' || !guardUnsavedChanges || !isDirty) return;
@@ -219,11 +237,18 @@ export function GuideFormScreen({ navigation, route }: Props) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [guardUnsavedChanges, isDirty]);
 
-  // Browser back, Android hardware back, the header Cancel button and any
-  // programmatic goBack() all funnel through beforeRemove, so the discard
-  // confirm lives here only — no caller adds its own, so it can never
-  // double-prompt. The success path clears the dirty ref first, so saving
-  // and leaving stays silent.
+  // Android hardware back, the header Cancel button and any programmatic
+  // goBack() funnel through beforeRemove, so the discard confirm lives here
+  // only — no caller adds its own, so it can never double-prompt. The success
+  // path clears the dirty ref first, so saving and leaving stays silent.
+  //
+  // BROWSER back does NOT reach here, and used to be listed above as though it
+  // did. On web React Navigation handles popstate by calling
+  // navigation.resetRoot(record.state) (useLinking.tsx:218) — a wholesale state
+  // replacement, not a dispatched action, so there is nothing for beforeRemove
+  // to veto, and its listener is registered at NavigationContainer mount, long
+  // before this screen exists. That gap is covered by useFormDraft above:
+  // browser back still leaves, but the typing survives and is offered back.
   useEffect(() => {
     if (!guardUnsavedChanges) return;
     return navigation.addListener('beforeRemove', (e) => {
@@ -243,11 +268,14 @@ export function GuideFormScreen({ navigation, route }: Props) {
         promptingRef.current = false;
         if (ok) {
           clearDirty();
+          // An explicit discard means the draft is unwanted, not merely
+          // interrupted — do not offer it back next time.
+          clearDraft();
           navigation.dispatch(e.data.action);
         }
       });
     });
-  }, [navigation, guardUnsavedChanges, clearDirty]);
+  }, [navigation, guardUnsavedChanges, clearDirty, clearDraft]);
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -344,6 +372,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       // Saved — drop the guard (ref first, so the listeners see it in this
       // same tick) before navigating, or leaving would prompt to discard.
       clearDirty();
+      clearDraft();
       navigation.goBack();
     } catch (error: any) {
       const message = friendlyError(error, 'Failed to save guide');
@@ -483,19 +512,23 @@ export function GuideFormScreen({ navigation, route }: Props) {
                 error={errors.title}
               />
 
-              <Input
+              {/* DateField, not Input: on web this is the browser's own
+                  calendar, so "Enter a real date in YYYY-MM-DD format" stops
+                  being something a person can trigger by typing. The value
+                  shape is unchanged, so the validators below still apply — they
+                  now guard against a bad URL restore rather than a bad typist. */}
+              <DateField
                 label="Start Date"
-                placeholder="YYYY-MM-DD"
                 value={formData.start_date}
-                onChangeText={(v) => updateField('start_date', v)}
+                onChange={(v) => updateField('start_date', v)}
                 error={errors.start_date}
               />
-              <Input
+              <DateField
                 label="End Date"
-                placeholder="YYYY-MM-DD"
                 value={formData.end_date}
-                onChangeText={(v) => updateField('end_date', v)}
+                onChange={(v) => updateField('end_date', v)}
                 error={errors.end_date}
+                min={formData.start_date || undefined}
               />
             </Card>
 

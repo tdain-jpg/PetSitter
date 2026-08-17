@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, CheatSheetView, ScreenContainer, SecurityNote } from '../components';
 import { useData } from '../contexts';
+import { useGuideWithPets } from '../hooks';
 import { supabase } from '../lib/supabase';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { COLORS } from '../constants';
@@ -90,7 +91,14 @@ function describeRetryWait(minutes: number | undefined): string {
 
 export function AICheatSheetScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, loadingGuides, getCheatSheet } = useData();
+  const { getCheatSheet } = useData();
+
+  // Resolved, not looked up in `guides`: that array is scoped to the caller's
+  // own households, so this screen used to be unreachable for a connected
+  // sitter. Generating a sheet for a client's guide is a read of data they are
+  // already allowed to read, so it stays available to them — but BUYING Crown
+  // for someone else's household does not, which is what canEdit gates below.
+  const { guide: resolvedGuide, loading: guideLoading, canEdit } = useGuideWithPets(guideId);
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [cheatSheet, setCheatSheet] = useState<CheatSheet | null>(null);
@@ -148,7 +156,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   // The getCheatSheet re-fetch this triggers is an idempotent read.
   useEffect(() => {
     loadData();
-  }, [guideId, guides]);
+  }, [guideId, resolvedGuide]);
 
   // Crown can arrive while this screen just sits in the stack: the buyer
   // returns from UnlockCrown (which changes neither guideId nor guides, so
@@ -163,7 +171,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const foundGuide = guides.find((g) => g.id === guideId);
+      const foundGuide = resolvedGuide;
       if (foundGuide) {
         setGuide(foundGuide);
       }
@@ -329,7 +337,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
   // Keep spinning while the household guides are still loading — declaring
   // "not found" before the initial fetch resolves would be a false negative.
-  if (loading || (!guide && loadingGuides)) {
+  if (loading || guideLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />
@@ -375,15 +383,21 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                 👑 Pawstructions Crown
               </Text>
               <Text className="text-brown-600 text-center mb-6">
-                This guide has already had its free cheat sheet. Crown covers the
-                cost of the AI that writes them — $5 once for your whole
-                household, not a subscription.
+                {canEdit
+                  ? "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them — $5 once for your whole household, not a subscription."
+                  : "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them, and it is the owner's to buy — ask them if you'd like another."}
               </Text>
               <View className="w-full gap-3">
-                <Button
-                  title="👑 Unlock Crown — $5"
-                  onPress={() => navigation.navigate('UnlockCrown', { guideId })}
-                />
+                {/* Crown belongs to a HOUSEHOLD, and create-checkout-session
+                    refuses a buyer who is not a member of it. Offering the
+                    button to a sitter is offering a purchase that cannot
+                    complete, for pets that are not theirs. */}
+                {canEdit ? (
+                  <Button
+                    title="👑 Unlock Crown — $5"
+                    onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+                  />
+                ) : null}
                 <Button
                   title="👀 See a Sample Cheat Sheet"
                   onPress={() => navigation.navigate('SampleCheatSheet')}
@@ -438,7 +452,9 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               homeInfo={guide?.home_info}
               generatedAt={cheatSheet.generated_at}
               watermarked={watermarked}
-              onUnlockPress={() => navigation.navigate('UnlockCrown', { guideId })}
+              onUnlockPress={
+                canEdit ? () => navigation.navigate('UnlockCrown', { guideId }) : undefined
+              }
             />
 
             {showCrownPaywall ? (
@@ -447,15 +463,17 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                   👑 Pawstructions Crown
                 </Text>
                 <Text className="text-brown-600 text-center mb-6">
-                  Your free cheat sheet for this guide is above. Crown covers the
-                  cost of the AI, so you can rewrite it whenever the details
-                  change — $5 once for your whole household, not a subscription.
+                  {canEdit
+                    ? 'Your free cheat sheet for this guide is above. Crown covers the cost of the AI, so you can rewrite it whenever the details change — $5 once for your whole household, not a subscription.'
+                    : "The free cheat sheet for this guide is above. Rewriting it needs Crown, which is the owner's to buy."}
                 </Text>
                 <View className="w-full">
-                  <Button
-                    title="👑 Unlock Crown — $5"
-                    onPress={() => navigation.navigate('UnlockCrown', { guideId })}
-                  />
+                  {canEdit ? (
+                    <Button
+                      title="👑 Unlock Crown — $5"
+                      onPress={() => navigation.navigate('UnlockCrown', { guideId })}
+                    />
+                  ) : null}
                 </View>
               </Card>
             ) : (

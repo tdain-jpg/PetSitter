@@ -1,4 +1,3 @@
-import { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,53 +7,35 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue, ScreenContainer } from '../components';
 import { useData } from '../contexts';
+import { useGuideWithPets } from '../hooks';
 import { COLORS } from '../constants';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { formatDate } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { Guide, Pet } from '../types';
 import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
 export function GuideDetailScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, activePets, deceasedPets, loadingGuides, deleteGuide, duplicateGuide, households } =
-    useData();
+  const { deleteGuide, duplicateGuide } = useData();
 
   /**
-   * A CONNECTED SITTER can reach this screen — they can read a client's guides,
-   * and the sitter household view links straight here. They are not a household
-   * member, so every write below is refused by RLS ("household member can crud"
-   * on guides and pets). Showing them Edit, Duplicate and Delete anyway offers
-   * buttons that can only ever produce a permission error, and Delete Guide is
-   * an alarming thing to dangle in front of someone looking after your animals.
+   * A CONNECTED SITTER can reach this screen — the sitter household view links
+   * straight here, and RLS lets them read a client's guides. They are not a
+   * household member, so every write below is refused ("household member can
+   * crud"). Showing them Edit, Duplicate and Delete offers buttons that can
+   * only ever produce a permission error, and Delete Guide is an alarming thing
+   * to dangle in front of someone looking after your animals.
    *
-   * `households` holds only households the user BELONGS to, so a guide whose
-   * household is absent from it means the caller is reading it as a sitter.
-   * Defaults to editable while guides are still loading, so an owner never sees
-   * their own controls flicker away.
+   * Both the guide and its pets come from useGuideWithPets rather than from the
+   * context arrays directly. Those arrays hold only the caller's OWN
+   * households, so this screen used to answer "Guide not found" to every sitter
+   * — which also meant canEdit's own not-found branch defaulted them to
+   * editable. Resolving first and deciding second fixes both halves.
    */
-  const canEdit = useMemo(() => {
-    const found = guides.find((g) => g.id === guideId);
-    if (!found?.household_id) return true; // pre-household guide, or not loaded yet
-    return households.some((h) => h.id === found.household_id);
-  }, [guides, guideId, households]);
-
-  const [guide, setGuide] = useState<Guide | null>(null);
-  const [guidePets, setGuidePets] = useState<Pet[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const foundGuide = guides.find((g) => g.id === guideId);
-    if (foundGuide) {
-      setGuide(foundGuide);
-      const allPets = [...activePets, ...deceasedPets];
-      setGuidePets(allPets.filter((p) => foundGuide.pet_ids.includes(p.id)));
-    }
-    setLoading(false);
-  }, [guideId, guides, activePets, deceasedPets]);
+  const { guide, pets: guidePets, loading, canEdit } = useGuideWithPets(guideId);
 
   const handleEdit = () => {
     (navigation as any).navigate('GuideForm', { mode: 'edit', guideId });
@@ -101,10 +82,10 @@ export function GuideDetailScreen({ navigation, route }: Props) {
     (navigation as any).navigate('HomeCare', { guideId });
   };
 
-  // Hold the spinner on a deep-link hard reload: the effect runs against an
-  // empty guides array before DataContext's initial fetch resolves, and the
-  // not-found state must wait for real data.
-  if (loading || (!guide && loadingGuides)) {
+  // The hook holds `loading` true until the context load AND the by-id
+  // fallback have both had their turn, so "not found" below is a real answer
+  // rather than a race.
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

@@ -53,6 +53,13 @@ interface DataContextType {
   deletePet: (petId: string) => Promise<void>;
   markPetDeceased: (petId: string, date: string) => Promise<Pet>;
   restorePet: (petId: string) => Promise<Pet>;
+  /**
+   * One pet by id, straight from the server. `pets` holds only the caller's OWN
+   * households (see SupabaseAdapter.getPets), so a connected sitter looking at
+   * a client's animal will never find it there — this is how those screens
+   * resolve it. RLS still decides: a stranger gets null, not a row.
+   */
+  getPet: (petId: string) => Promise<Pet | null>;
 
   // Guides
   guides: Guide[];
@@ -465,6 +472,10 @@ export function DataProvider({ children }: DataProviderProps) {
       if (userIdRef.current === userId) setLoadingGuides(false);
     }
   }, [userId, noteLoadFailure]);
+
+  const getPet = useCallback(async (petId: string) => {
+    return dataService.getPet(petId);
+  }, []);
 
   const getGuide = useCallback(async (guideId: string) => {
     return dataService.getGuide(guideId);
@@ -1207,6 +1218,7 @@ export function DataProvider({ children }: DataProviderProps) {
       loadingGuides,
       guidesError,
       refreshGuides,
+      getPet,
       getGuide,
       createGuide,
       updateGuide,
@@ -1302,6 +1314,7 @@ export function DataProvider({ children }: DataProviderProps) {
       loadingGuides,
       guidesError,
       refreshGuides,
+      getPet,
       getGuide,
       createGuide,
       updateGuide,

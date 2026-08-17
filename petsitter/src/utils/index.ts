@@ -37,6 +37,23 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * A human-readable name for someone we only know by email address.
+ *
+ * `email.split('@')[0]` is not good enough: it surfaces plus-addressing and
+ * separators verbatim — "tcdain+qapaws", "first.last" — which reads like a bug,
+ * and quoting a stranger's full address into a shared feed is more of their
+ * identity than the moment calls for. Returns '' when there is nothing usable,
+ * so callers can fall back to their own wording.
+ */
+export function personNameFromEmail(email?: string | null): string {
+  const local = email?.split('@')[0];
+  if (!local) return '';
+  const base = local.split('+')[0].replace(/[._-]+/g, ' ').trim();
+  if (!base) return '';
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+/**
  * Truncate a string to a specified length
  */
 export function truncate(str: string, length: number): string {

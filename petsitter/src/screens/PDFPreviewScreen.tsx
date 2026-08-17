@@ -14,6 +14,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
+import { useGuideWithPets } from '../hooks';
 import { supabase } from '../lib/supabase';
 import { COLORS } from '../constants';
 import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
@@ -164,15 +165,23 @@ function printExportedGuideOnWeb(html: string) {
 export function PDFPreviewScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
   const {
-    guides,
-    activePets,
-    deceasedPets,
-    loadingGuides,
     loadingPets,
     getCheatSheet,
     petsError,
     refreshPets,
   } = useData();
+
+  // Resolved rather than filtered out of the context arrays, which hold only
+  // the caller's own households. Exporting the guide to paper is the one thing
+  // a sitter most obviously needs and the one this screen refused them: the
+  // lookup missed and it rendered "Guide not found". No canEdit gating here —
+  // a PDF is a read, and a sitter wanting the instructions on paper is the
+  // entire point of the sitter account.
+  const {
+    guide: resolvedGuide,
+    pets: resolvedPets,
+    loading: guideLoading,
+  } = useGuideWithPets(guideId);
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
@@ -226,7 +235,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   // The getCheatSheet re-fetch this triggers is an idempotent read.
   useEffect(() => {
     loadData();
-  }, [guideId, guides, activePets, deceasedPets]);
+  }, [guideId, resolvedGuide, resolvedPets]);
 
   // Crown can arrive while this screen just sits in the stack: the buyer
   // returns from UnlockCrown (which changes neither guideId nor guides, so the
@@ -243,11 +252,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const foundGuide = guides.find((g) => g.id === guideId);
+      const foundGuide = resolvedGuide;
       if (foundGuide) {
         setGuide(foundGuide);
-        const allPets = [...activePets, ...deceasedPets];
-        const pets = allPets.filter((p) => foundGuide.pet_ids.includes(p.id));
+        const pets = resolvedPets;
         setGuidePets(pets);
         // Don't consume the one-shot seed while pets are still loading: on a
         // deep-link restore the guides fetch can win the race, and seeding
@@ -654,7 +662,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
   // Keep spinning while household guides/pets are still loading — declaring
   // "not found" before the initial fetch resolves would be a false negative.
-  if (loading || (!guide && (loadingGuides || loadingPets))) {
+  if (loading || guideLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />

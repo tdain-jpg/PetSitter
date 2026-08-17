@@ -14,6 +14,7 @@ import {
   ScreenHeader,
   ScreenContainer,
   speciesIconName,
+  DateField,
 } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
@@ -406,28 +407,21 @@ export function TripWizardScreen({ navigation }: Props) {
           onChangeText={setTripTitle}
         />
 
-        <Input
+        <DateField
           label="Start Date *"
-          placeholder="YYYY-MM-DD"
           value={startDate}
-          onChangeText={setStartDate}
+          onChange={setStartDate}
           error={startDateError}
         />
 
-        <Input
+        <DateField
           label="End Date *"
-          placeholder="YYYY-MM-DD"
           value={endDate}
-          onChangeText={setEndDate}
+          onChange={setEndDate}
           error={endDateError}
+          min={startDate || undefined}
         />
       </Card>
-
-      <View className="mb-4">
-        <Text className="text-tan-500 text-sm text-center">
-          Tip: Use format YYYY-MM-DD (e.g., 2026-03-15)
-        </Text>
-      </View>
     </View>
   );
 

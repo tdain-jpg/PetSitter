@@ -21,6 +21,10 @@ export function SensitiveValue({ value, label, className = '' }: SensitiveValueP
       accessibilityRole="button"
       accessibilityLabel={revealed ? `Hide ${label || 'sensitive value'}` : `Reveal ${label || 'sensitive value'}`}
       accessibilityState={{ expanded: revealed }}
+      // 17px tall before this. These are the WiFi password and the door code —
+      // the two things a sitter taps one-handed, standing outside a house they
+      // have never been to, holding a dog lead.
+      style={{ minHeight: 44 }}
       className="flex-row items-center"
     >
       <Text className={`text-brown-800 ${className}`} selectable={revealed}>

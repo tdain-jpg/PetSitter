@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, ScreenContainer } from '../components';
 import { useData } from '../contexts';
+import { useGuideWithPets } from '../hooks';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
@@ -57,37 +58,30 @@ const parseLocalDateKey = (key: string) => {
 export function DailyRoutineScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
   const {
-    guides,
-    activePets,
-    deceasedPets,
-    loadingGuides,
     getTaskCompletions,
     markTaskComplete,
     markTaskIncomplete,
     updateGuide,
-    households,
   } = useData();
 
-  const [guide, setGuide] = useState<Guide | null>(null);
-  const [guidePets, setGuidePets] = useState<Pet[]>([]);
-
   /**
-   * Authoring tasks is a write to the GUIDE (custom tasks live in
-   * guides.daily_routine), which RLS allows only to household members. A
-   * connected sitter can read this screen and tick boxes — that is the point of
-   * it — but "+ Add Task" for them is a PATCH that returns zero rows, which
-   * PostgREST reports as a 406 the modal had no idea what to do with.
+   * Guide, pets and write-permission all come from one resolver. It matters
+   * here for two reasons at once.
    *
-   * `households` holds only households the caller BELONGS to, so a guide whose
-   * household is missing from it means we are reading it as a sitter. Defaults
-   * to editable while guides load so an owner's controls never flicker.
+   * Reachability: a connected sitter's context arrays hold only their OWN
+   * households, so looking the guide up there returned nothing and this screen
+   * answered "Guide not found" — to the exact person the screen is for. Ticking
+   * boxes is what a sitter account is FOR.
+   *
+   * Permission: authoring tasks writes to the GUIDE (custom tasks live in
+   * guides.daily_routine), which RLS allows only to household members. For a
+   * sitter "+ Add Task" is a PATCH matching zero rows, which PostgREST reports
+   * as a 406. The old canEdit derived that from the same failed lookup, so it
+   * fell through to its not-loaded-yet branch and returned "editable" for
+   * precisely the case it existed to catch.
    */
-  const canEdit = useMemo(() => {
-    const found = guides.find((g) => g.id === guideId);
-    if (!found?.household_id) return true;
-    return households.some((h) => h.id === found.household_id);
-  }, [guides, guideId, households]);
-  const [loading, setLoading] = useState(true);
+  const { guide, pets: guidePets, loading: guideLoading, canEdit } = useGuideWithPets(guideId);
+
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()));
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
   const [customTasks, setCustomTasks] = useState<RoutineTask[]>([]);
@@ -110,35 +104,17 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     is_recurring: true,
   });
 
-  // Pet arrays are deps too: loadData builds guidePets from them, and on a
-  // deep-link hard reload the guides fetch can resolve before the pets fetch.
+  // Custom tasks are read out of the resolved guide rather than loaded
+  // separately, so they arrive whichever way the guide did.
   useEffect(() => {
-    loadData();
-  }, [guideId, guides, activePets, deceasedPets]);
+    setCustomTasks(guide?.daily_routine?.tasks?.filter((t) => t.is_custom) ?? []);
+  }, [guide]);
 
   useEffect(() => {
     if (guide) {
       loadCompletions();
     }
   }, [selectedDate, guide]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const foundGuide = guides.find((g) => g.id === guideId);
-      if (foundGuide) {
-        setGuide(foundGuide);
-        const allPets = [...activePets, ...deceasedPets];
-        setGuidePets(allPets.filter((p) => foundGuide.pet_ids.includes(p.id)));
-        // Load custom tasks from guide's daily_routine
-        if (foundGuide.daily_routine?.tasks) {
-          setCustomTasks(foundGuide.daily_routine.tasks.filter((t) => t.is_custom));
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadCompletions = async () => {
     const data = await getTaskCompletions(guideId, selectedDate);
@@ -413,6 +389,14 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
           ? {
               ...t,
               ...taskForm,
+              // Empty optional fields must become undefined, not ''. The create
+              // branch below already did this; the edit branch spread taskForm
+              // raw, so editing a task wrote empty strings back over fields the
+              // form had correctly left unset — which is where the stored ''
+              // values that broke rendering came from.
+              description: taskForm.description || undefined,
+              notes: taskForm.notes || undefined,
+              time: taskForm.time || undefined,
               pet_id: taskForm.pet_id || undefined,
             }
           : t
@@ -497,10 +481,9 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   const totalCount = allTasks.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  // Hold the spinner on a deep-link hard reload: the effect runs against an
-  // empty guides array before DataContext's initial fetch resolves, and the
-  // not-found state must wait for real data.
-  if (loading || (!guide && loadingGuides)) {
+  // The resolver holds this true until both the context load and the by-id
+  // fallback have had their turn, so "not found" below is an answer, not a race.
+  if (guideLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -627,21 +610,26 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                             </View>
                           )}
                         </View>
-                        {task.description && (
+                        {/* Ternaries, not `&&`. These fields are stored as
+                            EMPTY STRINGS by the add-task form, and `'' && …`
+                            renders the empty string itself — a bare text node
+                            inside a View. On web that is 26 console errors per
+                            visit; on native it throws. */}
+                        {task.description ? (
                           <Text className={`text-sm ${completed ? 'text-primary-600' : 'text-tan-500'}`}>
                             {task.description}
                           </Text>
-                        )}
-                        {task.notes && (
+                        ) : null}
+                        {task.notes ? (
                           <Text className={`text-sm italic ${completed ? 'text-primary-500' : 'text-tan-400'}`}>
                             Note: {task.notes}
                           </Text>
-                        )}
-                        {task.time && (
+                        ) : null}
+                        {task.time ? (
                           <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
                             ⏰ {task.time}
                           </Text>
-                        )}
+                        ) : null}
                         {pet && (
                           <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
                             🐾 {pet.name}
@@ -657,7 +645,8 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         {!isFirstCustom && (
                           <Pressable
                             onPress={() => handleMoveTask(task, 'up')}
-                            className="bg-tan-100 px-2 py-1 rounded"
+                            style={{ minHeight: 44, justifyContent: 'center' }}
+                            className="bg-tan-100 px-3 rounded"
                             accessibilityRole="button"
                             accessibilityLabel="Move task up"
                           >
@@ -667,7 +656,8 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         {!isLastCustom && (
                           <Pressable
                             onPress={() => handleMoveTask(task, 'down')}
-                            className="bg-tan-100 px-2 py-1 rounded"
+                            style={{ minHeight: 44, justifyContent: 'center' }}
+                            className="bg-tan-100 px-3 rounded"
                             accessibilityRole="button"
                             accessibilityLabel="Move task down"
                           >
@@ -676,7 +666,8 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         )}
                         <Pressable
                           onPress={() => handleEditTask(task)}
-                          className="bg-secondary-100 px-2 py-1 rounded"
+                          style={{ minHeight: 44, justifyContent: 'center' }}
+                          className="bg-secondary-100 px-3 rounded"
                           accessibilityRole="button"
                           accessibilityLabel="Edit task"
                         >
@@ -684,7 +675,8 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         </Pressable>
                         <Pressable
                           onPress={() => handleDeleteTask(task.id)}
-                          className="bg-accent-100 px-2 py-1 rounded"
+                          style={{ minHeight: 44, justifyContent: 'center' }}
+                          className="bg-accent-100 px-3 rounded"
                           accessibilityRole="button"
                           accessibilityLabel="Delete task"
                         >
@@ -739,6 +731,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                   onPress={() => setShowTaskModal(false)}
                   accessibilityRole="button"
                   accessibilityLabel="Close task modal"
+                  style={{ minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' }}
                 >
                   <Text className="text-2xl text-tan-400">✕</Text>
                 </Pressable>

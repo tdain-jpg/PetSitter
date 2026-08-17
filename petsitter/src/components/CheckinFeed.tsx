@@ -7,6 +7,7 @@ import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import { useData } from '../contexts';
 import { Checkin } from '../types';
+import { personNameFromEmail } from '../utils';
 
 interface CheckinFeedProps {
   householdId: string;
@@ -151,14 +152,15 @@ export function CheckinFeed({ householdId, canPost = true }: CheckinFeedProps) {
             <View className="flex-row justify-between items-center mt-2">
               <Text className="text-xs text-gray-500">
                 {/* is_mine FIRST: seeing your own address quoted back at you
-                    reads like somebody else wrote it. */}
+                    reads like somebody else wrote it.
+                    Everyone else gets a NAME, not an address. This used to
+                    print author_email raw, so an owner reading their sitter's
+                    check-ins saw "tcdain+qasitter@gmail.com" — plus-addressing,
+                    domain and all — where a person's name belongs. */}
                 {checkin.is_mine
                   ? 'You'
-                  : checkin.author_email
-                  ? checkin.author_email
-                  : checkin.is_mine 
-                    ? 'You' 
-                    : 'Someone in this household'}
+                  : personNameFromEmail(checkin.author_email) ||
+                    'Someone in this household'}
                 {' '}
                 • {formatTime(checkin.created_at)}
               </Text>

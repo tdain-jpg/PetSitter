@@ -37,6 +37,9 @@ export function ContactCard({
             onPress={handleCall}
             accessibilityRole="button"
             accessibilityLabel={`Call ${contact.name} at ${contact.phone}`}
+            // The emergency-contact phone number, at 23px. Whatever else is
+            // worth being able to hit on the first try, this is.
+            style={{ minHeight: 44, justifyContent: 'center' }}
           >
             <Text className="text-secondary-600 mt-1">📞 {contact.phone}</Text>
           </Pressable>

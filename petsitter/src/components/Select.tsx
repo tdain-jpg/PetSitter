@@ -42,7 +42,7 @@ export function Select({
         accessibilityLabel={label || placeholder}
         accessibilityValue={{ text: selectedOption?.label || '' }}
         className={`
-          border rounded-lg px-4 py-3 bg-cream-50 flex-row justify-between items-center
+          border rounded-lg px-4 py-3 bg-cream-50 flex-row justify-between items-center min-h-[44px]
           ${error ? 'border-accent-500' : 'border-tan-300'}
         `}
       >

@@ -22,6 +22,7 @@ const logo = require('../../assets/logo.png');
 // @ts-ignore
 const wordmark = require('../../assets/wordmark.png');
 import { useAuth, useData } from '../contexts';
+import { personNameFromEmail } from '../utils';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PendingInvite, PendingSitterInvite } from '../types';
@@ -200,16 +201,11 @@ export function HomeScreen({ navigation }: Props) {
   }, [settleSitterFirstRun, refreshSettings]);
 
   // Prefer a real name; otherwise derive something human from the address.
-  // Plain email.split('@')[0] surfaces plus-addressing and dots verbatim
-  // ("tcdain+qapaws", "first.last"), which reads like a bug to the user.
+  // The email path is shared with CheckinFeed — see personNameFromEmail.
   const displayName = (() => {
     const fullName = user?.full_name?.trim();
     if (fullName) return fullName.split(' ')[0];
-    const local = user?.email?.split('@')[0];
-    if (!local) return '';
-    const base = local.split('+')[0].replace(/[._-]+/g, ' ').trim();
-    if (!base) return '';
-    return base.charAt(0).toUpperCase() + base.slice(1);
+    return personNameFromEmail(user?.email);
   })();
 
   const isFocused = useIsFocused();
@@ -577,13 +573,25 @@ export function HomeScreen({ navigation }: Props) {
               </Text>
             </View>
           </View>
-          <View className="items-end shrink">
+          {/* ml-auto keeps this group pinned to the right edge even when
+              flex-wrap drops it to a second line. Without it a long name
+              widened the group past the row, and the wrapped line rendered
+              right-aligned content inside a left-aligned block — the Settings
+              button floating loose in the middle of the header. */}
+          <View className="items-end shrink ml-auto">
             <Button
               title="Settings"
               onPress={navigateToSettings}
               variant="secondary"
             />
-            <Text style={{ fontSize: 12, color: COLORS.tan, marginTop: 4 }}>
+            {/* Capped and clipped to one line. This is a greeting; a long name
+                is not worth reflowing the header for, and `Welcome, Bartholomew
+                -Christopher!` was doing exactly that. */}
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={{ fontSize: 12, color: COLORS.tan, marginTop: 4, maxWidth: 160 }}
+            >
               Welcome{displayName ? `, ${displayName}` : ''}!
             </Text>
           </View>

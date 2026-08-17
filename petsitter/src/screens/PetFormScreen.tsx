@@ -26,6 +26,7 @@ import {
 } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
+import { useFormDraft } from '../hooks';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -382,6 +383,23 @@ export function PetFormScreen({ navigation, route }: Props) {
     setIsDirty(false);
   }, []);
 
+  // Survives what beforeRemove cannot intercept — browser back, a swipe, a
+  // closed tab, a crash. See the note on the beforeRemove listener below.
+  const { clearDraft } = useFormDraft<FormData>({
+    kind: 'pet',
+    userId: user?.id,
+    enabled: guardUnsavedChanges,
+    value: formData,
+    isDirty,
+    noun: 'pet',
+    onRestore: (draft) => {
+      setFormData(draft);
+      // Restored work is unsaved work: without this the guard would treat a
+      // fully repopulated form as pristine and let it be thrown away again.
+      markDirty();
+    },
+  });
+
   // Web: warn before a refresh or tab close discards the form.
   useEffect(() => {
     if (Platform.OS !== 'web' || !guardUnsavedChanges || !isDirty) return;
@@ -396,11 +414,18 @@ export function PetFormScreen({ navigation, route }: Props) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [guardUnsavedChanges, isDirty]);
 
-  // Browser back, Android hardware back, the header Cancel button and any
-  // programmatic goBack() all funnel through beforeRemove, so the discard
-  // confirm lives here only — no caller adds its own, so it can never
-  // double-prompt. The success path clears the dirty ref first, so saving
-  // and leaving stays silent.
+  // Android hardware back, the header Cancel button and any programmatic
+  // goBack() funnel through beforeRemove, so the discard confirm lives here
+  // only — no caller adds its own, so it can never double-prompt. The success
+  // path clears the dirty ref first, so saving and leaving stays silent.
+  //
+  // BROWSER back does NOT reach here, and used to be listed above as though it
+  // did. On web React Navigation handles popstate by calling
+  // navigation.resetRoot(record.state) (useLinking.tsx:218) — a wholesale state
+  // replacement, not a dispatched action, so there is nothing for beforeRemove
+  // to veto, and its listener is registered at NavigationContainer mount, long
+  // before this screen exists. That gap is covered by useFormDraft above:
+  // browser back still leaves, but the typing survives and is offered back.
   useEffect(() => {
     if (!guardUnsavedChanges) return;
     return navigation.addListener('beforeRemove', (e) => {
@@ -420,11 +445,14 @@ export function PetFormScreen({ navigation, route }: Props) {
         promptingRef.current = false;
         if (ok) {
           clearDirty();
+          // An explicit discard means the draft is unwanted, not merely
+          // interrupted — do not offer it back next time.
+          clearDraft();
           navigation.dispatch(e.data.action);
         }
       });
     });
-  }, [navigation, guardUnsavedChanges, clearDirty]);
+  }, [navigation, guardUnsavedChanges, clearDirty, clearDraft]);
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -483,6 +511,7 @@ export function PetFormScreen({ navigation, route }: Props) {
       // Saved — drop the guard (ref first, so the listeners see it in this
       // same tick) before navigating, or leaving would prompt to discard.
       clearDirty();
+      clearDraft();
       navigation.goBack();
     } catch (error: any) {
       const message = friendlyError(error, 'Failed to save pet');

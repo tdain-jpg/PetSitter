@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, SectionHeader, SensitiveValue, ScreenContainer } from '../components';
 import { showAlert } from '../lib/showAlert';
 import { useData } from '../contexts';
+import { useGuideWithPets } from '../hooks';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -65,7 +66,14 @@ const SUPPLY_CATEGORIES: { label: string; value: SupplyCategory }[] = [
 
 export function HomeCareScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
-  const { guides, loadingGuides, updateGuide } = useData();
+  const { updateGuide } = useData();
+
+  // Resolved rather than looked up in `guides`: that array holds only the
+  // caller's own households, so a connected sitter — the person most likely to
+  // need the alarm code and the boiler instructions while standing in the
+  // house — was answered "Guide not found". canEdit comes from the same place,
+  // so every + Add and Delete below is owner-only; a sitter reads.
+  const { guide: resolvedGuide, loading: guideLoading, canEdit } = useGuideWithPets(guideId);
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [homeCare, setHomeCare] = useState<HomeCare | null>(null);
@@ -86,12 +94,12 @@ export function HomeCareScreen({ navigation, route }: Props) {
   // initial fetch resolves — the lookup must retry once guides arrive.
   useEffect(() => {
     loadData();
-  }, [guideId, guides]);
+  }, [guideId, resolvedGuide]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const foundGuide = guides.find((g) => g.id === guideId);
+      const foundGuide = resolvedGuide;
       if (foundGuide) {
         setGuide(foundGuide);
         setHomeCare(
@@ -221,7 +229,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
 
   // Keep spinning while the household guides are still loading — declaring
   // "not found" before the initial fetch resolves would be a false negative.
-  if (loading || (!guide && loadingGuides)) {
+  if (loading || guideLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <ActivityIndicator size="large" color={COLORS.secondary} />
@@ -265,7 +273,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
         <SectionHeader
           key={showSystemForm ? 'systems-form-open' : 'systems'}
           title={`Home Systems (${homeCare.systems.length})`}
-          rightAction={{ label: '+ Add', onPress: () => setShowSystemForm(true) }}
+          rightAction={canEdit ? { label: '+ Add', onPress: () => setShowSystemForm(true) } : undefined}
         >
           {homeCare.systems.length === 0 ? (
             <Text className="text-tan-500">No home systems added.</Text>
@@ -279,6 +287,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     {system.location && <Text className="text-tan-400 text-sm">📍 {system.location}</Text>}
                     {system.instructions && <Text className="text-tan-600 text-sm mt-1">{system.instructions}</Text>}
                   </View>
+                  {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteSystem(system.id)}
                     className="px-2 py-1"
@@ -287,6 +296,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
+                  )}
                 </View>
               </View>
             ))
@@ -307,7 +317,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
         <SectionHeader
           key={showTaskForm ? 'tasks-form-open' : 'tasks'}
           title={`Home Tasks (${homeCare.tasks.length})`}
-          rightAction={{ label: '+ Add', onPress: () => setShowTaskForm(true) }}
+          rightAction={canEdit ? { label: '+ Add', onPress: () => setShowTaskForm(true) } : undefined}
         >
           {homeCare.tasks.length === 0 ? (
             <Text className="text-tan-500">No home tasks added.</Text>
@@ -320,6 +330,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     <Text className="text-tan-500 text-sm capitalize">{task.frequency} • {task.category}</Text>
                     {task.instructions && <Text className="text-tan-600 text-sm mt-1">{task.instructions}</Text>}
                   </View>
+                  {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteTask(task.id)}
                     className="px-2 py-1"
@@ -328,6 +339,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
+                  )}
                 </View>
               </View>
             ))
@@ -348,7 +360,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
         <SectionHeader
           key={showSupplyForm ? 'supplies-form-open' : 'supplies'}
           title={`Supplies (${homeCare.supplies.length})`}
-          rightAction={{ label: '+ Add', onPress: () => setShowSupplyForm(true) }}
+          rightAction={canEdit ? { label: '+ Add', onPress: () => setShowSupplyForm(true) } : undefined}
         >
           {homeCare.supplies.length === 0 ? (
             <Text className="text-tan-500">No supplies added.</Text>
@@ -361,6 +373,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
                     {supply.quantity && <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text>}
                   </View>
+                  {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteSupply(supply.id)}
                     className="px-2 py-1"
@@ -369,6 +382,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
+                  )}
                 </View>
               </View>
             ))
@@ -389,7 +403,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
         <SectionHeader
           key={showApplianceForm ? 'appliances-form-open' : 'appliances'}
           title={`Appliances (${homeCare.appliances.length})`}
-          rightAction={{ label: '+ Add', onPress: () => setShowApplianceForm(true) }}
+          rightAction={canEdit ? { label: '+ Add', onPress: () => setShowApplianceForm(true) } : undefined}
         >
           {homeCare.appliances.length === 0 ? (
             <Text className="text-tan-500">No appliances added.</Text>
@@ -402,6 +416,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     {appliance.location && <Text className="text-tan-500 text-sm">📍 {appliance.location}</Text>}
                     {appliance.instructions && <Text className="text-tan-600 text-sm mt-1">{appliance.instructions}</Text>}
                   </View>
+                  {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteAppliance(appliance.id)}
                     className="px-2 py-1"
@@ -410,6 +425,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
+                  )}
                 </View>
               </View>
             ))
@@ -430,7 +446,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
         <SectionHeader
           key={showAmenityForm ? 'amenities-form-open' : 'amenities'}
           title={`Guest Amenities (${homeCare.guest_amenities.length})`}
-          rightAction={{ label: '+ Add', onPress: () => setShowAmenityForm(true) }}
+          rightAction={canEdit ? { label: '+ Add', onPress: () => setShowAmenityForm(true) } : undefined}
         >
           {homeCare.guest_amenities.length === 0 ? (
             <Text className="text-tan-500">No guest amenities added.</Text>
@@ -449,6 +465,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                     )}
                     {amenity.instructions && <Text className="text-tan-600 text-sm mt-1">{amenity.instructions}</Text>}
                   </View>
+                  {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteAmenity(amenity.id)}
                     className="px-2 py-1"
@@ -457,6 +474,7 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   >
                     <Text className="text-accent-500 text-sm">Delete</Text>
                   </Pressable>
+                  )}
                 </View>
               </View>
             ))
