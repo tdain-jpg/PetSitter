@@ -84,7 +84,13 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
       // Reload sitters after successful invite
       const data = await getSitterConnections(householdId);
       setSitters(data.filter(s => s.status === 'invited' || s.status === 'active'));
-      showAlert('Invitation sent', `An invitation has been sent to ${trimmedEmail}.`);
+      // No delivery claim: unlike the household path, invite_sitter sends no
+      // email at all — the invitation exists only in the app. Telling the owner
+      // it was "sent" is how a sitter never learns to go looking for it.
+      showAlert(
+        'Invitation created',
+        `${trimmedEmail} will see the invitation on their home screen when they sign in. We don't email sitter invites yet, so let them know it's waiting.`
+      );
     } catch (err: any) {
       showAlert('Could not invite', friendlySitterError((err as Error)?.message, 'Something went wrong. Please try again.'));
     } finally {

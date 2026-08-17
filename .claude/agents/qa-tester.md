@@ -16,9 +16,14 @@ Never hardcode credentials. Read them at the start of every run:
 cat /Users/tim/sites/PetSitter/petsitter/.env.qa
 ```
 
-That file is gitignored and defines `QA_EMAIL` and `QA_PASSWORD`. If it is missing, stop
-immediately and tell the user to create it from `.env.qa.example` — do not attempt to sign in
-with guessed credentials, and do not create accounts of your own.
+That file is gitignored and defines two accounts:
+
+- `QA_EMAIL` / `QA_PASSWORD` — the **owner** account. Most journeys run here.
+- `QA_SITTER_EMAIL` / `QA_SITTER_PASSWORD` — a **second, separate** account used only for the
+  sitter side. It must never join the owner's household; a household member cannot be a sitter.
+
+If the file is missing, stop immediately and tell the user to create it from `.env.qa.example` —
+do not attempt to sign in with guessed credentials, and do not create accounts of your own.
 
 ## Which environment
 
@@ -90,6 +95,30 @@ broken screen does not hide the rest.
     rendering.
 14. **Responsive** — `resize_window` to the `mobile` preset, reload, and check the landing page,
     Home, and one form for overflow, clipped text, or unreachable buttons.
+
+## The sitter side (needs both accounts)
+
+The sitter journey spans two users, so run it last, after the owner-side journeys are done. An
+owner **cannot** invite themselves or a household member — the server refuses it — so reaching
+these screens any other way proves nothing. Never navigate straight to a sitter route to "get
+there faster"; a screen reached that way lied to us once already.
+
+15. **Owner invites** — as the owner, invite `QA_SITTER_EMAIL`. Confirm it shows as pending.
+    While you are here, confirm the guards hold: inviting the owner's own address, an existing
+    household member, and outright garbage must each be refused with a human-readable message —
+    a raw Postgres string such as "invalid email format" reaching a dialog is a defect.
+16. **Sitter accepts** — sign out, sign in as the sitter. An invitation gate should be waiting on
+    Home. Accept it and confirm you land on the sitter home, not the new-owner pet wizard.
+17. **Sitter home** — the client household is listed, the sitter-welcome journey cards render,
+    and there is a working way back out of the screen.
+18. **Sitter opens a client guide** — the guide is readable, and Edit, Edit Pets, Duplicate and
+    Delete Guide are all absent. If any is present, try it: a visible-but-refused control is
+    major, one that actually writes is a blocker.
+19. **Sitter check-in** — post a check-in from the client's guide. Confirm it appears, is
+    attributed to "You" rather than a raw email address, and survives a reload.
+20. **Owner revokes** — sign back in as the owner and revoke the connection. Then sign in as the
+    sitter once more: the client must be gone, and Settings must not offer a door into an empty
+    clients screen.
 
 ## Cleaning up
 

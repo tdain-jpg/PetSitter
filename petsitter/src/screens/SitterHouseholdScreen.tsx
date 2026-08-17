@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, ScrollView, Text, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -17,24 +17,48 @@ type Props = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
 export function SitterHouseholdScreen({ navigation, route }: Props) {
   const { householdId, householdName } = route.params;
   
-  const {
-    guides,
-    activePets,
-    loadingGuides,
-    guidesError,
-    refreshGuides
-  } = useData();
+  const { getHouseholdPets, getHouseholdGuides } = useData();
 
   useFocusEffect(
     useCallback(() => {
-      refreshGuides();
+      void loadHousehold();
     }, [])
   );
 
-  const householdPets = activePets.filter(pet => pet.household_id === householdId);
-  const householdGuides = guides.filter(guide => guide.household_id === householdId);
+  // Fetched for THIS household rather than filtered out of the caller's own
+  // lists. getPets/getGuides are scoped to households the user is a member of —
+  // which a sitter is not — so filtering them here would always yield nothing.
+  const [householdPets, setHouseholdPets] = useState<Pet[]>([]);
+  const [householdGuides, setHouseholdGuides] = useState<Guide[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingHousehold, setLoadingHousehold] = useState(true);
 
-  if (loadingGuides && householdGuides.length === 0) {
+  const loadHousehold = useCallback(async () => {
+    setLoadingHousehold(true);
+    try {
+      const [p, g] = await Promise.all([
+        getHouseholdPets(householdId),
+        getHouseholdGuides(householdId),
+      ]);
+      setHouseholdPets(p);
+      setHouseholdGuides(g);
+      setLoadError(null);
+    } catch (err) {
+      // Never fall through to the empty state: a sitter who cannot load their
+      // client must not be told the client has no pets.
+      setLoadError((err as Error)?.message || 'Could not load this household.');
+    } finally {
+      setLoadingHousehold(false);
+    }
+  }, [householdId, getHouseholdPets, getHouseholdGuides]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadHousehold();
+    }, [loadHousehold])
+  );
+
+  if (loadingHousehold && householdGuides.length === 0) {
     return (
       <View className="flex-1 bg-cream-200 items-center justify-center">
         <StatusBar style="dark" />
@@ -43,7 +67,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
     );
   }
 
-  if (guidesError) {
+  if (loadError) {
     return (
       <View className="flex-1 bg-cream-200">
         <StatusBar style="dark" />
@@ -61,10 +85,10 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
         <ScrollView className="flex-1">
           <ScreenContainer variant="content">
             <Card className="bg-warm-50 border border-warm-300 p-4">
-              <Text className="text-brown-800 mb-2">{guidesError}</Text>
+              <Text className="text-brown-800 mb-2">{loadError}</Text>
               <Button 
                 title="Try Again" 
-                onPress={refreshGuides} 
+                onPress={() => void loadHousehold()} 
                 variant="primary" 
               />
             </Card>

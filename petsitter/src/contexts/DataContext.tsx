@@ -109,6 +109,10 @@ interface DataContextType {
   revokeSitter: (connectionId: string) => Promise<void>;
   /** Crown status for a household: active, and when it was granted. */
   getCrownReceipt: (householdId: string) => Promise<CrownReceipt | null>;
+  /** One household's pets — for the sitter view, which cannot filter its own lists. */
+  getHouseholdPets: (householdId: string) => Promise<Pet[]>;
+  /** One household's guides, same reason. */
+  getHouseholdGuides: (householdId: string) => Promise<Guide[]>;
   /** Check-in feed for a household, newest first. */
   getCheckins: (householdId: string, limit?: number) => Promise<Checkin[]>;
   /** Post a check-in. The server pins authorship to the caller. */
@@ -619,6 +623,16 @@ export function DataProvider({ children }: DataProviderProps) {
 
   const getCrownReceipt = useCallback(
     (householdId: string) => dataService.getCrownReceipt(householdId),
+    []
+  );
+
+  const getHouseholdPets = useCallback(
+    (householdId: string) => dataService.getHouseholdPets(householdId),
+    []
+  );
+
+  const getHouseholdGuides = useCallback(
+    (householdId: string) => dataService.getHouseholdGuides(householdId),
     []
   );
 
@@ -1213,6 +1227,8 @@ export function DataProvider({ children }: DataProviderProps) {
       getSitterConnections,
       revokeSitter,
       getCrownReceipt,
+      getHouseholdPets,
+      getHouseholdGuides,
       getCheckins,
       addCheckin,
       deleteCheckin,
@@ -1304,6 +1320,8 @@ export function DataProvider({ children }: DataProviderProps) {
       getSitterConnections,
       revokeSitter,
       getCrownReceipt,
+      getHouseholdPets,
+      getHouseholdGuides,
       getCheckins,
       addCheckin,
       deleteCheckin,

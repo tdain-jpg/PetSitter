@@ -63,12 +63,34 @@ export class SupabaseAdapter implements DataService {
   // ============================================
   // Pet Operations
   // ============================================
-  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
-  async getPets(_userId: string): Promise<Pet[]> {
-    const { data, error } = await supabase
-      .from('pets')
-      .select('*')
-      .order('created_at', { ascending: true });
+  /**
+   * The households this user is a MEMBER of. 0015 gave a connected sitter read
+   * access to a client's pets and guides but deliberately no read on
+   * `households`, so membership — unlike a bare RLS-scoped select — still means
+   * "mine" and never "a household I merely sit for".
+   */
+  private async memberHouseholdIds(): Promise<string[]> {
+    const { data, error } = await supabase.from('households').select('id');
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((h) => (h as { id: string }).id);
+  }
+
+  /**
+   * This user's OWN pets: their pre-household rows plus everything belonging to
+   * a household they are a member of.
+   *
+   * Do not simplify this back to an unfiltered select. It used to be one, on
+   * the premise that RLS returned only the caller's rows — true until 0015 let
+   * a connected sitter read a client's pets. After that the sitter's own
+   * "My Pets" quietly filled up with their client's animals.
+   */
+  async getPets(userId: string): Promise<Pet[]> {
+    const householdIds = await this.memberHouseholdIds();
+    const query = supabase.from('pets').select('*');
+    const scoped = householdIds.length
+      ? query.or(`user_id.eq.${userId},household_id.in.(${householdIds.join(',')})`)
+      : query.eq('user_id', userId);
+    const { data, error } = await scoped.order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Pet[];
   }
@@ -150,12 +172,14 @@ export class SupabaseAdapter implements DataService {
   // ============================================
   // Guide Operations
   // ============================================
-  /** @param _userId Deprecated: ignored — RLS scopes rows to the user's households. */
-  async getGuides(_userId: string): Promise<Guide[]> {
-    const { data, error } = await supabase
-      .from('guides')
-      .select('*')
-      .order('created_at', { ascending: false });
+  /** This user's OWN guides. Scoped for the same reason as `getPets` above. */
+  async getGuides(userId: string): Promise<Guide[]> {
+    const householdIds = await this.memberHouseholdIds();
+    const query = supabase.from('guides').select('*');
+    const scoped = householdIds.length
+      ? query.or(`user_id.eq.${userId},household_id.in.(${householdIds.join(',')})`)
+      : query.eq('user_id', userId);
+    const { data, error } = await scoped.order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []) as Guide[];
   }
@@ -737,6 +761,36 @@ export class SupabaseAdapter implements DataService {
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as CrownReceipt[];
     return rows[0] ?? null;
+  }
+
+  /**
+   * Pets and guides belonging to ONE household, fetched explicitly rather than
+   * filtered out of the caller's own lists.
+   *
+   * This exists because getPets/getGuides are now scoped to households the user
+   * is a MEMBER of — correct, and what stops a client's animals appearing in a
+   * sitter's own "My Pets". But the sitter's view OF that client reads the same
+   * arrays, so scoping them emptied it. A sitter is entitled to these rows
+   * (0015's read policies) and simply has to ask for them by household.
+   */
+  async getHouseholdPets(householdId: string): Promise<Pet[]> {
+    const { data, error } = await supabase
+      .from('pets')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Pet[];
+  }
+
+  async getHouseholdGuides(householdId: string): Promise<Guide[]> {
+    const { data, error } = await supabase
+      .from('guides')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Guide[];
   }
 
   /** The check-in feed for a household, newest first. */
