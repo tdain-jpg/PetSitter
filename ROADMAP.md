@@ -390,16 +390,19 @@ billing with no platform cut, and releases stay `git push`.
 **What's already done:** `public/site.webmanifest` with correct name, colors and start_url,
 plus all six icon sizes in `public/icons/` (192, 512, maskable 512, apple-touch 180, favicons).
 
-**What's missing** — none of it is referenced by the built page:
-- [ ] `<link rel="manifest">`, `<link rel="apple-touch-icon">`, `<meta name="theme-color">`
-  and `apple-mobile-web-app-*` tags in `index.html`. Expo's Metro web build generates this
-  file, so the reliable approach is a small post-build inject script wired into `build:web`.
-- [ ] A service worker. Required for Android's install prompt and for any offline behavior.
-  A hand-written cache-first worker for static assets and network-first for navigation is
-  enough; no Workbox dependency needed.
-- [ ] An **Install** page explaining Add to Home Screen — iOS requires Safari → Share → Add
-  to Home Screen, which nobody discovers unaided. Android shows an install prompt.
-- [ ] Verify with Lighthouse's installability audit.
+**What's missing:** nothing — all four shipped 2026-08-14/15 and are verified in the
+deployed build:
+- [x] `<link rel="manifest">`, `<link rel="apple-touch-icon">`, `<meta name="theme-color">`
+  and the `apple-mobile-web-app-*` tags. Expo's Metro web build owns `index.html`, so they
+  are injected afterwards by `scripts/postbuild-web.js`, wired into `build:web`.
+- [x] A service worker (`public/sw.js`) — cache-first for static assets, network-first for
+  navigation. No Workbox dependency.
+- [x] An **Install** page at `/install`, registered outside the isAuthenticated branch so it
+  resolves signed out. iOS needs Safari → Share → Add to Home Screen, which nobody discovers
+  unaided.
+- [x] Confirmed present in the built `dist/index.html`: manifest link, apple-touch-icon,
+  theme-color, all three `apple-mobile-web-app-*` tags, and the service-worker registration.
+  A full Lighthouse installability run has not been done since — worth one before launch.
 
 **Web push** becomes possible once the service worker exists — iOS 16.4+ supports it, but only
 for PWAs the user has installed to the Home Screen and then granted permission. That is enough
