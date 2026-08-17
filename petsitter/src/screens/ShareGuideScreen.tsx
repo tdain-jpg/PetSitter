@@ -111,9 +111,9 @@ export function ShareGuideScreen({ navigation, route }: Props) {
     setCreating(true);
     try {
       const newLink = await createShareLink(guideId, expiresInDays);
-      // The server deactivated every previously-active link for this guide
-      // before inserting the new one — mirror that locally so a dead link
-      // (possibly a housemate's) never keeps showing as active.
+      // Creating a link retires every other active link on this guide —
+      // mirror that locally so a dead link (possibly a housemate's) never
+      // keeps showing as active.
       setLinks((prev) => [...prev.map((l) => ({ ...l, is_active: false })), newLink]);
     } catch (error: any) {
       const message = friendlyError(error, 'Failed to create link');

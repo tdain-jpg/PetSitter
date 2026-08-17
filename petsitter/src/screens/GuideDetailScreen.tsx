@@ -317,7 +317,13 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           {/* Action Buttons */}
           <View className="gap-3 mt-6 mb-8">
             <Button title="🤖 Generate AI Cheat Sheet" onPress={handleAICheatSheet} variant="primary" />
-            <Button title="🔗 Share Guide" onPress={handleShare} variant="outline" />
+            {/* Share is owner-only. It mints a PUBLIC, unauthenticated URL to
+                the household's pet data and retires the guide's existing links
+                — not something to offer the person you hired to feed the cat.
+                RLS refuses it either way, but only after the screen has already
+                started writing. Export as PDF stays: it is read-only, and a
+                sitter wanting the guide on paper is the whole point. */}
+            {canEdit ? <Button title="🔗 Share Guide" onPress={handleShare} variant="outline" /> : null}
             <Button title="📄 Export as PDF" onPress={handleExportPDF} variant="outline" />
             {canEdit ? (
               <>

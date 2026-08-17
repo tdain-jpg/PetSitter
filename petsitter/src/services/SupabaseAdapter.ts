@@ -335,16 +335,17 @@ export class SupabaseAdapter implements DataService {
     userId: string,
     expiresInDays?: number
   ): Promise<ShareableLink> {
-    // Deactivate any existing active links for this guide. A silent failure
-    // here would leave an old code resolving alongside the new one, so abort
-    // creation if the revoke didn't apply.
-    const { error: deactivateError } = await supabase
-      .from('share_links')
-      .update({ is_active: false })
-      .eq('guide_id', guideId)
-      .eq('is_active', true);
-    if (deactivateError) throw new Error(deactivateError.message);
-
+    // ORDER MATTERS: create the new link FIRST, then retire the others.
+    //
+    // This used to deactivate-then-insert, which meant a caller who was going
+    // to be refused still fired a destructive PATCH across every active link on
+    // the guide before finding out. RLS made it harmless — a connected sitter's
+    // PATCH matched zero rows — but "harmless because the policy happens to
+    // filter it" is one policy change away from wiping an owner's live links on
+    // behalf of someone who was never allowed to.
+    //
+    // Insert-first inverts that: the permission boundary is hit before anything
+    // is touched, and a refusal leaves every existing link exactly as it was.
     const newLink = {
       guide_id: guideId,
       user_id: userId,
@@ -361,7 +362,28 @@ export class SupabaseAdapter implements DataService {
       .insert(newLink)
       .select('*')
       .single();
-    return unwrap(data as ShareableLink | null, error);
+    const created = unwrap(data as ShareableLink | null, error);
+
+    // Now retire every OTHER active link on this guide. `neq` on the row we
+    // just created is load-bearing — without it this would immediately
+    // deactivate the link it was asked to make.
+    //
+    // A silent failure here would leave an old code resolving alongside the new
+    // one, which is the whole reason this step exists. Since the insert already
+    // landed, back it out rather than returning a link the caller believes is
+    // exclusive.
+    const { error: deactivateError } = await supabase
+      .from('share_links')
+      .update({ is_active: false })
+      .eq('guide_id', guideId)
+      .eq('is_active', true)
+      .neq('id', created.id);
+    if (deactivateError) {
+      await supabase.from('share_links').delete().eq('id', created.id);
+      throw new Error(deactivateError.message);
+    }
+
+    return created;
   }
 
   async getShareLink(code: string): Promise<ShareableLink | null> {

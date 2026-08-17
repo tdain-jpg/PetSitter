@@ -65,10 +65,28 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     markTaskComplete,
     markTaskIncomplete,
     updateGuide,
+    households,
   } = useData();
 
   const [guide, setGuide] = useState<Guide | null>(null);
   const [guidePets, setGuidePets] = useState<Pet[]>([]);
+
+  /**
+   * Authoring tasks is a write to the GUIDE (custom tasks live in
+   * guides.daily_routine), which RLS allows only to household members. A
+   * connected sitter can read this screen and tick boxes — that is the point of
+   * it — but "+ Add Task" for them is a PATCH that returns zero rows, which
+   * PostgREST reports as a 406 the modal had no idea what to do with.
+   *
+   * `households` holds only households the caller BELONGS to, so a guide whose
+   * household is missing from it means we are reading it as a sitter. Defaults
+   * to editable while guides load so an owner's controls never flicker.
+   */
+  const canEdit = useMemo(() => {
+    const found = guides.find((g) => g.id === guideId);
+    if (!found?.household_id) return true;
+    return households.some((h) => h.id === found.household_id);
+  }, [guides, guideId, households]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(() => toLocalDateKey(new Date()));
   const [completions, setCompletions] = useState<TaskCompletion[]>([]);
@@ -324,16 +342,31 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   };
 
   // Save custom tasks to guide
-  const saveCustomTasks = async (updatedTasks: RoutineTask[]) => {
-    if (!guide) return;
+  /**
+   * Returns false if the write failed, having already told the user why. Every
+   * caller must honour that: this used to throw into three un-awaited handlers,
+   * so a refused PATCH left the modal open with no error, no close, and an
+   * uncaught rejection in the console — the user's only clue that "Add Task"
+   * had done nothing was that nothing happened.
+   */
+  const saveCustomTasks = async (updatedTasks: RoutineTask[]): Promise<boolean> => {
+    if (!guide) return false;
     const dailyRoutine = guide.daily_routine || { id: guideId, guide_id: guideId, tasks: [] };
-    await updateGuide(guideId, {
-      daily_routine: {
-        ...dailyRoutine,
-        tasks: updatedTasks,
-      },
-    });
+    try {
+      await updateGuide(guideId, {
+        daily_routine: {
+          ...dailyRoutine,
+          tasks: updatedTasks,
+        },
+      });
+    } catch (err: any) {
+      showAlert('Error', friendlyError(err, "Couldn't save the task. Please try again."));
+      return false;
+    }
+    // Local state only after the write lands, so a failure leaves the list
+    // showing what the server actually holds.
     setCustomTasks(updatedTasks);
+    return true;
   };
 
   // Open modal to add new task
@@ -384,7 +417,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
             }
           : t
       );
-      await saveCustomTasks(updatedTasks);
+      if (!(await saveCustomTasks(updatedTasks))) return;
     } else {
       // Create new task. Order is max(existing)+1 — counting tasks
       // (customTasks.length + generatedTasks.length) could collide with an
@@ -407,7 +440,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         is_custom: true,
         order: maxOrder + 1,
       };
-      await saveCustomTasks([...customTasks, newTask]);
+      if (!(await saveCustomTasks([...customTasks, newTask]))) return;
     }
 
     setShowTaskModal(false);
@@ -495,7 +528,9 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
           <View className="flex-row items-center">
             <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
           </View>
-          <Button title="+ Add Task" onPress={handleAddTask} variant="primary" />
+          {canEdit ? (
+            <Button title="+ Add Task" onPress={handleAddTask} variant="primary" />
+          ) : null}
         </View>
 
         {/* Date Navigator */}
@@ -615,8 +650,9 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                       </View>
                     </Pressable>
 
-                    {/* Edit/Delete/Move buttons for custom tasks */}
-                    {task.is_custom && (
+                    {/* Edit/Delete/Move buttons for custom tasks — owner only;
+                        a sitter ticks tasks, they don't author them. */}
+                    {task.is_custom && canEdit && (
                       <View className="flex-row justify-end gap-2 mt-1 px-2">
                         {!isFirstCustom && (
                           <Pressable
@@ -668,9 +704,13 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
             <Text className="text-5xl mb-4">📋</Text>
             <Text className="text-xl font-semibold text-brown-800 mb-2">No Tasks</Text>
             <Text className="text-tan-500 text-center mb-4">
-              Add feeding schedules and medications to your pets, or create custom tasks.
+              {canEdit
+                ? 'Add feeding schedules and medications to your pets, or create custom tasks.'
+                : "This guide's owner hasn't added any tasks yet."}
             </Text>
-            <Button title="+ Add Custom Task" onPress={handleAddTask} variant="primary" />
+            {canEdit ? (
+              <Button title="+ Add Custom Task" onPress={handleAddTask} variant="primary" />
+            ) : null}
           </Card>
         )}
         </ScreenContainer>
