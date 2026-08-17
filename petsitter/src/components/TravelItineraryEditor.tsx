@@ -179,6 +179,7 @@ export function TravelItineraryEditor({
             onPress={() => handleAddFlight('departure')}
             accessibilityRole="button"
             accessibilityLabel="Add departure flight"
+            style={{ minHeight: 44, justifyContent: 'center' }}
             className="bg-primary-50 px-3 py-1 rounded"
           >
             <Text className="text-primary-600 text-sm">+ Add Flight</Text>
@@ -200,6 +201,7 @@ export function TravelItineraryEditor({
             onPress={() => handleAddFlight('return')}
             accessibilityRole="button"
             accessibilityLabel="Add return flight"
+            style={{ minHeight: 44, justifyContent: 'center' }}
             className="bg-primary-50 px-3 py-1 rounded"
           >
             <Text className="text-primary-600 text-sm">+ Add Flight</Text>

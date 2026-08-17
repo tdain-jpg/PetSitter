@@ -608,6 +608,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   className="bg-secondary-50 px-3 py-1 rounded"
                   accessibilityRole="button"
                   accessibilityLabel="Add emergency contact"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                 >
                   <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
                 </Pressable>

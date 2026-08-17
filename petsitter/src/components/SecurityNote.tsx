@@ -35,6 +35,9 @@ export function SecurityNote({ context }: { context: SecurityNoteContext }) {
       onPress={() => showAlert('How we protect this', EXPLANATION)}
       accessibilityRole="button"
       accessibilityLabel="How we protect your sensitive information"
+      // 32px, and it appears on GuideForm, AICheatSheet and PDFPreview — one
+      // component, three screens under the floor.
+      style={{ minHeight: 44, justifyContent: 'center' }}
       className="mb-3"
     >
       <Text className="text-xs text-tan-500 leading-4">

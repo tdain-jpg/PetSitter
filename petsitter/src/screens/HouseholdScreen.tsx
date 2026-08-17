@@ -494,6 +494,7 @@ export function HouseholdScreen() {
                   onPress={() => startRename(household)}
                   accessibilityRole="button"
                   accessibilityLabel={`Rename ${household.name}`}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                   className="bg-primary-50 px-3 py-1.5 rounded"
                 >
                   <Text className="text-primary-600 text-sm font-medium">Rename</Text>

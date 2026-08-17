@@ -79,9 +79,13 @@ export function useFormDraft<T>({
   // Set once the user has answered, so the debounced writer can't save over a
   // draft the user is still being asked about.
   const readyRef = useRef(false);
+  // True while a change has been seen but not yet written. Read by the effect
+  // cleanup so a flush happens only when there is something to flush.
+  const pendingRef = useRef(false);
 
   const clear = useCallback(() => {
     readyRef.current = false;
+    pendingRef.current = false;
     // Fire and forget: nothing downstream waits on the delete, and a storage
     // failure here must not block a successful save from navigating away.
     AsyncStorage.removeItem(key).catch(() => {});
@@ -142,15 +146,46 @@ export function useFormDraft<T>({
   }, [enabled, key, noun, clear]);
 
   // --- persist -------------------------------------------------------------
+  const writeNow = useCallback(() => {
+    AsyncStorage.setItem(key, JSON.stringify(valueRef.current)).catch(() => {});
+  }, [key]);
+
   useEffect(() => {
     if (!enabled || !isDirty || !readyRef.current) return;
     // Debounced: these forms fire on every keystroke across ~30 fields, and a
     // write per character would be a lot of disk for no extra safety.
+    pendingRef.current = true;
     const timer = setTimeout(() => {
-      AsyncStorage.setItem(key, JSON.stringify(valueRef.current)).catch(() => {});
+      pendingRef.current = false;
+      writeNow();
     }, 600);
     return () => clearTimeout(timer);
-  }, [enabled, isDirty, key, value]);
+  }, [enabled, isDirty, key, value, writeNow]);
+
+  // Flush on the way OUT, and only there.
+  //
+  // The debounce above is a hole exactly where it hurts most: type a few
+  // fields, hit back immediately, and the pending timer is cleared by the
+  // unmount before it ever fires — so the draft holds whatever you typed
+  // several seconds ago and the last thing you wrote is gone. That is the
+  // precise failure this hook exists to prevent, surviving in miniature.
+  //
+  // Deliberately its own effect with no `value` dependency. Putting the flush
+  // in the debounce effect's cleanup would fire it on every keystroke — the
+  // cleanup runs on each dependency change, not just unmount — which is a
+  // write per character and no debounce at all.
+  //
+  // Not covered here: a browser tab closed mid-keystroke, because AsyncStorage
+  // is async and `beforeunload` will not wait for a promise. Both form screens
+  // keep their own `beforeunload` warning for that case.
+  useEffect(() => {
+    return () => {
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        writeNow();
+      }
+    };
+  }, [writeNow]);
 
   return { clearDraft: clear };
 }

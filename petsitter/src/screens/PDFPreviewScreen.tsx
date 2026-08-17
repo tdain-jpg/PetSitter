@@ -174,13 +174,15 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   // Resolved rather than filtered out of the context arrays, which hold only
   // the caller's own households. Exporting the guide to paper is the one thing
   // a sitter most obviously needs and the one this screen refused them: the
-  // lookup missed and it rendered "Guide not found". No canEdit gating here —
-  // a PDF is a read, and a sitter wanting the instructions on paper is the
-  // entire point of the sitter account.
+  // lookup missed and it rendered "Guide not found". The EXPORT is deliberately
+  // not gated on canEdit — a PDF is a read, and a sitter wanting the
+  // instructions on paper is the entire point of the sitter account. canEdit is
+  // used only to suppress advice a sitter cannot act on.
   const {
     guide: resolvedGuide,
     pets: resolvedPets,
     loading: guideLoading,
+    canEdit,
   } = useGuideWithPets(guideId);
 
   const [guide, setGuide] = useState<Guide | null>(null);
@@ -263,7 +265,23 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         // A FAILED pets load looks identical from here — `pets` is [] and
         // loadingPets is false — so it must not burn the seed either, or a
         // later successful refresh would never select anything.
-        if (selectionSeededForGuide.current !== guideId && !loadingPets && !petsError) {
+        //
+        // `loadingPets` alone is not enough. It tracks the CONTEXT pet load,
+        // and a connected sitter's pets do not come from there — they are
+        // fetched by id by useGuideWithPets, which loadingPets knows nothing
+        // about. So a sitter reliably burned the seed against an empty array
+        // and got a PDF with every pet unticked: no feeding schedule, no
+        // medication, on the one document they were going to carry around.
+        // Waiting until as many pets have resolved as the guide claims covers
+        // both loads without needing a flag for either.
+        const expectedPets = foundGuide.pet_ids?.length ?? 0;
+        const petsSettled = pets.length >= expectedPets;
+        if (
+          selectionSeededForGuide.current !== guideId &&
+          !loadingPets &&
+          !petsError &&
+          petsSettled
+        ) {
           setSelectedPetIds(pets.map((p) => p.id)); // Select all pets by default
           selectionSeededForGuide.current = guideId;
         }
@@ -794,6 +812,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                   onPress={selectAllPets}
                   accessibilityRole="button"
                   accessibilityLabel="Select all pets"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                 >
                   <Text className="text-primary-600 text-sm">All</Text>
                 </Pressable>
@@ -802,6 +821,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                   onPress={deselectAllPets}
                   accessibilityRole="button"
                   accessibilityLabel="Deselect all pets"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
                 >
                   <Text className="text-tan-500 text-sm">None</Text>
                 </Pressable>
@@ -865,8 +885,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           </Card>
         )}
 
-        {/* Tip for cheat sheet */}
-        {!cheatSheetContent && (
+        {/* Tip for cheat sheet — owner only. A sitter cannot generate one, so
+            telling them to "generate one first" is an instruction they cannot
+            follow, about a document that is not theirs to commission. */}
+        {!cheatSheetContent && canEdit && (
           <Card className="mb-4">
             <Text className="text-warm-600 font-medium mb-2">💡 Tip</Text>
             <Text className="text-tan-600">

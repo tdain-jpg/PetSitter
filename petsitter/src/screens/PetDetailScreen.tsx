@@ -639,12 +639,12 @@ export function PetDetailScreen({ navigation, route }: Props) {
                 {pet.vet_info && (
                   <>
                     {pet.vet_info.name && <InfoRow label="Vet" value={pet.vet_info.name} />}
-                    {pet.vet_info.clinic && (
+                    {pet.vet_info.clinic ? (
                       <InfoRow label="Clinic" value={pet.vet_info.clinic} />
-                    )}
-                    {pet.vet_info.phone && (
+                    ) : null}
+                    {pet.vet_info.phone ? (
                       <PhoneRow label="Phone" phone={pet.vet_info.phone} />
-                    )}
+                    ) : null}
                     {pet.vet_info.address && (
                       <InfoRow label="Address" value={pet.vet_info.address} />
                     )}

@@ -134,12 +134,18 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
 
           <View className="px-4 pb-4">
             <Text className="text-2xl font-bold text-brown-800">{guide.title}</Text>
-            {(guide.start_date || guide.end_date) && (
+            {/* Ternary, not `&&`. When both dates are empty strings the `&&`
+                form evaluates to '' and React renders it as a bare text node
+                inside a View — a console error on web, a throw on native. Any
+                guard on a STRING field in this file needs the same shape; the
+                `.length > 0` and `!= null` guards elsewhere are already
+                booleans and are fine as they are. */}
+            {(guide.start_date || guide.end_date) ? (
               <Text className="text-tan-500 mt-1">
                 📅 {formatDate(guide.start_date)}
                 {guide.end_date && ` → ${formatDate(guide.end_date)}`}
               </Text>
-            )}
+            ) : null}
           </View>
         </ScreenContainer>
       </View>
@@ -190,7 +196,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                     <View className="flex-1">
                       <Text className="text-lg font-semibold text-brown-800">{pet.name}</Text>
                       <Text className="text-tan-500 capitalize">{pet.species}</Text>
-                      {pet.breed && <Text className="text-tan-400 text-sm">{pet.breed}</Text>}
+                      {pet.breed ? <Text className="text-tan-400 text-sm">{pet.breed}</Text> : null}
                     </View>
                   </View>
 
@@ -239,45 +245,45 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                               ⏰ {med.times.filter(Boolean).join(', ')}
                             </Text>
                           )}
-                          {med.notes && (
+                          {med.notes ? (
                             <Text className="text-tan-500 text-sm">{med.notes}</Text>
-                          )}
+                          ) : null}
                         </View>
                       ))}
                     </View>
                   )}
 
                   {/* Medical Notes */}
-                  {pet.medical_notes && (
+                  {pet.medical_notes ? (
                     <View className="mt-3 pt-3 border-t border-tan-200">
                       <Text className="text-brown-700 font-medium mb-1">Medical Notes</Text>
                       <Text className="text-tan-600">{pet.medical_notes}</Text>
                     </View>
-                  )}
+                  ) : null}
 
                   {/* Special Instructions */}
-                  {pet.special_instructions && (
+                  {pet.special_instructions ? (
                     <View className="mt-3 pt-3 border-t border-tan-200">
                       <Text className="text-brown-700 font-medium mb-1">Special Instructions</Text>
                       <Text className="text-tan-600">{pet.special_instructions}</Text>
                     </View>
-                  )}
+                  ) : null}
 
                   {/* Vet Info */}
-                  {pet.vet_info && (
+                  {pet.vet_info ? (
                     <View className="mt-3 pt-3 border-t border-tan-200">
                       <Text className="text-brown-700 font-medium mb-2">Veterinarian</Text>
-                      {pet.vet_info.name && (
+                      {pet.vet_info.name ? (
                         <Text className="text-brown-600">{pet.vet_info.name}</Text>
-                      )}
-                      {pet.vet_info.clinic && (
+                      ) : null}
+                      {pet.vet_info.clinic ? (
                         <Text className="text-tan-500">{pet.vet_info.clinic}</Text>
-                      )}
-                      {pet.vet_info.phone && (
+                      ) : null}
+                      {pet.vet_info.phone ? (
                         <Text className="text-secondary-600">{pet.vet_info.phone}</Text>
-                      )}
+                      ) : null}
                     </View>
-                  )}
+                  ) : null}
                 </Card>
               ))
             )}
@@ -297,60 +303,60 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
           {/* Home Info */}
           <SectionHeader title="Home Information" icon="🏠">
             <View className="gap-2">
-              {guide.home_info.address && (
+              {guide.home_info.address ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Address:</Text>
                   <Text className="text-brown-800 flex-1">{guide.home_info.address}</Text>
                 </View>
-              )}
-              {guide.home_info.wifi_name && (
+              ) : null}
+              {guide.home_info.wifi_name ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">WiFi:</Text>
                   <Text className="text-brown-800 flex-1">{guide.home_info.wifi_name}</Text>
                 </View>
-              )}
-              {guide.home_info.wifi_password && (
+              ) : null}
+              {guide.home_info.wifi_password ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Password:</Text>
                   <View className="flex-1">
                     <SensitiveValue value={guide.home_info.wifi_password} label="WiFi password" />
                   </View>
                 </View>
-              )}
-              {guide.home_info.door_code && (
+              ) : null}
+              {guide.home_info.door_code ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Door Code:</Text>
                   <View className="flex-1">
                     <SensitiveValue value={guide.home_info.door_code} label="door code" />
                   </View>
                 </View>
-              )}
-              {guide.home_info.alarm_code && (
+              ) : null}
+              {guide.home_info.alarm_code ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Alarm Code:</Text>
                   <View className="flex-1">
                     <SensitiveValue value={guide.home_info.alarm_code} label="alarm code" />
                   </View>
                 </View>
-              )}
-              {guide.home_info.spare_key_location && (
+              ) : null}
+              {guide.home_info.spare_key_location ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Spare Key:</Text>
                   <Text className="text-brown-800 flex-1">{guide.home_info.spare_key_location}</Text>
                 </View>
-              )}
-              {guide.home_info.trash_day && (
+              ) : null}
+              {guide.home_info.trash_day ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Trash Day:</Text>
                   <Text className="text-brown-800 flex-1">{guide.home_info.trash_day}</Text>
                 </View>
-              )}
-              {guide.home_info.notes && (
+              ) : null}
+              {guide.home_info.notes ? (
                 <View className="mt-2">
                   <Text className="text-tan-500">Notes:</Text>
                   <Text className="text-brown-800">{guide.home_info.notes}</Text>
                 </View>
-              )}
+              ) : null}
               {!guide.home_info.address &&
                 !guide.home_info.wifi_name &&
                 !guide.home_info.door_code && (
@@ -360,25 +366,25 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
           </SectionHeader>
 
           {/* Travel Itinerary */}
-          {guide.travel_itinerary && (
+          {guide.travel_itinerary ? (
             <SectionHeader title="Travel Itinerary" icon="✈️" defaultExpanded={false}>
               <View className="gap-2">
-                {guide.travel_itinerary.destination && (
+                {guide.travel_itinerary.destination ? (
                   <View className="flex-row">
                     <Text className="text-tan-500 w-28">Destination:</Text>
                     <Text className="text-brown-800 flex-1">
                       {guide.travel_itinerary.destination}
                     </Text>
                   </View>
-                )}
-                {guide.travel_itinerary.contact_while_away && (
+                ) : null}
+                {guide.travel_itinerary.contact_while_away ? (
                   <View className="flex-row">
                     <Text className="text-tan-500 w-28">Contact:</Text>
                     <Text className="text-brown-800 flex-1">
                       {guide.travel_itinerary.contact_while_away}
                     </Text>
                   </View>
-                )}
+                ) : null}
                 {guide.travel_itinerary.flights.length > 0 && (
                   <View className="mt-2">
                     <Text className="text-tan-500 mb-2">Flights:</Text>
@@ -399,14 +405,14 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                 )}
               </View>
             </SectionHeader>
-          )}
+          ) : null}
 
           {/* Additional Notes */}
-          {guide.additional_notes && (
+          {guide.additional_notes ? (
             <SectionHeader title="Additional Notes" icon="📝" defaultExpanded={false}>
               <Text className="text-brown-600">{guide.additional_notes}</Text>
             </SectionHeader>
-          )}
+          ) : null}
 
           {/* Footer */}
           <View className="items-center py-8 mb-8">

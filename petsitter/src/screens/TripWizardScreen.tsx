@@ -301,6 +301,7 @@ export function TripWizardScreen({ navigation }: Props) {
               onPress={selectAllPets}
               accessibilityRole="button"
               accessibilityLabel="Select all pets"
+              style={{ minHeight: 44, justifyContent: 'center' }}
             >
               <Text className="text-secondary-600">Select All</Text>
             </Pressable>
@@ -308,6 +309,7 @@ export function TripWizardScreen({ navigation }: Props) {
               onPress={deselectAllPets}
               accessibilityRole="button"
               accessibilityLabel="Clear pet selection"
+              style={{ minHeight: 44, justifyContent: 'center' }}
             >
               <Text className="text-tan-500">Clear</Text>
             </Pressable>

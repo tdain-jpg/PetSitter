@@ -556,15 +556,23 @@ export function HomeScreen({ navigation }: Props) {
             rendered the header clipped with Settings off-screen. */}
         <View className="flex-row justify-between items-center flex-wrap gap-y-2">
           <View className="flex-row items-center shrink" style={{ minWidth: 0 }}>
+            {/* Sized down from 72/160. QA measured the wrap threshold exactly:
+                the left group was a fixed 242px (logo 72 + margin 10 + wordmark
+                160), which left the right group ~116px in a 390px viewport
+                after padding — so any first name of about nine characters
+                pushed the greeting past it and flex-wrap dropped Settings onto
+                a second line, growing the header 75px. Trimming 36px off the
+                left buys roughly five more characters, which covers ordinary
+                names; the greeting's own cap and ellipsis handle the rest. */}
             <Image
               source={logo}
-              style={{ width: 72, height: 72, marginRight: 10 }}
+              style={{ width: 56, height: 56, marginRight: 8 }}
               resizeMode="contain"
             />
             <View className="shrink" style={{ minWidth: 0 }}>
               <Image
                 source={wordmark}
-                style={{ width: 160, height: 33 }}
+                style={{ width: 142, height: 29 }}
                 resizeMode="contain"
                 accessibilityLabel="Pawstructions"
               />
@@ -590,7 +598,7 @@ export function HomeScreen({ navigation }: Props) {
             <Text
               numberOfLines={1}
               ellipsizeMode="tail"
-              style={{ fontSize: 12, color: COLORS.tan, marginTop: 4, maxWidth: 160 }}
+              style={{ fontSize: 12, color: COLORS.tan, marginTop: 4, maxWidth: 130 }}
             >
               Welcome{displayName ? `, ${displayName}` : ''}!
             </Text>

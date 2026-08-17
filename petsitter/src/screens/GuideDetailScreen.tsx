@@ -119,12 +119,12 @@ export function GuideDetailScreen({ navigation, route }: Props) {
 
           <View className="px-4 pb-4">
             <Text className="text-2xl font-bold text-brown-800">{guide.title}</Text>
-            {(guide.start_date || guide.end_date) && (
+            {(guide.start_date || guide.end_date) ? (
               <Text className="text-tan-500 mt-1">
                 📅 {formatDate(guide.start_date)}
                 {guide.end_date && ` → ${formatDate(guide.end_date)}`}
               </Text>
-            )}
+            ) : null}
           </View>
         </ScreenContainer>
       </View>
@@ -244,22 +244,22 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           {guide.travel_itinerary && (
             <SectionHeader title="Travel Itinerary" icon="✈️" defaultExpanded={false}>
               <View className="gap-2">
-                {guide.travel_itinerary.destination && (
+                {guide.travel_itinerary.destination ? (
                   <View className="flex-row">
                     <Text className="text-tan-500 w-28">Destination:</Text>
                     <Text className="text-brown-800 flex-1">
                       {guide.travel_itinerary.destination}
                     </Text>
                   </View>
-                )}
-                {guide.travel_itinerary.contact_while_away && (
+                ) : null}
+                {guide.travel_itinerary.contact_while_away ? (
                   <View className="flex-row">
                     <Text className="text-tan-500 w-28">Contact:</Text>
                     <Text className="text-brown-800 flex-1">
                       {guide.travel_itinerary.contact_while_away}
                     </Text>
                   </View>
-                )}
+                ) : null}
                 {guide.travel_itinerary.flights.length > 0 && (
                   <View className="mt-2">
                     <Text className="text-tan-500 mb-2">Flights:</Text>
@@ -297,7 +297,14 @@ export function GuideDetailScreen({ navigation, route }: Props) {
 
           {/* Action Buttons */}
           <View className="gap-3 mt-6 mb-8">
-            <Button title="🤖 Generate AI Cheat Sheet" onPress={handleAICheatSheet} variant="primary" />
+            {/* Same button, honest label. A sitter can now READ the sheet
+                (migration 0023) but never commissions one, so promising them
+                "Generate" was promising something the screen refuses. */}
+            <Button
+              title={canEdit ? '🤖 Generate AI Cheat Sheet' : '🤖 AI Cheat Sheet'}
+              onPress={handleAICheatSheet}
+              variant="primary"
+            />
             {/* Share is owner-only. It mints a PUBLIC, unauthenticated URL to
                 the household's pet data and retires the guide's existing links
                 — not something to offer the person you hired to feed the cat.

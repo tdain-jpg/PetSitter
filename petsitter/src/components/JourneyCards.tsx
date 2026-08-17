@@ -277,6 +277,9 @@ function DismissButton({ onPress, disabled, label }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={12}
+      // hitSlop already made this forgiving to a real finger, but the measured
+      // box was 24px and a11y audits read geometry, not hitSlop. Both now agree.
+      style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
       className="ml-2"
     >
       <Text className={`text-base ${disabled ? 'text-tan-300' : 'text-tan-500'}`}>✕</Text>

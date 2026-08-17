@@ -408,11 +408,20 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
           ) : (
             <Card className="items-center py-8">
               <Text className="text-5xl mb-4">🤖</Text>
+              {/* A sitter reads cheat sheets; they do not commission them.
+                  Generating spends the household's one free generation or its
+                  Crown, and neither belongs to the sitter — so for them this is
+                  a "nothing here yet" screen, not an offer. The old copy was
+                  written from the owner's chair and read absurdly from the
+                  sitter's: it invited them to make a summary "for your pet
+                  sitter", which is them. */}
               <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
-                Generate AI Cheat Sheet
+                {canEdit ? 'Generate AI Cheat Sheet' : 'No cheat sheet yet'}
               </Text>
               <Text className="text-tan-500 text-center mb-6">
-                Use AI to create a quick reference summary of this guide for your pet sitter.
+                {canEdit
+                  ? 'Use AI to create a quick reference summary of this guide for your pet sitter.'
+                  : "The owner hasn't made a one-page summary of this guide yet. Everything you need is still in the guide itself."}
               </Text>
 
               {/* Set the expectation BEFORE the free generation is spent —
@@ -420,29 +429,39 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                   Phrased without promising THIS sheet is free: the free
                   allowance is one per guide and lives server-side, so the
                   client can't honestly claim this guide still has one. */}
-              {watermarked && (
+              {watermarked && canEdit ? (
                 <Text className="text-brown-600 text-center mb-6">
                   Free cheat sheets arrive with a PREVIEW watermark across them.
                   Crown removes it and lets you rewrite the sheet whenever your
                   details change — $5 once for your whole household.
                 </Text>
-              )}
+              ) : null}
 
               {error && (
                 <Text className="text-accent-500 mb-4 text-center">{error}</Text>
               )}
 
-              <Button
-                title={generating ? 'Generating...' : '✨ Generate Cheat Sheet'}
-                onPress={handleGenerate}
-                loading={generating}
-                disabled={generating}
-              />
+              {canEdit ? (
+                <>
+                  <Button
+                    title={generating ? 'Generating...' : '✨ Generate Cheat Sheet'}
+                    onPress={handleGenerate}
+                    loading={generating}
+                    disabled={generating}
+                  />
 
-              <Text className="text-tan-500 text-sm mt-4 mb-2 text-center">
-                Guide contents are summarized by Pawstructions&apos; AI helper.
-              </Text>
-              <SecurityNote context="ai" />
+                  <Text className="text-tan-500 text-sm mt-4 mb-2 text-center">
+                    Guide contents are summarized by Pawstructions&apos; AI helper.
+                  </Text>
+                  <SecurityNote context="ai" />
+                </>
+              ) : (
+                <Button
+                  title="← Back to the guide"
+                  onPress={() => navigation.goBack()}
+                  variant="outline"
+                />
+              )}
             </Card>
           )
         ) : (

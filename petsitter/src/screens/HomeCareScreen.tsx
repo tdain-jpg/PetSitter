@@ -284,13 +284,14 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{system.name}</Text>
                     <Text className="text-tan-500 text-sm capitalize">{system.type.replace('_', ' ')}</Text>
-                    {system.location && <Text className="text-tan-400 text-sm">📍 {system.location}</Text>}
-                    {system.instructions && <Text className="text-tan-600 text-sm mt-1">{system.instructions}</Text>}
+                    {system.location ? <Text className="text-tan-400 text-sm">📍 {system.location}</Text> : null}
+                    {system.instructions ? <Text className="text-tan-600 text-sm mt-1">{system.instructions}</Text> : null}
                   </View>
                   {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteSystem(system.id)}
-                    className="px-2 py-1"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3"
                     accessibilityRole="button"
                     accessibilityLabel={`Delete system ${system.name}`}
                   >
@@ -328,12 +329,13 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{task.title}</Text>
                     <Text className="text-tan-500 text-sm capitalize">{task.frequency} • {task.category}</Text>
-                    {task.instructions && <Text className="text-tan-600 text-sm mt-1">{task.instructions}</Text>}
+                    {task.instructions ? <Text className="text-tan-600 text-sm mt-1">{task.instructions}</Text> : null}
                   </View>
                   {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteTask(task.id)}
-                    className="px-2 py-1"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3"
                     accessibilityRole="button"
                     accessibilityLabel={`Delete task ${task.title}`}
                   >
@@ -371,12 +373,13 @@ export function HomeCareScreen({ navigation, route }: Props) {
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{supply.name}</Text>
                     <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
-                    {supply.quantity && <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text>}
+                    {supply.quantity ? <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text> : null}
                   </View>
                   {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteSupply(supply.id)}
-                    className="px-2 py-1"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3"
                     accessibilityRole="button"
                     accessibilityLabel={`Delete supply ${supply.name}`}
                   >
@@ -413,13 +416,14 @@ export function HomeCareScreen({ navigation, route }: Props) {
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{appliance.name}</Text>
-                    {appliance.location && <Text className="text-tan-500 text-sm">📍 {appliance.location}</Text>}
-                    {appliance.instructions && <Text className="text-tan-600 text-sm mt-1">{appliance.instructions}</Text>}
+                    {appliance.location ? <Text className="text-tan-500 text-sm">📍 {appliance.location}</Text> : null}
+                    {appliance.instructions ? <Text className="text-tan-600 text-sm mt-1">{appliance.instructions}</Text> : null}
                   </View>
                   {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteAppliance(appliance.id)}
-                    className="px-2 py-1"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3"
                     accessibilityRole="button"
                     accessibilityLabel={`Delete appliance ${appliance.name}`}
                   >
@@ -456,19 +460,20 @@ export function HomeCareScreen({ navigation, route }: Props) {
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{amenity.name}</Text>
-                    {amenity.location && <Text className="text-tan-500 text-sm">📍 {amenity.location}</Text>}
-                    {amenity.password && (
+                    {amenity.location ? <Text className="text-tan-500 text-sm">📍 {amenity.location}</Text> : null}
+                    {amenity.password ? (
                       <View className="flex-row items-center mt-1">
                         <Text className="text-tan-400 text-sm mr-1">🔑</Text>
                         <SensitiveValue value={amenity.password} label={`${amenity.name} password`} className="text-sm" />
                       </View>
-                    )}
-                    {amenity.instructions && <Text className="text-tan-600 text-sm mt-1">{amenity.instructions}</Text>}
+                    ) : null}
+                    {amenity.instructions ? <Text className="text-tan-600 text-sm mt-1">{amenity.instructions}</Text> : null}
                   </View>
                   {canEdit && (
                   <Pressable
                     onPress={() => handleDeleteAmenity(amenity.id)}
-                    className="px-2 py-1"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3"
                     accessibilityRole="button"
                     accessibilityLabel={`Delete amenity ${amenity.name}`}
                   >
