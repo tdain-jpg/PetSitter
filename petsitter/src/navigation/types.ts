@@ -51,7 +51,11 @@ export type MainStackParamList = {
   // Sitter side (0015). A connected sitter is not a household member: these
   // screens are their own view of the households they help care for.
   SitterHome: undefined;
-  SitterHousehold: { householdId: string; householdName: string };
+  // householdName is display-only and OPTIONAL: a web reload restores this
+  // route from the URL, and the household's name is not something to take from
+  // a query string. The screen resolves it from the sitter's own connection
+  // list instead. See RootNavigator's RESTORABLE_MAIN_ROUTES.
+  SitterHousehold: { householdId: string; householdName?: string };
   SitterPlans: undefined;
 
   // Settings

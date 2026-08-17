@@ -15,9 +15,18 @@ import type { Guide, Pet } from '../types';
 type Props = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
 
 export function SitterHouseholdScreen({ navigation, route }: Props) {
-  const { householdId, householdName } = route.params;
+  const { householdId, householdName: passedName } = route.params;
   
-  const { getHouseholdPets, getHouseholdGuides } = useData();
+  const { getHouseholdPets, getHouseholdGuides, sitterConnections } = useData();
+
+  // Navigating here from SitterHome passes the name; restoring this route from
+  // a reloaded URL does not, because a household's name has no business coming
+  // out of a query string. Either way the connection list is authoritative —
+  // it is the same list that decided this screen was reachable at all.
+  const householdName =
+    sitterConnections.find((c) => c.household_id === householdId)?.household_name ??
+    passedName ??
+    'Client household';
 
   useFocusEffect(
     useCallback(() => {

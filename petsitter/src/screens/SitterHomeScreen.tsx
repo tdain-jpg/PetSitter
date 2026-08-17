@@ -128,6 +128,13 @@ export function SitterHomeScreen({ navigation }: Props) {
           householdName: client.household_name
         })}
         className="mb-4"
+        // Without these the whole card is an unnamed clickable region: a
+        // screen reader announces the two Texts inside it and gives no hint
+        // that the row goes anywhere. The label repeats the access window
+        // because that is the part a sitter is checking for.
+        accessibilityRole="button"
+        accessibilityLabel={`${client.household_name}. ${accessText}.`}
+        accessibilityHint="Opens this client's pets, guides and check-ins"
       >
         <Card>
           <View className="p-4">

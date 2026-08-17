@@ -728,6 +728,18 @@ export function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('Household')}
               variant="outline"
             />
+            {/* A sitter who also keeps pets of their own lands on this Home,
+                and their clients were two taps away behind Settings with
+                nothing here pointing at them. Only shown when there is
+                actually something to open, so an owner who has never sat for
+                anyone never sees it. */}
+            {(hasActiveSitterConnection || pendingSitterInvites.length > 0) && (
+              <Button
+                title="🐾 My Clients"
+                onPress={() => navigation.navigate('SitterHome')}
+                variant="outline"
+              />
+            )}
           </View>
         </Card>
 

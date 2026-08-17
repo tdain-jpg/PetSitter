@@ -38,6 +38,12 @@ type ParamParser = (query: URLSearchParams) => RestoredParams | null;
 
 const noParams: ParamParser = () => ({ params: undefined });
 
+// Restoring a route from a URL means the params come from whatever the address
+// bar happens to hold. For ids that is fine once they are shape-checked — a
+// bad uuid resolves to nothing and the screen says so — but free text is not,
+// which is why nothing below ever restores a name or a label.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const guideParams: ParamParser = (query) => {
   const guideId = query.get('guideId');
   return guideId ? { params: { guideId } } : null;
@@ -85,6 +91,18 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
     const petId = query.get('petId');
     if (mode === 'edit' && petId) return { params: { mode, petId } };
     return null;
+  },
+  // The sitter side. Left out of this list until now, which meant a sitter who
+  // reloaded the page — or opened their client's household in a new tab — was
+  // silently dropped on the owner dashboard, a screen with none of their
+  // clients on it and no obvious way back.
+  SitterHome: noParams,
+  SitterPlans: noParams,
+  SitterHousehold: (query) => {
+    const householdId = query.get('householdId');
+    // householdName is deliberately NOT restored: the screen looks it up from
+    // the sitter's connection list, which is the only trustworthy source.
+    return householdId && UUID_RE.test(householdId) ? { params: { householdId } } : null;
   },
   GuideForm: (query) => {
     const mode = query.get('mode');
