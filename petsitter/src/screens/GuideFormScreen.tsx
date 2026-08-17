@@ -17,7 +17,7 @@ import { useFormDraft } from '../hooks';
 import { generateId } from '../services';
 import { COLORS } from '../constants';
 import { showAlert, showConfirm } from '../lib/dialogs';
-import { isValidDateString } from '../lib/dates';
+import { isValidDateString, todayLocal } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { EmergencyContact, HomeInfo, TravelItinerary, ContactType } from '../types';
@@ -285,6 +285,24 @@ export function GuideFormScreen({ navigation, route }: Props) {
     }
   };
 
+  /**
+   * True when the whole trip is behind us. Uses the END date so an in-progress
+   * trip never trips it, and falls back to the start date for an open-ended
+   * one. String comparison is safe because both sides are 'YYYY-MM-DD'.
+   */
+  const tripIsInThePast = useMemo(() => {
+    const last = formData.end_date || formData.start_date;
+    if (!last || !isValidDateString(last)) return false;
+    return last < todayLocal();
+  }, [formData.start_date, formData.end_date]);
+
+  const nextYearHint = useMemo(() => {
+    const start = formData.start_date;
+    if (!start || !isValidDateString(start)) return 'a later date';
+    const year = Number(start.slice(0, 4));
+    return `${year + 1}${start.slice(4)}`;
+  }, [formData.start_date]);
+
   const updateHomeInfo = (field: keyof HomeInfo, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -530,6 +548,18 @@ export function GuideFormScreen({ navigation, route }: Props) {
                 error={errors.end_date}
                 min={formData.start_date || undefined}
               />
+              {/* A nudge, never a block. A guide for a trip that has already
+                  happened is legitimate — writing one up after the fact, or
+                  reusing last year's — so this cannot be an error. But "3 April
+                  2026" typed in August 2026 is far more often a year that got
+                  away from someone than a deliberate backdate, and nothing said
+                  a word about it. */}
+              {tripIsInThePast ? (
+                <Text className="text-warm-600 text-sm -mt-2 mb-4">
+                  Heads up: this trip has already finished. Did you mean{' '}
+                  {nextYearHint}?
+                </Text>
+              ) : null}
             </Card>
 
             {/* Pet Selection */}

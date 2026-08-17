@@ -157,7 +157,8 @@ export function SymptomCheckerEditor({
                     onPress={() => removeCustomSymptom(symptom.id)}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${symptom.name}`}
-                    className="px-2 py-1 bg-accent-50 rounded"
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                    className="px-3 bg-accent-50 rounded"
                   >
                     <Text className="text-accent-600 text-xs">Remove</Text>
                   </Pressable>

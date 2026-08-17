@@ -339,10 +339,20 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                   </View>
                 </View>
               ) : null}
+              {/* Masked like the codes above it. It was plain text while the
+                  door code four lines up sat behind a reveal tap — and both
+                  facts open the same door. On the PUBLIC share view that gap
+                  mattered most: a stranger holding the link paid one tap for
+                  the code and nothing at all for "under the blue plant pot". */}
               {guide.home_info.spare_key_location ? (
                 <View className="flex-row">
                   <Text className="text-tan-500 w-28">Spare Key:</Text>
-                  <Text className="text-brown-800 flex-1">{guide.home_info.spare_key_location}</Text>
+                  <View className="flex-1">
+                    <SensitiveValue
+                      value={guide.home_info.spare_key_location}
+                      label="spare key location"
+                    />
+                  </View>
                 </View>
               ) : null}
               {guide.home_info.trash_day ? (

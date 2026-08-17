@@ -116,9 +116,14 @@ export function TravelItineraryEditor({
           <Text className="font-medium text-brown-800">
             {flight.airline} {flight.flight_number}
           </Text>
-          <Text className="text-tan-600 text-sm">
-            {flight.departure_airport} → {flight.arrival_airport}
-          </Text>
+          {/* No airports means no route line. Unguarded this rendered " → "
+              on its own — no text-node error, because the arrow is a real
+              string, which is why the console never caught it. */}
+          {(flight.departure_airport || flight.arrival_airport) ? (
+            <Text className="text-tan-600 text-sm">
+              {flight.departure_airport} → {flight.arrival_airport}
+            </Text>
+          ) : null}
           {/* Ternary: both times are stored as empty strings when the flight
               form is left blank, and `'' && …` renders '' as a bare text node
               inside a View. Same shape already fixed in the share view. */}

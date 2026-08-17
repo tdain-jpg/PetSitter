@@ -24,15 +24,25 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Label row with a tappable phone number, dialing like ContactCard does. */
-function PhoneRow({ label, phone }: { label: string; phone: string }) {
+/**
+ * Label row with a tappable phone number, dialing like ContactCard does.
+ *
+ * `who` is who is being called; `label` is only the row heading. They used to
+ * be the same string, so a screen reader announced the vet's number as "Call
+ * Phone at 555 014 2" — the word "Phone" where a name belongs. Falls back to
+ * the heading when the caller has nothing better, which is still no worse than
+ * before.
+ */
+function PhoneRow({ label, phone, who }: { label: string; phone: string; who?: string }) {
   return (
     <View className="flex-row">
       <Text className="text-tan-500 w-28">{label}:</Text>
       <Pressable
         onPress={() => Linking.openURL(`tel:${phone}`)}
         accessibilityRole="button"
-        accessibilityLabel={`Call ${label} at ${phone}`}
+        accessibilityLabel={`Call ${who || label} at ${phone}`}
+        // 19px before this, on a vet's phone number.
+        style={{ minHeight: 44, justifyContent: 'center' }}
         className="flex-1"
       >
         <Text className="text-secondary-600">📞 {phone}</Text>
@@ -643,13 +653,21 @@ export function PetDetailScreen({ navigation, route }: Props) {
                       <InfoRow label="Clinic" value={pet.vet_info.clinic} />
                     ) : null}
                     {pet.vet_info.phone ? (
-                      <PhoneRow label="Phone" phone={pet.vet_info.phone} />
+                      <PhoneRow
+                        label="Phone"
+                        phone={pet.vet_info.phone}
+                        who={pet.vet_info.name || pet.vet_info.clinic || 'the vet'}
+                      />
                     ) : null}
                     {pet.vet_info.address && (
                       <InfoRow label="Address" value={pet.vet_info.address} />
                     )}
                     {pet.vet_info.emergency_phone && (
-                      <PhoneRow label="Emergency" phone={pet.vet_info.emergency_phone} />
+                      <PhoneRow
+                        label="Emergency"
+                        phone={pet.vet_info.emergency_phone}
+                        who={`${pet.vet_info.name || pet.vet_info.clinic || 'the vet'} (emergency)`}
+                      />
                     )}
                   </>
                 )}
@@ -674,7 +692,11 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   <InfoRow label="Policy #" value={pet.insurance.policy_number} />
                 )}
                 {pet.insurance.claims_phone && (
-                  <PhoneRow label="Claims" phone={pet.insurance.claims_phone} />
+                  <PhoneRow
+                    label="Claims"
+                    phone={pet.insurance.claims_phone}
+                    who={`${pet.insurance.provider || 'the insurer'} claims`}
+                  />
                 )}
                 {pet.insurance.coverage_notes && (
                   <View className="mt-2">

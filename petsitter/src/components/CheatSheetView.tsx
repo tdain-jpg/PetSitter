@@ -317,10 +317,15 @@ export function CheatSheetView({
           {/* Two audiences now read this. 0023 let a connected sitter see the
               sheet, and the sentence still called it "your own sheet, written
               from your guide" — neither of which is true for the person it was
-              written FOR. onUnlockPress is absent exactly when the reader
-              cannot buy, so it doubles as "is this the owner". */}
+              written FOR.
+              Branches on isOwner and NOT on onUnlockPress. Those two questions
+              look identical and are not: the caller withholds onUnlockPress
+              from an OWNER when the Crown card repeats the button directly
+              below, so using its absence here told the owner the watermark
+              belonged to somebody else, in a paragraph sitting on top of a card
+              saying "your whole household". */}
           <Text className="text-brown-600 text-sm">
-            {onUnlockPress
+            {isOwner
               ? 'This is your own sheet, written from your guide. Crown clears the watermark here and in the PDF, and lets you rewrite the sheet whenever your details change.'
               : "The content underneath is real and complete — nothing has been left out. The watermark is the owner's to clear."}
           </Text>

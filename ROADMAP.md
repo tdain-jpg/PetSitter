@@ -756,6 +756,50 @@ deep link on the test list.
 
 ---
 
+## Next loop: the sitter has no way to reach the owner
+
+Found in a full sitter journey, and it is the one thing a QA pass said it would
+actually want in the field: **there is no route from the sitter's view to the
+person who owns the animal.** The emergency contact has a tap-to-call button.
+The vet has one. The owner appears nowhere. If a pet stops eating on day three,
+the sitter's options are a check-in note the owner may not read for hours, or
+the neighbour.
+
+The check-in feed is a journal, not a channel, and it was never meant to be one.
+
+Not built here because it is a privacy decision, not a UI one: it means putting
+the owner's email or phone number in front of the sitter, and whose call that is,
+and whether it should be opt-in per connection, is Tim's to make rather than
+mine. Three shapes, cheapest first:
+
+1. **Reuse what exists.** Owners already list emergency contacts — prompt them to
+   add themselves as one when they invite a sitter. No schema, no new exposure,
+   and the owner chooses what number to give.
+2. **A per-connection contact field** on `sitter_connections`, set by the owner at
+   invite time and shown on the sitter's household screen. Explicit, revocable
+   with the connection, and never touches the account's own address.
+3. **Notify on check-in.** The outbox already exists and already emails; a
+   check-in that mentions a problem could reach the owner in minutes instead of
+   whenever they next open the app. Closest to what the sitter actually wanted,
+   and it needs no contact details to be shared at all.
+
+Option 1 is a copy change. Option 3 is probably the right answer.
+
+### Also from that journey
+
+- **Cheat sheet codes render in the clear** while every other sitter-facing
+  surface masks them behind a reveal tap. This is defensible — the cheat sheet is
+  behind auth (only members and connected sitters can read it, migration 0023),
+  while the reveal tap on the share view guards a PUBLIC link against
+  shoulder-surfing — but it is an inconsistency a sitter will notice, and it
+  deserves a deliberate answer rather than staying an accident.
+- **`📋 Copy` on the cheat sheet is unverified.** Three QA passes could not test
+  it: a synthetic click is not a trusted user gesture, so the Clipboard API
+  refuses. The failure path is correct and well-worded; the success path has
+  never been exercised by anything. Worth one manual tap before launch.
+
+---
+
 ## Launch gate — the only thing left that is not code
 
 **Stripe is still in TEST mode.** Everything about Crown works end to end; it just works

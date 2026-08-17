@@ -124,12 +124,21 @@ export function useFormDraft<T>({
         return;
       }
 
+      // Check `cancelled` BEFORE opening the dialog as well as after. QA hit
+      // the window between: type fast, save, and the screen unmounts while this
+      // read is still resolving — then a "Resume unfinished pet?" prompt opens
+      // over the pets list, offering a draft the successful save has already
+      // deleted. Harmless (Resume dismissed it and nothing was restored) but it
+      // is a dialog about a screen that no longer exists.
+      if (cancelled) return;
+
       const resume = await showConfirm({
         title: `Resume unfinished ${noun}?`,
         message: `You started adding a ${noun} and didn't finish. Pick up where you left off?`,
         confirmLabel: 'Resume',
         cancelLabel: 'Start fresh',
       });
+      // And again after, since the user can leave while the dialog is open.
       if (cancelled) return;
 
       if (resume) {
@@ -157,6 +166,11 @@ export function useFormDraft<T>({
     pendingRef.current = true;
     const timer = setTimeout(() => {
       pendingRef.current = false;
+      // readyRef is lowered by clear(), so a debounce still in flight when the
+      // form is saved or discarded cannot resurrect the draft that clear() just
+      // deleted — which would leave a "resume?" prompt waiting next time for
+      // work the user had already committed.
+      if (!readyRef.current) return;
       writeNow();
     }, 600);
     return () => clearTimeout(timer);
@@ -180,7 +194,9 @@ export function useFormDraft<T>({
   // keep their own `beforeunload` warning for that case.
   useEffect(() => {
     return () => {
-      if (pendingRef.current) {
+      // Same readyRef check as the timer, for the same reason: a save clears
+      // the draft and then unmounts, and the flush must not undo it.
+      if (pendingRef.current && readyRef.current) {
         pendingRef.current = false;
         writeNow();
       }

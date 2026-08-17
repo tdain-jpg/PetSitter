@@ -372,7 +372,14 @@ export function HomeCareScreen({ navigation, route }: Props) {
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{supply.name}</Text>
-                    <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
+                    {/* Guarded like every other location row in this file.
+                        Unguarded, a supply with no location rendered a location
+                        pin pointing at nothing — which is exactly the row a
+                        sitter reads when they are looking for where the cat
+                        litter is kept. */}
+                    {supply.location ? (
+                      <Text className="text-tan-500 text-sm">📍 {supply.location}</Text>
+                    ) : null}
                     {supply.quantity ? <Text className="text-tan-400 text-sm">Qty: {supply.quantity}</Text> : null}
                   </View>
                   {canEdit && (
