@@ -30,12 +30,39 @@ land-wide or park-wide scoring. Both have seams waiting for them — see
 
 ```bash
 npm install
-npm start          # Expo dev server; press w for web
+npm start          # Expo dev server; press w for web, i for the iOS simulator
 npm run web        # straight to the browser
 ```
 
-Tilt needs a real phone on `https://` (or `localhost`). Desktop browsers fall
-back to tap controls automatically.
+### On a real phone
+
+`npm start` prints a QR code. Scan it with [Expo Go](https://expo.dev/go) and
+the app runs natively — same source, real accelerometer. This is the only way
+to feel the tilt gesture properly, so it's the one to use when tuning
+`fireDeg` / `rearmDeg` in `src/core/tilt.ts`.
+
+Phone and computer have to be on the same network. If the QR fails on a
+locked-down wifi, `npx expo start --tunnel` routes around it.
+
+### In the iOS simulator
+
+`npm start`, then press `i` (needs Xcode installed). Everything works except
+tilt: the simulator has no accelerometer, so the app falls back to tap
+controls on its own. Use it for flow and layout, not for the gesture.
+
+### As the installed PWA
+
+Build and serve the static export, then use Add to Home Screen:
+
+```bash
+npm run build:web
+npx http-server dist -p 8099
+```
+
+One catch worth knowing before you test on a phone: `DeviceOrientationEvent`
+requires a **secure context**. `localhost` counts, a plain `http://192.168.x.x`
+LAN address does not — over LAN http the app will quietly offer tap controls
+only. To exercise tilt in the real PWA it has to be on an `https://` host.
 
 ## Building the PWA
 
