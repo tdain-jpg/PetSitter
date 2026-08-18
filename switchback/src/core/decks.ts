@@ -1,0 +1,187 @@
+/**
+ * The prompt decks.
+ *
+ * Everything here is original, generic theme-park culture. No park, ride,
+ * character, film or product name is used, and none should be added — the
+ * whole point of this app is to be the queue game that doesn't depend on
+ * somebody else's licence.
+ *
+ * Prompts are written to be *actable*: a thing you can do with your body in a
+ * crowded line without leaving your spot in it.
+ */
+
+import type { Deck } from './types';
+
+function cards(deckId: string, entries: (string | [string, string])[]) {
+  return entries.map((entry, i) => {
+    const [text, hint] = Array.isArray(entry) ? entry : [entry, undefined];
+    return { id: `${deckId}-${i + 1}`, text, hint };
+  });
+}
+
+export const DECKS: Deck[] = [
+  {
+    id: 'ride-it',
+    name: 'Ride It',
+    tagline: 'Every kind of thing that goes round, up or down.',
+    badge: '🎢',
+    cards: cards('ride-it', [
+      'Loop the loop',
+      ['Log flume splashdown', 'The part that soaks row one'],
+      'Spinning teacups',
+      'Drop tower',
+      'Bumper cars',
+      'Carousel horse',
+      ['Stuck at the top of the Ferris wheel', 'Great view, mild panic'],
+      'Haunted walk-through',
+      ['Wooden coaster rattle', 'You can feel it in your teeth'],
+      'Lazy river tube',
+      'Motion simulator',
+      'Swinging pirate ship',
+      'Go-kart track',
+      'Bobsled run',
+      'Runaway mine train',
+      'Water raft ride',
+      'Zip line',
+      'Monorail',
+      ['Gondola over the park', 'Feet dangling, very quiet'],
+      ['Spinning wall of death', 'The one where the floor drops out'],
+      'Kiddie coaster',
+      ['Launch countdown', 'Three, two, one and you are gone'],
+      'Track brake screech',
+      'Slow boat ride',
+    ]),
+  },
+  {
+    id: 'snack-bar',
+    name: 'Snack Bar',
+    tagline: 'Fried, frozen, or on a stick.',
+    badge: '🍿',
+    cards: cards('snack-bar', [
+      'Turkey leg',
+      'Funnel cake',
+      'Churro',
+      'Pineapple soft serve',
+      'Corn dog',
+      'Giant pretzel',
+      ['Blue raspberry slushie', 'Check your tongue after'],
+      'Cotton candy',
+      'Caramel apple',
+      ['Souvenir sipper cup', 'Free refills all day, allegedly'],
+      'Popcorn bucket',
+      'Frozen lemonade',
+      ['Deep fried anything', 'If it fits in the basket, it goes in'],
+      'Loaded nachos',
+      'Ice cream sandwich',
+      'Kettle corn',
+      'Snow cone',
+      'Warm cookie',
+      ['Dropped your cone', 'Three seconds of silence'],
+      'Mystery meat on a stick',
+      ['Breakfast at eleven', 'You slept through rope drop'],
+      ['Sharing one basket of fries', 'Four people, one basket'],
+      'Refill station queue',
+      'Melting everything',
+    ]),
+  },
+  {
+    id: 'queue-life',
+    name: 'Queue Life',
+    tagline: 'The part of the day you spend standing still.',
+    badge: '🧍',
+    cards: cards('queue-life', [
+      ['Single rider line', 'Faster, but you ride with strangers'],
+      'Stroller parking',
+      ['How much longer', 'Asked every ninety seconds'],
+      ['Blinked in the ride photo', 'Everyone else looks great'],
+      'Lanyard full of pins',
+      'Reapplying sunscreen',
+      ['Phone at four percent', 'And the meeting point is across the park'],
+      'Line cutter',
+      ['Height check', 'Standing as tall as humanly possible'],
+      'Hand stamp',
+      'Locker before the coaster',
+      'Empty water bottle',
+      ['Sudden downpour poncho', 'Everyone becomes the same colour'],
+      'Ride breakdown announcement',
+      'Fanny pack',
+      ['Arguing over the park map', 'Two people, two routes, one hill'],
+      'Meeting point at the fountain',
+      ['Rope drop sprint', 'Walking fast, definitely not running'],
+      'Nap in the shade',
+      ['Sitting down in line', 'The queue moves, you do not'],
+      'Blister',
+      ['Group photo, nobody ready', 'Someone is always looking away'],
+      ['I will hold the bags', 'The noblest job in the park'],
+      'Counting switchbacks left',
+    ]),
+  },
+  {
+    id: 'backstage',
+    name: 'Backstage',
+    tagline: 'Everyone who makes the day happen.',
+    badge: '🎭',
+    cards: cards('backstage', [
+      ['Costumed mascot', 'Big head, waving, never speaks'],
+      ['Ride operator spiel', 'Arms down, head back, hold on'],
+      'Parade dancer',
+      'Street sweeper',
+      'Stilt walker',
+      'Face painter',
+      'Balloon twister',
+      'Caricature artist',
+      'Barbershop quartet',
+      'Juggler',
+      'Magician',
+      'Marching band',
+      ['Living statue', 'Do not blink, do not move'],
+      'Photographer at the ride exit',
+      'Ticket taker',
+      'Lost and found desk',
+      'Fireworks technician',
+      'Character handler',
+      'Popcorn cart vendor',
+      ['Loose articles announcement', 'Phones, hats, glasses, keys'],
+      'Mime',
+      'Acrobat on silks',
+      'Puppeteer',
+      ['Announcer voice', 'Welcome, folks, to the show'],
+    ]),
+  },
+  {
+    id: 'souvenir-stand',
+    name: 'Souvenir Stand',
+    tagline: 'Things you buy at 9pm and regret at 9am.',
+    badge: '🛍️',
+    cards: cards('souvenir-stand', [
+      'Novelty ear headband',
+      ['Pressed penny machine', 'Crank it and wait'],
+      'Autograph book',
+      'Snow globe',
+      'Fridge magnet',
+      'Light up spinning toy',
+      'Foam sword',
+      'Personalised keychain',
+      'Oversized lollipop',
+      'Photo frame with the date on it',
+      'Tie dye T-shirt',
+      'Baseball cap',
+      'Poncho in a pouch',
+      'Plush animal',
+      ['Backpack full of everything', 'Somebody has to carry it'],
+      'Sunglasses stand',
+      'Postcard rack',
+      'Bubble wand',
+      'Glow necklace',
+      'Temporary tattoo',
+      'Beach towel',
+      ['The ride photo you buy anyway', 'It is terrible and it is yours'],
+      'Enamel pin',
+      ['Name spelled wrong', 'Close enough, take it'],
+    ]),
+  },
+];
+
+export function deckById(id: string): Deck | undefined {
+  return DECKS.find((d) => d.id === id);
+}
