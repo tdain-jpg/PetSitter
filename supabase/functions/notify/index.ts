@@ -24,7 +24,8 @@
 // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are auto-provided by the platform.
 //
 // Outbox row shape this function relies on (0008 notifications_outbox):
-//   id, kind ('invite' | 'share_opened' | 'trip_incomplete'), recipient_email,
+//   id, kind ('invite' | 'share_opened' | 'trip_incomplete' | 'sitter_checkin'),
+//   recipient_email,
 //   payload (jsonb), dedupe_key (unique), attempts, sent_at, last_error,
 //   created_at
 
@@ -148,6 +149,51 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           `Your sitter opened ${title}`,
           `<p style="margin: 0 0 16px;">Good news &mdash; your sitter just opened <strong>${title}</strong>.</p>
           <p style="margin: 0;">Feeding schedules, medications, and emergency contacts are all at their fingertips. Nothing for you to do; we just thought you'd like to know your pets are in the loop.</p>`
+        ),
+      };
+    }
+
+    // Drafted by a local qwen3-coder from a spec, then reviewed. It got the
+    // subtle part right unprompted-by-example — truncate BEFORE escaping, so a
+    // cut never lands inside an &amp; and leaves half an entity on screen. Nine
+    // corrections went in on review; the two that mattered were an unguarded
+    // .substring() on untyped JSON (a note arriving as anything but a string
+    // throws and takes the whole outbox batch down with it) and an empty <p>
+    // rendered whenever guide_title was absent.
+    case 'sitter_checkin': {
+      const sitter = escapeHtml(p.sitter_name || 'Your sitter');
+      const household = p.household_name ? escapeHtml(p.household_name) : null;
+      const guideTitle = p.guide_title ? escapeHtml(p.guide_title) : null;
+
+      // String() first: row.payload is untyped JSON off the queue, and a note
+      // that is not a string would throw here and fail every other row in the
+      // same batch. Truncated BEFORE escaping so the cut can never land inside
+      // an entity and leave "&am" on the page.
+      const rawNote = p.note == null ? '' : String(p.note);
+      const note =
+        rawNote.length > 300 ? `${rawNote.slice(0, 300)}\u2026` : rawNote;
+
+      const noteHtml = note
+        ? `<blockquote style="margin: 0 0 16px; padding: 12px 16px; background-color: #F5EDD6; border-left: 3px solid #3C6779; border-radius: 4px; color: #263544; font-style: italic;">${escapeHtml(note)}</blockquote>`
+        : '<p style="margin: 0 0 16px;">They did not leave a note.</p>';
+
+      // Named only when we have one. An owner can belong to more than one
+      // household, and "someone checked in" is not much use if you cannot tell
+      // whose animals are meant.
+      const wherePart = guideTitle
+        ? ` on <strong>${guideTitle}</strong>`
+        : household
+          ? ` at <strong>${household}</strong>`
+          : '';
+
+      return {
+        subject: `${subjectSafe(p.sitter_name, 'Your sitter')} checked in on your pets`,
+        html: emailShell(
+          `${sitter} checked in`,
+          `<p style="margin: 0 0 16px;">${sitter} left an update${wherePart}.</p>
+          ${noteHtml}
+          <p style="margin: 0 0 16px;">Nothing for you to do &mdash; we just thought you would want to hear it.</p>
+          ${ctaButton('See the check-in')}`
         ),
       };
     }

@@ -774,16 +774,21 @@ mine. Three shapes, cheapest first:
 
 1. **Reuse what exists.** Owners already list emergency contacts — prompt them to
    add themselves as one when they invite a sitter. No schema, no new exposure,
-   and the owner chooses what number to give.
+   and the owner chooses what number to give. **Still open.**
 2. **A per-connection contact field** on `sitter_connections`, set by the owner at
    invite time and shown on the sitter's household screen. Explicit, revocable
    with the connection, and never touches the account's own address.
-3. **Notify on check-in.** The outbox already exists and already emails; a
-   check-in that mentions a problem could reach the owner in minutes instead of
-   whenever they next open the app. Closest to what the sitter actually wanted,
-   and it needs no contact details to be shared at all.
+   **Still open — this is the one that needs a privacy call.**
+3. **Notify on check-in.** — ✅ **SHIPPED 2026-08-29**, migration 0024. A sitter
+   check-in now enqueues a `sitter_checkin` outbox row to every household member,
+   drained by the existing `notify` cron. Restricted to check-ins whose author is
+   NOT a member, so family notes in the shared feed do not email the household.
+   Shares no contact details in either direction.
 
-Option 1 is a copy change. Option 3 is probably the right answer.
+Options 1 and 2 are still worth doing and are not pre-empted by 3: the owner
+hearing about a check-in within the cron interval is not the same as the sitter
+being able to reach them right now. But 3 was the half that needed no decision
+from anyone, so it went first.
 
 ### Also from that journey
 
