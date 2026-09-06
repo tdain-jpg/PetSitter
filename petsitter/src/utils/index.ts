@@ -1,14 +1,12 @@
-/**
- * Format a date string for display
+/*
+ * formatDate used to live here, doing `new Date(dateStr)` on a 'YYYY-MM-DD'
+ * string — which the spec says to parse as UTC midnight, so it rendered the
+ * PREVIOUS day for everyone west of Greenwich. It had no importers left (every
+ * screen already uses lib/dates' formatDate), so it was dead code with a live
+ * landmine in it: the next person to reach for the obvious name in the obvious
+ * place would have reintroduced a bug this codebase has already shipped once.
+ * Deleted rather than fixed — one implementation, in lib/dates.ts.
  */
-export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 /**
  * Format a time string for display

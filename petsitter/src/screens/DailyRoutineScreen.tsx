@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
+import { parseLocalDate, toLocalDateKey } from '../lib/dates';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
@@ -42,18 +43,13 @@ const TASK_CATEGORIES: { value: TaskCategory; label: string }[] = [
 
 const generateId = () => `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-// Date keys use the LOCAL calendar day. toISOString() is UTC — for a US user
-// after ~5-8pm local it is already tomorrow's date, so completions would be
-// recorded (and read back) under the wrong day.
-const toLocalDateKey = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-// Parse a YYYY-MM-DD key as a LOCAL date. `new Date('YYYY-MM-DD')` parses as
-// UTC midnight, which renders as the previous day west of UTC.
-const parseLocalDateKey = (key: string) => {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
+// Both date helpers now live in lib/dates.ts. They were correct here — the
+// comments explaining WHY are preserved at the definitions — but a third
+// private copy of local-date handling is how MemorialScreen shipped a
+// user-visible bug: everyone west of UTC saw deceased dates a day early.
+// parseLocalDateKey's only behavioural difference was returning a Date
+// unconditionally; parseLocalDate returns null for a malformed key, handled at
+// the two call sites below.
 
 export function DailyRoutineScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
@@ -294,7 +290,9 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   };
 
   const changeDate = (offset: number) => {
-    const date = parseLocalDateKey(selectedDate);
+    // selectedDate is always a key we produced ourselves, so null here would
+    // be a bug rather than user input — fall back to today instead of crashing.
+    const date = parseLocalDate(selectedDate) ?? new Date();
     date.setDate(date.getDate() + offset);
     setSelectedDate(toLocalDateKey(date));
   };
@@ -310,7 +308,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     if (dateStr === toLocalDateKey(tomorrowDate)) return 'Tomorrow';
     if (dateStr === toLocalDateKey(yesterdayDate)) return 'Yesterday';
 
-    return parseLocalDateKey(dateStr).toLocaleDateString('en-US', {
+    return (parseLocalDate(dateStr) ?? new Date()).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

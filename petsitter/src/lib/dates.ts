@@ -35,9 +35,22 @@ const DEFAULT_FORMAT: Intl.DateTimeFormatOptions = {
  * return tomorrow's date for users behind UTC late in the day.
  */
 export function todayLocal(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-    now.getDate()
+  return toLocalDateKey(new Date());
+}
+
+/**
+ * A Date rendered as a 'YYYY-MM-DD' key in the user's LOCAL timezone.
+ *
+ * The inverse of parseLocalDate, and the reason both live here rather than in
+ * whichever screen needed one first. Built from getFullYear/getMonth/getDate —
+ * never `toISOString()`, which is UTC, so for anyone behind UTC late in the day
+ * it returns TOMORROW. DailyRoutine records task completions under this key, so
+ * that would have filed an evening tick under the wrong day and then failed to
+ * read it back.
+ */
+export function toLocalDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate()
   ).padStart(2, '0')}`;
 }
 

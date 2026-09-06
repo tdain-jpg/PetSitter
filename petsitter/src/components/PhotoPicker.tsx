@@ -44,7 +44,9 @@ export function PhotoPicker({
 
     // Launch image picker
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // MediaTypeOptions was deprecated in SDK 51 and is slated for removal;
+      // MediaType is the replacement and takes an array.
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,

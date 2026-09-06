@@ -1020,16 +1020,16 @@ Prefer one shared component so the timezone handling is written once, not per sc
 
 ## 5. Deferred / minor
 
-- **Share-link Copy button (Loop 3 QA):** "Failed to copy link" alert in the QA browser pane —
-  likely a clipboard-permission artifact of the embedded pane, but add a fallback anyway
-  (legacy execCommand or select-the-text) and friendlier copy. Verify once in normal Chrome.
-- **expo-image-picker deprecation (Loop 3 QA):** `MediaTypeOptions` → `MediaType` in the
-  PhotoPicker call site before the next Expo SDK upgrade.
+- ~~**Share-link Copy button**~~ ✅ ALREADY DONE (found stale 2026-09-06). copyToClipboard has
+  all three tiers — async Clipboard API, legacy execCommand on an off-screen readonly textarea,
+  then a dialog pointing at the selectable link on the card. Still unverified in normal Chrome
+  because a synthetic click is not a trusted gesture; that goes on Tim's human-QA list.
+- ~~**expo-image-picker deprecation**~~ ✅ DONE 2026-09-06 — `MediaTypeOptions.Images` →
+  `['images']` in PhotoPicker.
 - **Crown-gate console noise:** the intentional 402 logs `Failed to load resource` in devtools;
   harmless, documented here so nobody chases it.
-- **Household polish (from the 2026-08-15 QA pass):** map raw RPC error strings to
-  sentence-case copy in HouseholdScreen alerts ("invalid email" → "That doesn't look like an
-  email address."); add a space after the emoji in the info-card header; "Joined" dates for
+- ~~**Household raw RPC strings**~~ ✅ ALREADY DONE (found stale 2026-09-06) — slice 7b routed
+  every HouseholdScreen alert through `lib/errors.ts` friendlyError. Remaining polish: add a space after the emoji in the info-card header; "Joined" dates for
   migration-backfilled members show the migration date — accepted semantics (it is when the
   household was created), revisit only if users find it confusing.
 - **Edit-form closure (polish):** duplicate the SaveStatusIndicator at the BOTTOM of
@@ -1038,8 +1038,11 @@ Prefer one shared component so the timezone handling is written once, not per sc
   button — a save button beside working autosave manufactures doubt — and the saved state
   is never styled red (red is reserved for the error state the indicator already has).
 
-- **DailyRoutineScreen** keeps private copies of the date helpers now centralized in
-  `src/lib/dates.ts` — consolidate. (MemorialScreen had the same problem and shipped a
+- ~~**DailyRoutineScreen date helpers**~~ ✅ DONE 2026-09-06 — consolidated into
+  `lib/dates.ts`, which gained `toLocalDateKey(Date)` as the inverse of `parseLocalDate`.
+  The codebase-wide audit found one more landmine: a dead `formatDate` in `utils/index.ts`
+  doing `new Date(dateStr)` with zero importers — deleted rather than fixed. Every remaining
+  `new Date(x)` takes a full ISO timestamp, where UTC parsing is correct. (MemorialScreen had the same problem and shipped a
   user-visible bug because of it: `new Date('YYYY-MM-DD')` parses as UTC midnight, so every
   user west of UTC saw the deceased date a day early. Fixed in Loop 5 by switching to
   `formatDate`. Worth auditing for any remaining bare `new Date(someDateString)`.)
