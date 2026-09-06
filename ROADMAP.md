@@ -682,14 +682,28 @@ webhook → entitlement → watermark-disappears run before anything goes live.
   Castles and Currents. A sole proprietor gets ONE EIN covering all their businesses, so
   nothing new is filed. MouseTech Studios is a 4-founder LLC and is deliberately NOT the
   entity here — that would commingle with three other people's business.
+- **Account: `acct_1SRaaQRwDZ9L2GiJ`, display name "Pawstructions"** (confirmed in the
+  dashboard 2026-09-06). Separate from the MouseTech Studios account, which is deliberately
+  not used. The rename to PAWSTRUCTIONS is DONE; the statement descriptor still needs checking.
 - Stripe login is `tcdain@gmail.com` (Tim is the developer); **Dana is the account owner and
   must be the responsible party at activation** — her identity verification, her bank account.
   Add her as an Administrator; disputes and payout failures go to account users.
+- **LIVE product `prod_VDCmoGczA36rvU`, price `price_1UCmNDRwDZ9L2GiJWTGlbXkY`**
+  ($5.00 USD one-off, "Pawstructions Crown", created 2026-09-06). The price id carries the
+  account fingerprint `RwDZ9L2GiJ`, matching `acct_1SRaaQRwDZ9L2GiJ` — independent confirmation
+  these belong to the right account. The old sandbox price `price_1U4ppkRyrAg8SNrWJ3eyeprZ`
+  carries a different fingerprint (`RyrAg8SNrW`), which is why sandbox objects can never be
+  reused live.
+- Live catalog was verified EMPTY before this: 0 products, 0 archived, 0 subscriptions. The
+  "pre-existing account" worry recorded on 2026-08-15 is closed — nothing has ever run here.
 - **Sandbox product id: `prod_V4zp7GWD8ggqhM`** ($5.00 USD one-off, "Pawstructions Crown").
   Sandbox objects do NOT carry to live — the live product gets a different id, so this is a
   config value (`STRIPE_PRODUCT_ID`), never baked into code. `STRIPE_PRICE_ID` is supported as
   a direct override; when unset the function resolves the product's default price.
-- ⚠️ **UNRESOLVED:** the account is named "Castles and Cruise…" and holds an `Annual
+- ~~⚠️ UNRESOLVED~~ **RESOLVED 2026-09-06:** the live account is named "Pawstructions" and its
+  catalog and subscriptions are both empty, so there is no shared balance with anything. The
+  note below is kept for the record only.
+- ⚠️ (historic) the account was named "Castles and Cruise…" and held an `Annual
   Subscription` ($49.99/yr) created 2025-11-09 — nine months before the account was supposedly
   created. Either a fossil of the original annual-fee Crown plan (§2 still describes Crown that
   way) or evidence this is a PRE-EXISTING account, in which case Pawstructions revenue shares a
@@ -706,7 +720,7 @@ webhook → entitlement → watermark-disappears run before anything goes live.
 1. ~~Create the Stripe account~~ DONE (sandbox).
 2. ~~Create the product + $5 price~~ DONE — `prod_V4zp7GWD8ggqhM`.
 3. Resolve the Annual Subscription / account-provenance question above; archive the stray product.
-4. Rename business name + statement descriptor to PAWSTRUCTIONS.
+4. ~~Rename business name~~ DONE (account reads "Pawstructions"). Statement descriptor still to check.
 5. Paste `STRIPE_SECRET_KEY` (sandbox `sk_test_…`) and `STRIPE_WEBHOOK_SECRET` into Supabase secrets.
 6. Point the Stripe webhook endpoint at the deployed function URL.
 7. Tell me Dana's exact registered business name for the legal pages — Stripe's reviewer
@@ -805,35 +819,50 @@ from anyone, so it went first.
 
 ---
 
-## Launch gate — the only thing left that is not code
+## Launch gate — CLEARED 2026-09-06
 
-**Stripe is still in TEST mode.** Everything about Crown works end to end; it just works
-against test money. The only real row in `crown_purchases` carries a `cs_test_...` session.
-This is invisible from the code — the functions read `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
-`STRIPE_PRODUCT_ID` and `STRIPE_WEBHOOK_SECRET` from Edge Function secrets and neither know
-nor care which mode they name — which is exactly why it is worth writing down. In test mode
-the app looks finished because it *is* finished.
+Stripe is live. Verified against the API, not the dashboard:
 
-Four actions in Stripe, in this order:
+```
+acct_1SRaaQRwDZ9L2GiJ   charges_enabled True   payouts_enabled True
+                        details_submitted True currently_due None  past_due None
+                        statement_descriptor PAWSTRUCTIONS
+price_1UCmNDRwDZ9L2GiJWTGlbXkY   livemode True  500 usd  one_time  active
+product prod_VDCmoGczA36rvU
+webhook POST (unsigned) -> 400 {"error":"missing_signature"}
+```
 
-1. **Activate the account.** The reviewer has no login, which is why /about, /terms,
-   /privacy and /refunds are registered outside the authenticated stack.
-2. **Create the live product and the $5 price.** Live mode has its own object ids; the
-   sandbox `prod_`/`price_` do not carry over.
-3. **Create a LIVE webhook endpoint** subscribed to `checkout.session.completed`,
-   `checkout.session.async_payment_succeeded`, `charge.refunded` and
-   `charge.dispute.closed`.
-4. **Update the four secrets** (`supabase secrets set`).
+The account turned out to be activated already — identity, bank and descriptor were
+all done before this session, so the "activate the account" step in the old plan was
+a no-op. What actually remained was the live product, the live webhook destination
+and the four secrets, all now in place:
 
-Step 3 before step 4 matters: the signing secret is per-endpoint, so the live endpoint has a
-different `whsec_` than the sandbox one. Swapping the API key without it leaves every live
-event failing signature verification, and Stripe retrying each for about three days.
+- `STRIPE_SECRET_KEY` — `sk_live_…`
+- `STRIPE_WEBHOOK_SECRET` — from the LIVE destination (per-endpoint; the sandbox one
+  no longer verifies, which is expected)
+- `STRIPE_PRODUCT_ID` / `STRIPE_PRICE_ID` — the live objects above
 
-Also outstanding and not code: the migration-history repair (SETUP §2), and a Lighthouse
-installability run (§4a). `debug-env` is still deployed as an inert 410 stub and can be
-deleted whenever.
+Webhook destination "Pawstructions Crown — live", payload style **Snapshot** (the
+"thin" style sends only ids and would break `constructEventAsync`), subscribed to
+exactly the four events the function branches on:
+`checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+`charge.refunded`, `charge.dispute.closed`.
 
----
+### The one thing still untested
+
+**No live payment has been made.** Everything above proves configuration, not the
+path. A real $5 charge is the only way to prove checkout -> webhook -> `grant_crown`
+-> watermark-disappears end to end, and it is Tim's to make, not mine. Refund it
+afterwards from the dashboard — that also exercises `charge.refunded` ->
+`revoke_crown`, which is the half nobody ever tests until a customer asks for their
+money back.
+
+### When the sitter subscription ships
+
+Add to the SAME destination — the signing secret does not change and no redeploy is
+needed: `customer.subscription.created` / `.updated` / `.deleted`, `invoice.paid`,
+`invoice.payment_failed`. Deliberately not added now, because that feature is
+undesigned and the exact set depends on trial/proration/Customer Portal choices.
 
 ## Loop 7 — planned
 
