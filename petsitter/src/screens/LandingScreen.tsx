@@ -60,6 +60,17 @@ const features = [
     color: COLORS.accent,
     bgClass: 'bg-accent-50',
   },
+  {
+    // The sitter side is half the product and this page said nothing about it.
+    // Last in the list on purpose: an owner arriving here is shopping for
+    // themselves, and the pitch has to land before we mention the other
+    // audience.
+    icon: '🐾',
+    title: 'A Home for Sitters Too',
+    description: 'Sitters can have their own account: every client in one list, tasks to tick off as they go, and your phone number on the pet\u2019s page for when something needs asking. Three clients free, permanently.',
+    color: COLORS.secondary,
+    bgClass: 'bg-secondary-50',
+  },
 ];
 
 // Public pages every visitor can reach without signing in. They live on the
@@ -199,7 +210,7 @@ export function LandingScreen({ navigation }: Props) {
               Everything You Need
             </Text>
             <Text className="text-tan-500 text-center mb-6">
-              Powerful features to make pet care simple
+              Free unless it says otherwise
             </Text>
 
             {features.map((feature) => (
@@ -278,6 +289,28 @@ export function LandingScreen({ navigation }: Props) {
                 </Text>
               </View>
             </Card>
+          </ScreenContainer>
+        </View>
+
+        {/* Sitters get their own section, not just a feature card. They arrive
+              here from an invitation email with a different question ("what am I
+              being asked to sign up to?"), and the answer to that is not the
+              owner pitch above. */}
+        <View className="px-6 py-8 bg-cream-50 border-y border-tan-200">
+          <ScreenContainer variant="content">
+            <Text className="text-2xl font-bold text-brown-800 text-center mb-4">
+              Looking after someone else&apos;s pets?
+            </Text>
+            <Text className="text-tan-600 text-center leading-6 mb-4">
+              Pawstructions has a side built for you. Every client household in one list, with
+              their pets, routines and emergency contacts already written down by the person who
+              knows them best. Tick tasks off as you go and the owner can see what has been done,
+              without either of you sending the "everything ok?" text.
+            </Text>
+            <Text className="text-tan-600 text-center leading-6">
+              Three client households free, permanently. Beyond that it is $9 a month or $60 a
+              year, and it only lifts the client limit — every feature is included either way.
+            </Text>
           </ScreenContainer>
         </View>
 

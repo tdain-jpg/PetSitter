@@ -86,6 +86,7 @@ const linking = {
       // terms, privacy policy and refund policy, and their reviewer has no
       // login, so these must resolve for a signed-out visitor by URL alone.
       About: 'about',
+      FAQ: 'faq',
       Privacy: 'privacy',
       Terms: 'terms',
       Refund: 'refunds',

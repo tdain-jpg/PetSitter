@@ -120,6 +120,7 @@ export type RootStackParamList = {
   // reaching a service description, terms, privacy and refund policy, and
   // their reviewer has no login. Signed-in users reach them from Settings.
   About: undefined;
+  FAQ: undefined;
   Privacy: undefined;
   Terms: undefined;
   Refund: undefined;
@@ -129,6 +130,7 @@ export type InstallScreenProps = NativeStackScreenProps<RootStackParamList, 'Ins
 
 export type UnlockCrownScreenProps = NativeStackScreenProps<MainStackParamList, 'UnlockCrown'>;
 export type AboutScreenProps = NativeStackScreenProps<RootStackParamList, 'About'>;
+export type FAQScreenProps = NativeStackScreenProps<RootStackParamList, 'FAQ'>;
 export type PrivacyScreenProps = NativeStackScreenProps<RootStackParamList, 'Privacy'>;
 export type TermsScreenProps = NativeStackScreenProps<RootStackParamList, 'Terms'>;
 export type RefundScreenProps = NativeStackScreenProps<RootStackParamList, 'Refund'>;

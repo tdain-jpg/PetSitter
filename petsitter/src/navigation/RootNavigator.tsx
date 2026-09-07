@@ -7,6 +7,7 @@ import { SharedGuideViewScreen } from '../screens/SharedGuideViewScreen';
 import { InstallScreen } from '../screens/InstallScreen';
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { AboutScreen } from '../screens/AboutScreen';
+import { FAQScreen } from '../screens/FAQScreen';
 import { PrivacyScreen } from '../screens/PrivacyScreen';
 import { TermsScreen } from '../screens/TermsScreen';
 import { RefundScreen } from '../screens/RefundScreen';
@@ -312,6 +313,7 @@ export function RootNavigator() {
       <Stack.Screen name="SharedGuideView" component={SharedGuideViewScreen} />
       <Stack.Screen name="Install" component={InstallScreen} />
       <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About Us' }} />
+      <Stack.Screen name="FAQ" component={FAQScreen} options={{ title: 'Questions & Answers' }} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy Policy' }} />
       <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms of Service' }} />
       <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund Policy' }} />

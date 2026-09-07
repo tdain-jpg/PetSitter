@@ -5,7 +5,7 @@ import { TrustPage, TrustSection, TrustText, TrustBullet } from '../components/T
 import type { AboutScreenProps } from '../navigation/types';
 
 // Bump when the wording below changes.
-const LAST_UPDATED = '2026-08-15';
+const LAST_UPDATED = '2026-09-07';
 
 /**
  * The staff are real — two dogs and two people — and the titles are the ones
@@ -87,10 +87,10 @@ export function AboutScreen(_props: AboutScreenProps) {
         <TrustText>
           Almost all of it is free: unlimited pets, unlimited guides, sharing, PDF export,
           checklists, and inviting the rest of your household so everyone works from the same
-          information.
+          information. There are two paid things, one for owners and one for sitters.
         </TrustText>
         <TrustText>
-          There is one paid thing. Crown is a single $5 (USD) payment for one household, and it
+          Crown is a single $5 (USD) payment for one household, and it
           unlocks AI-written cheat sheets — the one-page summary a sitter can keep on the fridge.
           It is not a subscription. It does not renew, there is nothing to cancel, and buying it
           once covers that household permanently. Every guide you write gets one free cheat sheet
@@ -99,14 +99,21 @@ export function AboutScreen(_props: AboutScreenProps) {
           quality of the content — the care details on a preview sheet are your own, and a sitter
           can follow them exactly as written.
         </TrustText>
+        <TrustText>
+          The second is for sitters, not owners. Anyone sitting for up to three households uses
+          Pawstructions free, permanently; beyond that it is $9 a month or $60 a year. It unlocks
+          no features — every guide, routine and cheat sheet a sitter can see is already included
+          for free — it lifts the limit on how many clients they can take on. If you are a pet
+          owner, this will never apply to you.
+        </TrustText>
       </TrustSection>
 
       <TrustSection heading="Who runs it">
         <TrustText>
           Pawstructions is an independent product built and run by a small family team. There is
           no advertising, no analytics scripts following you around, and nobody buying your pets’
-          data — the software is paid for by people choosing to buy Crown, and that is the whole
-          business model.
+          data — the software is paid for by people choosing to buy Crown and by sitters
+          subscribing, and that is the whole business model.
         </TrustText>
         <TrustText>
           For anything at all — a question, a bug, a refund, deleting your account — email

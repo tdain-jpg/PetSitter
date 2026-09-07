@@ -28,11 +28,12 @@ import type { RootStackParamList } from '../navigation/types';
  * cycle.
  */
 
-type TrustRoute = 'About' | 'Privacy' | 'Terms' | 'Refund';
+type TrustRoute = 'About' | 'FAQ' | 'Privacy' | 'Terms' | 'Refund';
 
 // Insertion order is the order the cross-links render in.
 const PAGE_LABELS: Record<TrustRoute, string> = {
   About: 'About Us',
+  FAQ: 'Q & A',
   Privacy: 'Privacy',
   Terms: 'Terms',
   Refund: 'Refunds',
