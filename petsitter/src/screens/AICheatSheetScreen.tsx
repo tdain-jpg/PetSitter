@@ -17,6 +17,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js';
 import { COLORS } from '../constants';
 import { showAlert } from '../lib/showAlert';
 import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
+import { markdownToPlainText } from '../lib/markdownToPlainText';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, CheatSheet } from '../types';
@@ -306,7 +307,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
         ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own — Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
         : body;
 
-      if (await copyToClipboard(filled)) {
+      // Plain text, not markdown. A clipboard has no renderer, so pasting the
+      // raw source into Messages or email showed "## Feeding Schedule" and
+      // "**Rex**" as literal noise — in the one place the text is read with
+      // nothing to hide the syntax behind. The PDF still gets markdown, via
+      // markdownToPrintHtml.
+      const asPlainText = markdownToPlainText(filled);
+
+      if (await copyToClipboard(asPlainText)) {
         showAlert('Copied', 'Cheat sheet copied to clipboard!');
         return;
       }
