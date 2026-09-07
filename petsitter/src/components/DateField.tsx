@@ -43,6 +43,13 @@ interface DateFieldProps {
   /** 'YYYY-MM-DD'. Web only. */
   max?: string;
   placeholder?: string;
+  /**
+   * 'date' (default) gives YYYY-MM-DD. 'datetime' gives "YYYY-MM-DD HH:mm" —
+   * SPACE separated, which is the shape already stored for flight times and
+   * what the cheat-sheet prompt and PDF read. The `T` the browser wants exists
+   * only inside the input element; it never reaches the data.
+   */
+  mode?: 'date' | 'datetime';
 }
 
 export function DateField({
@@ -53,8 +60,17 @@ export function DateField({
   min,
   max,
   placeholder = 'YYYY-MM-DD',
+  mode = 'date',
 }: DateFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
+
+  const isDateTime = mode === 'datetime';
+  // Stored "2026-01-15 08:30" <-> the element's required "2026-01-15T08:30".
+  // Anything that isn't already in that shape is handed through untouched, so
+  // a legacy free-text value shows as empty rather than being mangled.
+  const toInput = (v: string) =>
+    isDateTime ? (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(v) ? v.slice(0, 16).replace(' ', 'T') : '') : v;
+  const fromInput = (v: string) => (isDateTime ? v.replace('T', ' ') : v);
 
   if (Platform.OS !== 'web') {
     return (
@@ -81,13 +97,13 @@ export function DateField({
       : COLORS.tanLight;
 
   const input = createElement('input' as any, {
-    type: 'date',
-    value,
+    type: isDateTime ? 'datetime-local' : 'date',
+    value: toInput(value),
     min,
     max,
     'aria-label': label || placeholder,
     'aria-invalid': error ? true : undefined,
-    onChange: (e: { target: { value: string } }) => onChange(e.target.value),
+    onChange: (e: { target: { value: string } }) => onChange(fromInput(e.target.value)),
     onFocus: () => setIsFocused(true),
     onBlur: () => setIsFocused(false),
     style: {

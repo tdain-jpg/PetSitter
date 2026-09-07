@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Button } from './Button';
 import { Input } from './Input';
+import { Select } from './Select';
+import { DateField } from './DateField';
 import { generateId } from '../services';
 import type { TravelItinerary, FlightInfo, HotelInfo } from '../types';
 
@@ -9,6 +11,28 @@ interface TravelItineraryEditorProps {
   value: TravelItinerary | undefined;
   onChange: (value: TravelItinerary) => void;
 }
+
+/**
+ * Signed hour offsets between the owner and the sitter, as the OWNER would say
+ * it: "I am 6 hours ahead of you". Stored as the signed number so it can be
+ * computed with later; the label is what a person reads.
+ *
+ * Half-hour zones are real (India, parts of Australia, Newfoundland) and are
+ * included rather than rounded away — an owner in Delhi telling their sitter
+ * "+9" when it is +9:30 is the kind of small wrongness that erodes trust in
+ * everything else on the page.
+ */
+const TIMEZONE_OFFSETS: { value: string; label: string }[] = [
+  { value: '', label: 'Same time as my sitter' },
+  ...[-12, -11, -10, -9, -8, -7, -6, -5, -4, -3.5, -3, -2, -1].map((h) => ({
+    value: String(h),
+    label: `${h} hours (I'm behind my sitter)`,
+  })),
+  ...[1, 2, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 8, 8.75, 9, 9.5, 10, 10.5, 11, 12, 12.75, 13, 14].map((h) => ({
+    value: `+${h}`,
+    label: `+${h} hours (I'm ahead of my sitter)`,
+  })),
+];
 
 export function TravelItineraryEditor({
   value,
@@ -167,18 +191,28 @@ export function TravelItineraryEditor({
         onChangeText={(v) => updateItinerary({ destination: v || undefined })}
       />
 
+      {/* formatAsPhone like every other phone field in the app — this one was
+          storing "6185200491" while the emergency contacts beside it stored
+          "(618) 520-0491". A sitter reading them side by side should not have
+          to work out that they are the same kind of thing. */}
       <Input
         label="Contact While Away"
         placeholder="Phone, WhatsApp, or how to reach you"
         value={itinerary.contact_while_away || ''}
         onChangeText={(v) => updateItinerary({ contact_while_away: v || undefined })}
+        formatAsPhone
       />
 
-      <Input
+      {/* A picker, not free text. "+1 Hour" typed by hand cannot be reasoned
+          about — the app cannot tell whether the sitter's 8am is the owner's
+          9am — and every user invents their own spelling. The stored value is
+          a signed offset in hours, so a future "it's 3pm where they are"
+          feature has something to compute with; the labels do the explaining. */}
+      <Select
         label="Timezone Difference"
-        placeholder="e.g., +6 hours, -3 hours"
         value={itinerary.timezone_difference || ''}
-        onChangeText={(v) => updateItinerary({ timezone_difference: v || undefined })}
+        options={TIMEZONE_OFFSETS}
+        onValueChange={(v) => updateItinerary({ timezone_difference: v || undefined })}
       />
 
       {/* Departure Flights */}
@@ -268,17 +302,17 @@ export function TravelItineraryEditor({
             value={flightForm.arrival_airport || ''}
             onChangeText={(v) => setFlightForm((prev) => ({ ...prev, arrival_airport: v }))}
           />
-          <Input
+          <DateField
             label="Departure Time"
-            placeholder="e.g., 2025-01-15 08:30"
+            mode="datetime"
             value={flightForm.departure_time || ''}
-            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, departure_time: v }))}
+            onChange={(v) => setFlightForm((prev) => ({ ...prev, departure_time: v }))}
           />
-          <Input
+          <DateField
             label="Arrival Time"
-            placeholder="e.g., 2025-01-15 16:45"
+            mode="datetime"
             value={flightForm.arrival_time || ''}
-            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, arrival_time: v }))}
+            onChange={(v) => setFlightForm((prev) => ({ ...prev, arrival_time: v }))}
           />
 
           <View className="flex-row gap-2 mt-4">
