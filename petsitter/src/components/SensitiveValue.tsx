@@ -13,7 +13,16 @@ interface SensitiveValueProps {
  */
 export function SensitiveValue({ value, label, className = '' }: SensitiveValueProps) {
   const [revealed, setRevealed] = useState(false);
-  const masked = '•'.repeat(Math.max(6, Math.min(value.length, 12)));
+  // Fixed width, deliberately unrelated to value.length.
+  //
+  // This used to be repeat(max(6, min(length, 12))), which clamps at the ends
+  // and is therefore exact in between: an 11-character WiFi password rendered
+  // exactly 11 dots. Anyone reading over a shoulder — or reading the PUBLIC
+  // share page, which needs no login — got the length of the password for
+  // free, and length is the one thing that most narrows a guess. The door code
+  // beside it was already immune, but only by accident of being short enough
+  // to hit the floor of 6.
+  const masked = '••••••••';
 
   return (
     <Pressable
