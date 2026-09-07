@@ -113,10 +113,27 @@ function printExportedGuideOnWeb(html: string) {
   iframe.setAttribute('title', 'Guide print preview');
   iframe.setAttribute('aria-hidden', 'true');
   iframe.setAttribute('tabindex', '-1');
-  // Positioned off-screen rather than display:none — hidden frames are not
-  // painted, and some browsers then refuse to print them.
+  // OFF-SCREEN, BUT AT REAL PAGE SIZE.
+  //
+  // This was 1px by 1px at opacity 0, and that is what printed a blank page.
+  // window.print() prints the frame's OWN layout, and a frame one pixel wide
+  // lays the document out one pixel wide. Measured, with the real stylesheet:
+  //
+  //     1x1 frame     content box  32px wide,  cheat sheet 846px tall
+  //     816x1056      content box 776px wide,  cheat sheet 219px tall
+  //
+  // At 32px the body's max-width:800px never applies and every line wraps to
+  // roughly one character, so the sheet becomes a 1300px ribbon of slivers.
+  // That prints as an empty page with the short, centred footer surviving at
+  // the bottom — exactly the "blank except a footer" that was reported twice.
+  //
+  // 816x1056 is US Letter at 96dpi, comfortably wider than the document's own
+  // 800px max-width so the layout is the one the stylesheet was written for.
+  // Still off-screen at left:-10000px, but no longer opacity:0 — a fully
+  // transparent frame is another thing browsers may decline to paint, and
+  // being off-screen already hides it.
   iframe.style.cssText =
-    'position:fixed;top:0;left:-10000px;width:1px;height:1px;opacity:0;border:0;';
+    'position:fixed;top:0;left:-10000px;width:816px;height:1056px;border:0;';
 
   let readyTimer: ReturnType<typeof setTimeout>;
   let cleanupTimer: ReturnType<typeof setTimeout>;

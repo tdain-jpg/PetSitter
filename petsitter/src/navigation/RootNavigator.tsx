@@ -28,10 +28,59 @@ import type { MainStackParamList, RootStackParamList } from './types';
 // it — pendingWebPath stays null without a window.
 // ---------------------------------------------------------------------------
 
-let pendingWebPath: string | null =
-  typeof window !== 'undefined' && window.location
-    ? `${window.location.pathname}${window.location.search}`
-    : null;
+/**
+ * Where to send the user back to after an identity provider round trip.
+ *
+ * signInWithOAuth sends Google a redirectTo of window.location.origin — the
+ * BARE origin — so Google returns the browser to https://pawstructions.com/
+ * and the URL the user actually asked for is gone before the app reloads.
+ * Ask for /Main/Guides while signed out, sign in with Google, and you land on
+ * Home having been silently ignored. sessionStorage is the only thing that
+ * survives that round trip, and it is per-tab, so a second tab cannot steal it.
+ */
+const OAUTH_RETURN_KEY = 'pawstructions.postAuthPath';
+
+/** True only on the way back from Supabase's OAuth/magic-link callback. */
+function isAuthCallbackUrl(): boolean {
+  const blob = `${window.location.hash}${window.location.search}`;
+  return /[#&?](access_token|refresh_token|code|error_description)=/.test(blob);
+}
+
+function capturePendingWebPath(): string | null {
+  if (typeof window === 'undefined' || !window.location) return null;
+
+  const here = `${window.location.pathname}${window.location.search}`;
+
+  if (here.startsWith('/Main/')) {
+    // Remember it in case this visit is about to bounce through Google. Doing
+    // it here rather than in the sign-in handler is deliberate: by the time the
+    // user reaches a sign-in button they are on /Auth/Landing and the URL they
+    // originally wanted is already gone.
+    try {
+      window.sessionStorage.setItem(OAUTH_RETURN_KEY, here);
+    } catch {
+      // Private mode or storage disabled. The deep link simply won't survive
+      // an OAuth hop, which is exactly the behaviour before this existed.
+    }
+  }
+
+  // Only a real callback may consume the stored path. Without that guard the
+  // value outlives its purpose: open the bare origin in the same tab an hour
+  // later and you would be flung to a page you asked for once, long ago.
+  if (isAuthCallbackUrl()) {
+    try {
+      const saved = window.sessionStorage.getItem(OAUTH_RETURN_KEY);
+      window.sessionStorage.removeItem(OAUTH_RETURN_KEY);
+      if (saved) return saved;
+    } catch {
+      // Fall through to the URL we actually have.
+    }
+  }
+
+  return here;
+}
+
+let pendingWebPath: string | null = capturePendingWebPath();
 
 type RestoredParams = { params: object | undefined };
 type ParamParser = (query: URLSearchParams) => RestoredParams | null;
