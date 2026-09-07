@@ -24,6 +24,42 @@ import { UnlockCrownScreen } from '../screens/UnlockCrownScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
 import type { MainStackParamList } from './types';
+import { hosted } from './ScreenHost';
+
+
+/**
+ * Wrapped ONCE, at module scope.
+ *
+ * hosted() must not be called inside the JSX below: that produces a new
+ * component identity on every render of this navigator, and React would
+ * unmount and remount the screen each time — throwing away its scroll
+ * position, its form state and any in-flight request. Built up here, each
+ * wrapper is stable for the life of the module.
+ */
+const HomeH = hosted(HomeScreen);
+const PetListH = hosted(PetListScreen);
+const PetDetailH = hosted(PetDetailScreen);
+const PetFormH = hosted(PetFormScreen);
+const GuideListH = hosted(GuideListScreen);
+const GuideDetailH = hosted(GuideDetailScreen);
+const GuideFormH = hosted(GuideFormScreen);
+const DailyRoutineH = hosted(DailyRoutineScreen);
+const HomeCareH = hosted(HomeCareScreen);
+const SettingsH = hosted(SettingsScreen);
+const MemorialH = hosted(MemorialScreen);
+const HouseholdH = hosted(HouseholdScreen);
+const ShareGuideH = hosted(ShareGuideScreen);
+const PDFPreviewH = hosted(PDFPreviewScreen);
+const AICheatSheetH = hosted(AICheatSheetScreen);
+const SampleCheatSheetH = hosted(SampleCheatSheetScreen);
+const CheatSheetsH = hosted(CheatSheetsScreen);
+const SittersH = hosted(SittersScreen);
+const SitterHomeH = hosted(SitterHomeScreen);
+const SitterHouseholdH = hosted(SitterHouseholdScreen);
+const SitterPlansH = hosted(SitterPlansScreen);
+const UnlockCrownH = hosted(UnlockCrownScreen);
+const OnboardingH = hosted(OnboardingScreen);
+const TripWizardH = hosted(TripWizardScreen);
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -35,30 +71,30 @@ export function MainNavigator() {
         contentStyle: { backgroundColor: '#FAF6EA' },
       }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Pets" component={PetListScreen} />
-      <Stack.Screen name="PetDetail" component={PetDetailScreen} />
-      <Stack.Screen name="PetForm" component={PetFormScreen} />
-      <Stack.Screen name="Guides" component={GuideListScreen} />
-      <Stack.Screen name="GuideDetail" component={GuideDetailScreen} />
-      <Stack.Screen name="GuideForm" component={GuideFormScreen} />
-      <Stack.Screen name="DailyRoutine" component={DailyRoutineScreen} />
-      <Stack.Screen name="HomeCare" component={HomeCareScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="Memorial" component={MemorialScreen} />
-      <Stack.Screen name="Household" component={HouseholdScreen} />
-      <Stack.Screen name="ShareGuide" component={ShareGuideScreen} />
-      <Stack.Screen name="PDFPreview" component={PDFPreviewScreen} />
-      <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />
-      <Stack.Screen name="SampleCheatSheet" component={SampleCheatSheetScreen} />
-      <Stack.Screen name="CheatSheets" component={CheatSheetsScreen} />
-      <Stack.Screen name="Sitters" component={SittersScreen} />
-      <Stack.Screen name="SitterHome" component={SitterHomeScreen} />
-      <Stack.Screen name="SitterHousehold" component={SitterHouseholdScreen} />
-      <Stack.Screen name="SitterPlans" component={SitterPlansScreen} />
-      <Stack.Screen name="UnlockCrown" component={UnlockCrownScreen} />
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="TripWizard" component={TripWizardScreen} />
+      <Stack.Screen name="Home" component={HomeH} />
+      <Stack.Screen name="Pets" component={PetListH} />
+      <Stack.Screen name="PetDetail" component={PetDetailH} />
+      <Stack.Screen name="PetForm" component={PetFormH} />
+      <Stack.Screen name="Guides" component={GuideListH} />
+      <Stack.Screen name="GuideDetail" component={GuideDetailH} />
+      <Stack.Screen name="GuideForm" component={GuideFormH} />
+      <Stack.Screen name="DailyRoutine" component={DailyRoutineH} />
+      <Stack.Screen name="HomeCare" component={HomeCareH} />
+      <Stack.Screen name="Settings" component={SettingsH} />
+      <Stack.Screen name="Memorial" component={MemorialH} />
+      <Stack.Screen name="Household" component={HouseholdH} />
+      <Stack.Screen name="ShareGuide" component={ShareGuideH} />
+      <Stack.Screen name="PDFPreview" component={PDFPreviewH} />
+      <Stack.Screen name="AICheatSheet" component={AICheatSheetH} />
+      <Stack.Screen name="SampleCheatSheet" component={SampleCheatSheetH} />
+      <Stack.Screen name="CheatSheets" component={CheatSheetsH} />
+      <Stack.Screen name="Sitters" component={SittersH} />
+      <Stack.Screen name="SitterHome" component={SitterHomeH} />
+      <Stack.Screen name="SitterHousehold" component={SitterHouseholdH} />
+      <Stack.Screen name="SitterPlans" component={SitterPlansH} />
+      <Stack.Screen name="UnlockCrown" component={UnlockCrownH} />
+      <Stack.Screen name="Onboarding" component={OnboardingH} />
+      <Stack.Screen name="TripWizard" component={TripWizardH} />
     </Stack.Navigator>
   );
 }
