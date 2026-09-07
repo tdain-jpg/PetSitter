@@ -18,17 +18,13 @@ import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
+import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks } from '../lib/routineTasks';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
 import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
 
-const TIME_BLOCKS: { id: TimeBlock; label: string; icon: string }[] = [
-  { id: 'morning', label: 'Morning', icon: '🌅' },
-  { id: 'midday', label: 'Midday', icon: '☀️' },
-  { id: 'evening', label: 'Evening', icon: '🌆' },
-  { id: 'bedtime', label: 'Bedtime', icon: '🌙' },
-];
+
 
 const TASK_CATEGORIES: { value: TaskCategory; label: string }[] = [
   { value: 'feeding', label: 'Feeding' },
@@ -119,141 +115,20 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   };
 
   // Generate tasks from pet schedules.
-  // Every generated id is prefixed with the guide id: completions are keyed by
-  // (guide_id, task_id, date), and unprefixed ids ('walk-morning',
-  // 'feeding-<petId>-...') would repeat across guides covering the same pet
-  // (or duplicated guides), colliding in the checklist history.
-  const generatedTasks = useMemo(() => {
-    const tasks: RoutineTask[] = [];
-    let order = 0;
-
-    guidePets.forEach((pet) => {
-      // Feeding tasks
-      pet.feeding_schedule.forEach((feeding) => {
-        const hour = parseInt(feeding.time.split(':')[0], 10);
-        let timeBlock: TimeBlock = 'morning';
-        if (hour >= 11 && hour < 15) timeBlock = 'midday';
-        else if (hour >= 15 && hour < 20) timeBlock = 'evening';
-        else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
-
-        tasks.push({
-          id: `feeding-${guideId}-${pet.id}-${feeding.id}`,
-          pet_id: pet.id,
-          time_block: timeBlock,
-          time: feeding.time,
-          title: `Feed ${pet.name}`,
-          description: `${feeding.amount} of ${feeding.food_type}${feeding.notes ? ` - ${feeding.notes}` : ''}`,
-          is_recurring: true,
-          is_custom: false,
-          category: 'feeding',
-          order: order++,
-        });
-      });
-
-      // Medication tasks - create one task per time
-      pet.medications.forEach((med) => {
-        const times = med.times?.filter(t => t) || [];
-
-        // If no specific times, create a single morning task
-        if (times.length === 0) {
-          tasks.push({
-            id: `med-${guideId}-${pet.id}-${med.id}`,
-            pet_id: pet.id,
-            time_block: 'morning',
-            title: `Give ${pet.name} medication`,
-            description: `${med.name}: ${med.dosage}${med.with_food ? ' (with food)' : ''}${med.notes ? ` - ${med.notes}` : ''}`,
-            is_recurring: true,
-            is_custom: false,
-            category: 'medication',
-            order: order++,
-          });
-        } else {
-          // Create a task for each time
-          times.forEach((time, timeIndex) => {
-            let timeBlock: TimeBlock = 'morning';
-            const hour = parseInt(time.split(':')[0], 10);
-            if (hour >= 11 && hour < 15) timeBlock = 'midday';
-            else if (hour >= 15 && hour < 20) timeBlock = 'evening';
-            else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
-
-            tasks.push({
-              id: `med-${guideId}-${pet.id}-${med.id}-${timeIndex}`,
-              pet_id: pet.id,
-              time_block: timeBlock,
-              time: time,
-              title: `Give ${pet.name} medication`,
-              description: `${med.name}: ${med.dosage}${med.with_food ? ' (with food)' : ''}${med.notes ? ` - ${med.notes}` : ''}`,
-              is_recurring: true,
-              is_custom: false,
-              category: 'medication',
-              order: order++,
-            });
-          });
-        }
-      });
-    });
-
-    // Add general tasks
-    if (guidePets.some((p) => p.species === 'dog')) {
-      tasks.push({
-        id: `gd-${guideId}-walk-morning`,
-        time_block: 'morning',
-        title: 'Morning walk',
-        is_recurring: true,
-        is_custom: false,
-        category: 'walk',
-        order: order++,
-      });
-      tasks.push({
-        id: `gd-${guideId}-walk-evening`,
-        time_block: 'evening',
-        title: 'Evening walk',
-        is_recurring: true,
-        is_custom: false,
-        category: 'walk',
-        order: order++,
-      });
-    }
-
-    if (guidePets.some((p) => p.species === 'cat')) {
-      tasks.push({
-        id: `gd-${guideId}-litter-morning`,
-        time_block: 'morning',
-        title: 'Clean litter box',
-        is_recurring: true,
-        is_custom: false,
-        category: 'litter',
-        order: order++,
-      });
-    }
-
-    // Water refresh
-    tasks.push({
-      id: `gd-${guideId}-water-morning`,
-      time_block: 'morning',
-      title: 'Refresh water bowls',
-      is_recurring: true,
-      is_custom: false,
-      category: 'water',
-      order: order++,
-    });
-
-    return tasks;
-  }, [guidePets, guideId]);
+  // Derivation lives in lib/routineTasks so the cross-client Today view builds
+  // the identical list from the identical inputs. Two copies would drift, and a
+  // drifted routine means a sitter is shown a different day than the owner
+  // wrote.
+  const generatedTasks = useMemo(
+    () => buildGeneratedTasks(guideId, guidePets),
+    [guidePets, guideId]
+  );
 
   // Combine auto-generated and custom tasks
-  const allTasks = useMemo(() => {
-    const combined = [...generatedTasks, ...customTasks];
-    // Sort by time block order, then by custom order, then by time
-    return combined.sort((a, b) => {
-      const blockOrder = TIME_BLOCKS.findIndex((tb) => tb.id === a.time_block) -
-        TIME_BLOCKS.findIndex((tb) => tb.id === b.time_block);
-      if (blockOrder !== 0) return blockOrder;
-      if (a.order !== b.order) return a.order - b.order;
-      if (a.time && b.time) return a.time.localeCompare(b.time);
-      return 0;
-    });
-  }, [generatedTasks, customTasks]);
+  const allTasks = useMemo(
+    () => sortRoutineTasks([...generatedTasks, ...customTasks]),
+    [generatedTasks, customTasks]
+  );
 
   const isTaskCompleted = (taskId: string) => {
     return completions.some((c) => c.task_id === taskId);

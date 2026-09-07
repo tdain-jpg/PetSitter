@@ -618,3 +618,21 @@ export interface SitterPlan {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
 }
+
+/** One task in a sitter's cross-client day, with the household it belongs to. */
+export interface SitterTodayRow {
+  task: RoutineTask;
+  guideId: string;
+  guideTitle: string;
+  householdId: string;
+  householdName: string;
+  completed: boolean;
+}
+
+/** Today's rows for one time block. Empty blocks are dropped before this. */
+export interface SitterTodayGroup {
+  block: TimeBlock;
+  label: string;
+  icon: string;
+  rows: SitterTodayRow[];
+}

@@ -206,6 +206,7 @@ export function SitterHomeScreen({ navigation }: Props) {
   const clientCount = activeClients.length;
   // A pending invitation is not "no clients" — saying so directly above one is
   // the app arguing with itself.
+  const hasAnyClient = sitterConnections.some((c) => c.status === 'active');
   const subtitle = clientCount === 0
     ? pendingInvites.length > 0
       ? pendingInvites.length === 1
@@ -228,6 +229,19 @@ export function SitterHomeScreen({ navigation }: Props) {
             </View>
             <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
             <Text className="text-tan-500">{subtitle}</Text>
+            {/* The list of clients answers "who am I sitting for". Today
+                answers "what is next", which is the question a sitter actually
+                has while standing in somebody's kitchen — so it gets the
+                primary button, above the client list rather than below it. */}
+            {hasAnyClient ? (
+              <View className="mt-4">
+                <Button
+                  title="📋 Today — across all clients"
+                  onPress={() => navigation.navigate('SitterToday')}
+                  variant="primary"
+                />
+              </View>
+            ) : null}
           </View>
         </ScreenContainer>
       </View>

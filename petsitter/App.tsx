@@ -88,6 +88,7 @@ const linking = {
           Sitters: 'Sitters',
           UnlockCrown: 'UnlockCrown',
           SitterHome: 'SitterHome',
+          SitterToday: 'SitterToday',
           SitterHousehold: 'SitterHousehold',
           SitterPlans: 'SitterPlans',
           Settings: 'Settings',

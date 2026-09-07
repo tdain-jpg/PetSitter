@@ -55,6 +55,7 @@ export type MainStackParamList = {
   // Sitter side (0015). A connected sitter is not a household member: these
   // screens are their own view of the households they help care for.
   SitterHome: undefined;
+  SitterToday: undefined;
   // householdName is display-only and OPTIONAL: a web reload restores this
   // route from the URL, and the household's name is not something to take from
   // a query string. The screen resolves it from the sitter's own connection
@@ -105,6 +106,7 @@ export type HouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'H
 export type SitterHomeScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
 export type SitterHouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
 export type SitterPlansScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterPlans'>;
+export type SitterTodayScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterToday'>;
 
 export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 

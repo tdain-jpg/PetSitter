@@ -17,6 +17,7 @@ import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
 import { SampleCheatSheetScreen } from '../screens/SampleCheatSheetScreen';
 import { CheatSheetsScreen } from '../screens/CheatSheetsScreen';
 import { SittersScreen } from '../screens/SittersScreen';
+import { SitterTodayScreen } from '../screens/SitterTodayScreen';
 import { SitterHomeScreen } from '../screens/SitterHomeScreen';
 import { SitterHouseholdScreen } from '../screens/SitterHouseholdScreen';
 import { SitterPlansScreen } from '../screens/SitterPlansScreen';
@@ -55,6 +56,7 @@ const SampleCheatSheetH = hosted(SampleCheatSheetScreen);
 const CheatSheetsH = hosted(CheatSheetsScreen);
 const SittersH = hosted(SittersScreen);
 const SitterHomeH = hosted(SitterHomeScreen);
+const SitterTodayH = hosted(SitterTodayScreen);
 const SitterHouseholdH = hosted(SitterHouseholdScreen);
 const SitterPlansH = hosted(SitterPlansScreen);
 const UnlockCrownH = hosted(UnlockCrownScreen);
@@ -90,6 +92,7 @@ export function MainNavigator() {
       <Stack.Screen name="CheatSheets" component={CheatSheetsH} />
       <Stack.Screen name="Sitters" component={SittersH} />
       <Stack.Screen name="SitterHome" component={SitterHomeH} />
+      <Stack.Screen name="SitterToday" component={SitterTodayH} />
       <Stack.Screen name="SitterHousehold" component={SitterHouseholdH} />
       <Stack.Screen name="SitterPlans" component={SitterPlansH} />
       <Stack.Screen name="UnlockCrown" component={UnlockCrownH} />

@@ -1,5 +1,6 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks } from '../lib/routineTasks';
 import type {
   Pet,
   Guide,
@@ -18,6 +19,7 @@ import type {
   AppSettings,
   OnboardingState,
   SitterPlan,
+  SitterTodayGroup,
 } from '../types';
 import {
   DataService,
@@ -969,6 +971,79 @@ export class SupabaseAdapter implements DataService {
     const url = (data as { url?: string } | null)?.url;
     if (!url) throw new Error('Billing did not return a checkout link. Please try again.');
     return url;
+  }
+
+  /**
+   * Everything due today across every client household this sitter is actively
+   * connected to.
+   *
+   * Assembled here rather than in an RPC because the tasks do not exist in the
+   * database: guides.daily_routine holds only the custom ones, and feeding,
+   * medication, walks, litter and water are all DERIVED from the pets by
+   * lib/routineTasks. See that file for why reimplementing the derivation in
+   * SQL was rejected. The consequence is a handful of reads, all issued in
+   * parallel, rather than one round trip.
+   *
+   * D1: a guide appears only if its date range covers today. Guides with NO
+   * dates are excluded — an always-active reading would show a sitter every
+   * routine they have ever been given, for ever, and the list is worthless the
+   * moment it is not actually today's work. Those guides stay reachable from
+   * the client list exactly as before.
+   */
+  async getSitterToday(date: string): Promise<SitterTodayGroup[]> {
+    const connections = await this.getMySitterConnections();
+    const active = connections.filter((c) => c.status === 'active');
+    if (active.length === 0) return [];
+
+    const perHousehold = await Promise.all(
+      active.map(async (connection) => {
+        const [pets, guides] = await Promise.all([
+          this.getHouseholdPets(connection.household_id),
+          this.getHouseholdGuides(connection.household_id),
+        ]);
+
+        // Inclusive on both ends, and a missing end date means open-ended from
+        // the start date — the same reading the guide list uses when it calls a
+        // trip current.
+        const current = guides.filter((guide) => {
+          if (!guide.start_date) return false;
+          if (guide.start_date > date) return false;
+          if (guide.end_date && guide.end_date < date) return false;
+          return true;
+        });
+
+        return Promise.all(
+          current.map(async (guide) => {
+            const guidePets = pets.filter((pet) => guide.pet_ids?.includes(pet.id));
+            const generated = buildGeneratedTasks(guide.id, guidePets);
+            const custom = (guide.daily_routine?.tasks ?? []).filter((t) => t.is_custom);
+            const completions = await this.getTaskCompletions(guide.id, date);
+            const done = new Set(completions.map((c) => c.task_id));
+
+            return sortRoutineTasks([...generated, ...custom]).map((task) => ({
+              task,
+              guideId: guide.id,
+              guideTitle: guide.title,
+              householdId: connection.household_id,
+              householdName: connection.household_name ?? 'Client',
+              completed: done.has(task.id),
+            }));
+          })
+        );
+      })
+    );
+
+    const rows = perHousehold.flat(2);
+
+    // Grouped by time block, NOT by household: the sitter's real question
+    // standing in someone's kitchen is "what is next", not "what does the
+    // Patel house need". The household is on every row instead.
+    return TIME_BLOCKS.map((block) => ({
+      block: block.id,
+      label: block.label,
+      icon: block.icon,
+      rows: rows.filter((r) => r.task.time_block === block.id),
+    })).filter((group) => group.rows.length > 0);
   }
 
   /**
