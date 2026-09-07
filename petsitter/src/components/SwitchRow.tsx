@@ -10,8 +10,22 @@ import { View, Text, Pressable, Switch } from 'react-native';
  * a thumb is not a cosmetic problem there: it silently arms or disarms an alert
  * about somebody's animal.
  *
- * The row is the button; the Switch inside it is decoration that also happens
- * to be draggable.
+ * The row is the button. The Switch inside it is DECORATION ONLY — it does not
+ * handle its own interaction, and it must not.
+ *
+ * THE BUG THAT TAUGHT US THIS. The first version left `onValueChange` on the
+ * inner Switch as well. Clicking the label worked, because only the Pressable
+ * saw it. Clicking the switch itself did nothing at all: the Switch flipped the
+ * value, the same click then bubbled to the Pressable, and the Pressable
+ * flipped it back. Two handlers, one click, net zero — a control that visibly
+ * twitched and then refused. QA found it on the PDF export toggles and on a
+ * pet's Spayed/Neutered flag, where the form's autosave then reported
+ * "Last saved" over a value that had never changed. Every switch in the app is
+ * this component, so every switch in the app was dead on the thumb.
+ *
+ * Hence both halves below: the Switch has no handler, and the wrapper stops
+ * pointer events so the click reaches the row instead of being eaten by the
+ * input. Do not give the inner Switch an onValueChange again.
  */
 interface SwitchRowProps {
   label: string;
@@ -79,10 +93,17 @@ export function SwitchRow({
             NATIVE-ONLY — react-native-web drops both, and the inner input was
             measured still carrying role="switch". aria-hidden is what actually
             does the work on web; the native props stay for iOS and Android. */}
-        <View aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <View
+          aria-hidden
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          // The click belongs to the row. Without this the inner input consumes
+          // it and re-emits its own change, which is half of the double-toggle
+          // described above; the row's handler is the single source of truth.
+          pointerEvents="none"
+        >
           <Switch
             value={value}
-            onValueChange={onValueChange}
             disabled={disabled}
             trackColor={trackColor}
             thumbColor={thumbColor}
