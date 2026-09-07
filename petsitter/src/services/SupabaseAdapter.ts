@@ -17,6 +17,7 @@ import type {
   CheatSheet,
   AppSettings,
   OnboardingState,
+  SitterPlan,
 } from '../types';
 import {
   DataService,
@@ -900,6 +901,74 @@ export class SupabaseAdapter implements DataService {
     });
     if (error) throw new Error(error.message);
     return data === true;
+  }
+
+  /**
+   * The caller's own sitter plan: how many clients they have, how many are
+   * free, and whether they are subscribed. One round trip, and it takes no
+   * user argument at all, so it cannot be pointed at another sitter.
+   */
+  async getMySitterPlan(): Promise<SitterPlan> {
+    const { data, error } = await supabase.rpc('my_sitter_plan');
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      activeClients: row?.active_clients ?? 0,
+      freeLimit: row?.free_limit ?? 3,
+      subscribed: row?.subscribed === true,
+      status: row?.status ?? 'inactive',
+      currentPeriodEnd: row?.current_period_end ?? null,
+      cancelAtPeriodEnd: row?.cancel_at_period_end === true,
+    };
+  }
+
+  /**
+   * Start a sitter subscription. Returns the Stripe Checkout URL to open.
+   *
+   * Same error-code discipline as createCrownCheckoutSession: codes we know
+   * become sentences, and anything unrecognised falls through to the generic
+   * message rather than a guess, because inventing copy for an unknown failure
+   * risks describing the wrong problem to somebody trying to pay us.
+   */
+  async createSitterCheckoutSession(plan: 'monthly' | 'yearly'): Promise<string> {
+    return await this.invokeSitterBilling({ action: 'checkout', plan });
+  }
+
+  /** Stripe's customer portal, where a sitter changes plan or cancels. */
+  async createSitterPortalSession(): Promise<string> {
+    return await this.invokeSitterBilling({ action: 'portal' });
+  }
+
+  private async invokeSitterBilling(body: Record<string, string>): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('sitter-billing', { body });
+
+    if (error) {
+      let code: string | undefined;
+      if (error instanceof FunctionsHttpError) {
+        try {
+          const parsed = await error.context.json();
+          code = parsed?.error;
+        } catch {
+          // Not JSON — fall through to the generic message.
+        }
+      }
+      switch (code) {
+        case 'already_subscribed':
+          throw new Error(
+            'You already have a sitter subscription. Use Manage subscription to change or cancel it.'
+          );
+        case 'no_customer':
+          throw new Error('There is no subscription to manage yet.');
+        case 'billing_not_configured':
+          throw new Error('Subscriptions are not available right now. Please try again later.');
+        default:
+          throw new Error(error.message || 'Could not reach billing. Please try again.');
+      }
+    }
+
+    const url = (data as { url?: string } | null)?.url;
+    if (!url) throw new Error('Billing did not return a checkout link. Please try again.');
+    return url;
   }
 
   /** Owner revokes a sitter's access. Returns false if it was already revoked. */

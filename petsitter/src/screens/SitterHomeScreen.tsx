@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PendingSitterInvite, SitterConnection } from '../types';
 import { friendlyError } from '../lib/errors';
+import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'SitterHome'>;
 
@@ -55,6 +56,18 @@ export function SitterHomeScreen({ navigation }: Props) {
         showAlert('Could not accept', 'Please try again later.');
       }
     } catch (error: any) {
+      // The client limit is not a failure, it is the product. Showing it in a
+      // red "could not respond" box would read as the app being broken.
+      if (isSitterClientLimitError(error)) {
+        const seePlans = await showConfirm({
+          title: 'One more client needs a plan',
+          message: sitterLimitMessage(error),
+          confirmLabel: 'See plans',
+          cancelLabel: 'Not now',
+        });
+        if (seePlans) navigation.navigate('SitterPlans');
+        return;
+      }
       showAlert('Could not respond', friendlyError(error, 'An unknown error occurred'));
     } finally {
       setLoadingResponse(null);

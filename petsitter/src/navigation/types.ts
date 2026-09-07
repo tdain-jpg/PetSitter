@@ -58,7 +58,10 @@ export type MainStackParamList = {
   // a query string. The screen resolves it from the sitter's own connection
   // list instead. See RootNavigator's RESTORABLE_MAIN_ROUTES.
   SitterHousehold: { householdId: string; householdName?: string };
-  SitterPlans: undefined;
+  // `checkout` is where Stripe sends the sitter back to. Same shape as
+  // UnlockCrown's, and for the same reason: on web that return is a hard page
+  // load, so the outcome has to survive in the URL.
+  SitterPlans: { checkout?: 'success' | 'cancelled' | 'done' } | undefined;
 
   // Settings
   Settings: undefined;

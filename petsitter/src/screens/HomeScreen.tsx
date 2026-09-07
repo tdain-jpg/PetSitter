@@ -16,6 +16,7 @@ import {
 } from '../components';
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
+import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -461,6 +462,19 @@ export function HomeScreen({ navigation }: Props) {
       // have no pets of their own, and the households they came for are here.
       navigation.replace('SitterHome');
     } catch (error: any) {
+      // Same paywall, reached from the first-run gate rather than the client
+      // list. A brand new sitter can land here already at their limit if they
+      // were invited by four households before signing up.
+      if (isSitterClientLimitError(error)) {
+        const seePlans = await showConfirm({
+          title: 'One more client needs a plan',
+          message: sitterLimitMessage(error),
+          confirmLabel: 'See plans',
+          cancelLabel: 'Not now',
+        });
+        if (seePlans) (navigation as any).navigate('SitterPlans');
+        return;
+      }
       showAlert('Error', friendlyError(error, 'Could not accept the invitation.'));
     } finally {
       setSitterGateResponse(null);

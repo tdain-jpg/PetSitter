@@ -600,3 +600,21 @@ export interface SaveState {
   lastSaved?: string;
   error?: string;
 }
+
+/**
+ * A sitter's plan, as the sitter side needs it.
+ *
+ * `subscribed` is the server's answer, not something the client recomputes
+ * from `status` — the rules for which statuses still count (past_due does,
+ * deliberately) live in sitter_has_unlimited_clients, and a second copy here
+ * would eventually disagree with the one that actually gates access.
+ */
+export interface SitterPlan {
+  activeClients: number;
+  freeLimit: number;
+  subscribed: boolean;
+  /** Stripe's own vocabulary: active | trialing | past_due | canceled | inactive. */
+  status: string;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}

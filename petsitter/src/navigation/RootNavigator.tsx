@@ -146,7 +146,17 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   // silently dropped on the owner dashboard, a screen with none of their
   // clients on it and no obvious way back.
   SitterHome: noParams,
-  SitterPlans: noParams,
+  // Matched against the three values sitter-billing can send rather than
+  // forwarded verbatim, so arbitrary query text never reaches route.params.
+  SitterPlans: (query) => {
+    const checkout = query.get('checkout');
+    return {
+      params:
+        checkout === 'success' || checkout === 'cancelled' || checkout === 'done'
+          ? { checkout }
+          : undefined,
+    };
+  },
   // Param-free destinations that were simply never listed. Each is a screen a
   // user can reach, bookmark and reload, and each silently answered that
   // reload with Home — the same class of bug as the sitter routes above, found
