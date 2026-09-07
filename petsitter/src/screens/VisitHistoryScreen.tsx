@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -131,7 +132,7 @@ export function VisitHistoryScreen({ navigation, route }: VisitHistoryScreenProp
 
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
-          <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+          <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Visit history</Text>
             <Text className="text-tan-500">{guide?.title ?? 'What has been done, and when'}</Text>

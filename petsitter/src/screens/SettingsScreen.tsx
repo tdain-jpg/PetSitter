@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -242,7 +243,7 @@ export function SettingsScreen({ navigation }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="form">
           <View className="flex-row items-center">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             <Text className="text-xl font-bold text-brown-800 ml-4">Settings</Text>
           </View>
         </ScreenContainer>

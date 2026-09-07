@@ -151,6 +151,13 @@ export function useFormDraft<T>({
         message: `You started adding a ${noun} and didn't finish. Pick up where you left off?`,
         confirmLabel: 'Resume',
         cancelLabel: 'Start fresh',
+        // The guards either side of this await cover "we left before asking"
+        // and "we left while it was open". Neither covers the gap between: the
+        // request can sit in the dialog queue, behind another dialog, while the
+        // user walks away — and then surface over an unrelated screen and jam
+        // everything queued behind it. This is checked at the moment it would
+        // be shown, which is the only moment that can answer the question.
+        isStale: () => !isFocusedRef.current,
       });
       // And again after, since the user can leave while the dialog is open.
       if (cancelled || !isFocusedRef.current) return;

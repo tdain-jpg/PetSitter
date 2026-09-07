@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { safeGoBack } from '../lib/goBack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -26,7 +27,7 @@ export function ScreenHeader({
     if (onBack) {
       onBack();
     } else {
-      navigation.goBack();
+      safeGoBack(navigation);
     }
   };
 

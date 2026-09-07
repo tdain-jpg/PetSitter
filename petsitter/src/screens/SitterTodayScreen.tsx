@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, ActivityIndicator, Pressable, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +9,7 @@ import { dataService } from '../services';
 import { showAlert } from '../lib/dialogs';
 import { friendlyError } from '../lib/errors';
 import { toLocalDateKey } from '../lib/dates';
+import { formatTaskTime } from '../lib/routineTasks';
 import { COLORS } from '../constants';
 import type { SitterTodayGroup, SitterTodayRow } from '../types';
 import type { SitterTodayScreenProps } from '../navigation/types';
@@ -105,7 +107,7 @@ export function SitterTodayScreen({ navigation }: SitterTodayScreenProps) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             <Button
               title="My Clients"
               onPress={() => navigation.navigate('SitterHome')}
@@ -115,7 +117,11 @@ export function SitterTodayScreen({ navigation }: SitterTodayScreenProps) {
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Today</Text>
             <Text className="text-tan-500">
-              {loading ? 'Across all your clients' : `${done} of ${total} done`}
+              {loading
+                ? 'Across all your clients'
+                : total === 0
+                  ? 'Across all your clients'
+                  : `${done} of ${total} done`}
             </Text>
           </View>
         </ScreenContainer>
@@ -215,7 +221,7 @@ export function SitterTodayScreen({ navigation }: SitterTodayScreenProps) {
                           ) : null}
                         </View>
                         {row.task.time ? (
-                          <Text className="text-tan-500 text-sm ml-2">{row.task.time}</Text>
+                          <Text className="text-tan-500 text-sm ml-2">{formatTaskTime(row.task.time)}</Text>
                         ) : null}
                       </Pressable>
                     );

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, ScrollView, Text, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -86,7 +87,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
         <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
           <ScreenContainer variant="content">
             <View className="flex-row items-center justify-between">
-              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+              <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             </View>
             <View className="mt-4">
               <Text className="text-2xl font-bold text-brown-800">{householdName}</Text>
@@ -117,7 +118,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">{householdName}</Text>

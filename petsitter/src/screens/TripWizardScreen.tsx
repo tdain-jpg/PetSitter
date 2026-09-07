@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -220,7 +221,7 @@ export function TripWizardScreen({ navigation }: Props) {
       // "Discard Trip" means discard it — do not offer it back next time.
       clearDraft();
     }
-    navigation.goBack();
+    safeGoBack(navigation);
   };
 
   const goBack = () => {

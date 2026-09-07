@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, ActivityIndicator, Platform, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -661,7 +662,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
     if (guideId) {
       navigation.navigate('AICheatSheet', { guideId });
     } else {
-      navigation.goBack();
+      safeGoBack(navigation);
     }
   };
 

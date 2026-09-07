@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -81,7 +82,7 @@ export function TrustPage({ route, title, intro, lastUpdated, children }: TrustP
         <ScreenContainer variant="content">
           {canGoBack && (
             <Pressable
-              onPress={() => navigation.goBack()}
+              onPress={() => safeGoBack(navigation)}
               accessibilityRole="button"
               accessibilityLabel="Go back"
               className="py-2 mb-2 self-start"

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../contexts';
@@ -225,7 +226,7 @@ export function SitterHomeScreen({ navigation }: Props) {
             <View className="flex-row items-center justify-between mb-2">
               {/* On web the browser back button rescues you; in the installed
                   PWA and on native there is nothing else off this screen. */}
-              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+              <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             </View>
             <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
             <Text className="text-tan-500">{subtitle}</Text>

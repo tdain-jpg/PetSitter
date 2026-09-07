@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { safeGoBack } from '../lib/goBack';
 import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue, ScreenContainer } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
@@ -50,7 +51,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
     });
     if (!ok) return;
     await deleteGuide(guideId);
-    navigation.goBack();
+    safeGoBack(navigation);
   };
 
   const handleDuplicate = async () => {
@@ -97,7 +98,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
       </View>
     );
   }
@@ -111,7 +112,7 @@ export function GuideDetailScreen({ navigation, route }: Props) {
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
             <View className="flex-row items-center" style={{ gap: 16 }}>
-              <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+              <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
               <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
             </View>
             {canEdit ? <Button title="Edit" onPress={handleEdit} variant="primary" /> : null}

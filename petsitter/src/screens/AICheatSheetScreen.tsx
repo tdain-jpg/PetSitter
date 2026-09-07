@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -357,7 +358,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
       </View>
     );
   }
@@ -370,7 +371,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             {cheatSheet ? (
               <View className="flex-row" style={{ gap: 8 }}>
                 <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
@@ -477,7 +478,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               ) : (
                 <Button
                   title="← Back to the guide"
-                  onPress={() => navigation.goBack()}
+                  onPress={() => safeGoBack(navigation)}
                   variant="outline"
                 />
               )}

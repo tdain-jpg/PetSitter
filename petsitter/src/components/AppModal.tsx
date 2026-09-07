@@ -16,6 +16,19 @@ export interface DialogRequest {
   cancelLabel?: string;
   destructive?: boolean;
   resolve: (result: boolean) => void;
+  /**
+   * Asked just before this request would be shown. Return true and it is
+   * dropped, unshown, resolving false.
+   *
+   * A dialog is requested by a SCREEN, and a screen can be gone by the time its
+   * request reaches the front of the queue. Without this, that request sits at
+   * the head for ever: it renders over whatever screen happens to be there —
+   * QA saw "Resume unfinished pet?" appear on a pet's detail page — and,
+   * because the head never settles, every dialog behind it is dead too. That
+   * silently disabled Delete Pet, Delete Guide, Move to Memorial and every
+   * other confirm-guarded action for the rest of the session.
+   */
+  isStale?: () => boolean;
 }
 
 type DialogHandler = (request: DialogRequest) => void;
@@ -64,6 +77,19 @@ export function ModalHost() {
     setQueue((prev) => (prev[0] === request ? prev.slice(1) : prev));
     request.resolve(result);
   }, []);
+
+  /**
+   * Drop requests that have gone stale before showing them.
+   *
+   * Runs whenever the head changes, so a queue can drain through several dead
+   * requests in a row. Resolves false, which is what a confirm means by "the
+   * screen that asked is gone" — nobody agreed to anything.
+   */
+  useEffect(() => {
+    if (current?.isStale?.()) {
+      settle(current, false);
+    }
+  }, [current, settle]);
 
   const confirm = useCallback(() => {
     if (current) {

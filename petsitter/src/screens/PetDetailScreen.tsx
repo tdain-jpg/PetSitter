@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, Image, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert, showConfirm } from '../lib/dialogs';
@@ -116,7 +117,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
     if (!ok) return;
     try {
       await deletePet(petId);
-      navigation.goBack();
+      safeGoBack(navigation);
     } catch (error: any) {
       showAlert('Error', friendlyError(error, 'Failed to delete pet'));
     }
@@ -320,7 +321,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <Text className="text-xl text-tan-500 mb-4">Pet not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
       </View>
     );
   }
@@ -383,7 +384,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
       <View className="bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
           </View>
 

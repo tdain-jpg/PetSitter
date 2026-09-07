@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -18,7 +19,7 @@ import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks } from '../lib/routineTasks';
+import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks, formatTaskTime } from '../lib/routineTasks';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
 import { friendlyError } from '../lib/errors';
 
@@ -390,7 +391,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
       </View>
     );
   }
@@ -404,7 +405,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
         <ScreenContainer variant="content">
         <View className="flex-row items-center justify-between px-4 pt-12 pb-2">
           <View className="flex-row items-center">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
           </View>
           {canEdit ? (
             <Button title="+ Add Task" onPress={handleAddTask} variant="primary" />
@@ -522,7 +523,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         ) : null}
                         {task.time ? (
                           <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
-                            ⏰ {task.time}
+                            ⏰ {formatTaskTime(task.time)}
                           </Text>
                         ) : null}
                         {/* Only once it's done, and only when we know — rows

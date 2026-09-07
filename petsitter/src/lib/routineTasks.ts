@@ -32,6 +32,71 @@ export const TIME_BLOCKS: { id: TimeBlock; label: string; icon: string }[] = [
   { id: 'bedtime', label: 'Bedtime', icon: '\u{1F319}' },
 ];
 
+
+/**
+ * The hour of day a time string means, 0-23, or null if it means nothing.
+ *
+ * THE BUG THIS FIXES. This used to be `parseInt(time.split(':')[0], 10)`, which
+ * reads 7 out of "7:30 PM" and files an evening feed under Morning. The time
+ * field is free text with an "08:00" placeholder and no validation, and the
+ * fixture already contained "7:30 AM", so 12-hour strings demonstrably reach
+ * the database. The same expression governed medication, meaning a 9 PM dose
+ * was listed as a morning dose — on a checklist somebody follows while looking
+ * after an animal that needs it.
+ *
+ * Accepts "18:30", "6:30 PM", "6:30pm", "6 PM". Returns null for anything else
+ * so callers can decide, rather than silently yielding NaN and defaulting.
+ */
+export function parseHour24(raw: string | undefined | null): number | null {
+  if (!raw) return null;
+  const text = raw.trim().toLowerCase();
+  const match = text.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!match) return null;
+
+  let hour = parseInt(match[1], 10);
+  const minute = match[2] ? parseInt(match[2], 10) : 0;
+  const meridiem = match[3];
+
+  if (Number.isNaN(hour) || hour < 0 || minute > 59) return null;
+
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    // 12 AM is midnight and 12 PM is noon — the one pair that does not follow
+    // the "add twelve" rule, and the one most often got wrong.
+    if (meridiem === 'am') hour = hour === 12 ? 0 : hour;
+    else hour = hour === 12 ? 12 : hour + 12;
+  } else if (hour > 23) {
+    return null;
+  }
+
+  return hour;
+}
+
+/**
+ * Which block an hour belongs to. Unparseable times go to morning, which is
+ * where they went before and is the safest default: a task shown too early is
+ * noticed, a task shown too late may not be.
+ */
+export function timeBlockForHour(hour: number | null): TimeBlock {
+  if (hour === null) return 'morning';
+  if (hour >= 11 && hour < 15) return 'midday';
+  if (hour >= 15 && hour < 20) return 'evening';
+  if (hour >= 20 || hour < 6) return 'bedtime';
+  return 'morning';
+}
+
+/** One display format, so a list cannot show "7:30 AM" next to "18:30". */
+export function formatTaskTime(raw: string | undefined | null): string {
+  if (!raw) return '';
+  const hour = parseHour24(raw);
+  if (hour === null) return raw.trim();
+  const minuteMatch = raw.trim().match(/:(\d{2})/);
+  const minute = minuteMatch ? minuteMatch[1] : '00';
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const display = hour % 12 === 0 ? 12 : hour % 12;
+  return `${display}:${minute} ${suffix}`;
+}
+
 /**
  * Every generated id is prefixed with the guide id: completions are keyed by
  * (guide_id, task_id, date), and unprefixed ids ('walk-morning',
@@ -46,11 +111,7 @@ export function buildGeneratedTasks(guideId: string, guidePets: Pet[]): RoutineT
     guidePets.forEach((pet) => {
       // Feeding tasks
       pet.feeding_schedule.forEach((feeding) => {
-        const hour = parseInt(feeding.time.split(':')[0], 10);
-        let timeBlock: TimeBlock = 'morning';
-        if (hour >= 11 && hour < 15) timeBlock = 'midday';
-        else if (hour >= 15 && hour < 20) timeBlock = 'evening';
-        else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
+        const timeBlock: TimeBlock = timeBlockForHour(parseHour24(feeding.time));
 
         tasks.push({
           id: `feeding-${guideId}-${pet.id}-${feeding.id}`,
@@ -86,11 +147,7 @@ export function buildGeneratedTasks(guideId: string, guidePets: Pet[]): RoutineT
         } else {
           // Create a task for each time
           times.forEach((time, timeIndex) => {
-            let timeBlock: TimeBlock = 'morning';
-            const hour = parseInt(time.split(':')[0], 10);
-            if (hour >= 11 && hour < 15) timeBlock = 'midday';
-            else if (hour >= 15 && hour < 20) timeBlock = 'evening';
-            else if (hour >= 20 || hour < 6) timeBlock = 'bedtime';
+            const timeBlock: TimeBlock = timeBlockForHour(parseHour24(time));
 
             tasks.push({
               id: `med-${guideId}-${pet.id}-${med.id}-${timeIndex}`,

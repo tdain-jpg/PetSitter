@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -777,7 +778,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     return (
       <View className="flex-1 items-center justify-center bg-cream-200">
         <Text className="text-xl text-tan-500 mb-4">Guide not found</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} variant="outline" />
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
       </View>
     );
   }
@@ -790,7 +791,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
             <Button
               title="🖨️ Export"
               onPress={handleExport}

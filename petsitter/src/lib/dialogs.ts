@@ -16,6 +16,8 @@ export interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /** Return true to have the dialog dropped unshown — see AppModal. */
+  isStale?: () => boolean;
 }
 
 /** Show a branded alert dialog with a single OK button. */
@@ -56,6 +58,7 @@ export function showConfirm(opts: ConfirmOptions): Promise<boolean> {
       confirmLabel: opts.confirmLabel,
       cancelLabel: opts.cancelLabel,
       destructive: opts.destructive,
+      isStale: opts.isStale,
       resolve,
     });
     if (accepted) {

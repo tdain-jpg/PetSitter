@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -392,7 +393,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       // same tick) before navigating, or leaving would prompt to discard.
       clearDirty();
       clearDraft();
-      navigation.goBack();
+      safeGoBack(navigation);
     } catch (error: any) {
       const message = friendlyError(error, 'Failed to save guide');
       showAlert('Error', message);
@@ -494,6 +495,38 @@ export function GuideFormScreen({ navigation, route }: Props) {
     );
   }
 
+  /**
+   * Editing a guide that is not one of ours.
+   *
+   * `guides` holds only the caller's OWN households, so a CONNECTED SITTER who
+   * opens /Main/GuideForm?mode=edit&guideId=<a client's guide> found a fully
+   * rendered "Edit Guide" form with every field blank, and typing in it fired
+   * an autosave that silently did nothing. RLS refuses the write — connected
+   * sitters have SELECT only on guides — so nothing was ever at risk, but a
+   * form that looks like it is working and is not is its own kind of broken.
+   *
+   * It also removes a loaded gun: buildGuideDataFromForm composes the payload
+   * from the EMPTY form state, so if that policy were ever widened this URL
+   * would blank a client's pets, contacts and home info in one autosave.
+   *
+   * Not reachable from any link — you have to type the URL — so this is a
+   * closed door rather than a fixed leak.
+   */
+  if (isEditing && !loadingGuides && !guides.some((g) => g.id === guideId)) {
+    return (
+      <View className="flex-1 items-center justify-center bg-cream-200 px-8">
+        <Text className="text-xl text-tan-500 mb-2 text-center">
+          This guide can&apos;t be edited here
+        </Text>
+        <Text className="text-tan-500 text-center mb-4">
+          It belongs to another household. If you are sitting for them, you can read it from
+          your client list.
+        </Text>
+        <Button title="Go Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -506,7 +539,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
         <ScreenHeader
           title={isEditing ? 'Edit Guide' : 'New Guide'}
           backLabel={isEditing ? '← Done' : 'Cancel'}
-          onBack={() => navigation.goBack()}
+          onBack={() => safeGoBack(navigation)}
         />
 
         {/* Auto-save status indicator for edit mode */}
@@ -890,7 +923,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   variant="primary"
                   onPress={() => {
                     saveNow();
-                    navigation.goBack();
+                    safeGoBack(navigation);
                   }}
                 />
               </View>

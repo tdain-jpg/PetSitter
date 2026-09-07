@@ -1,4 +1,5 @@
 import { View, Text, ScrollView } from 'react-native';
+import { safeGoBack } from '../lib/goBack';
 import { StatusBar } from 'expo-status-bar';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
@@ -53,7 +54,7 @@ export function MemorialScreen({ navigation }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="flex-row items-center">
-            <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Pet Memorial</Text>

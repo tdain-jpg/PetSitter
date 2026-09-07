@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import {
   View,
   Text,
@@ -490,7 +491,7 @@ export function PetFormScreen({ navigation, route }: Props) {
   const handleBack = () => {
     // No confirm here: the beforeRemove listener above intercepts this goBack()
     // and prompts once, exactly as it does for browser/hardware back.
-    navigation.goBack();
+    safeGoBack(navigation);
   };
 
   const handleSubmit = async () => {
@@ -513,7 +514,7 @@ export function PetFormScreen({ navigation, route }: Props) {
       // same tick) before navigating, or leaving would prompt to discard.
       clearDirty();
       clearDraft();
-      navigation.goBack();
+      safeGoBack(navigation);
     } catch (error: any) {
       const message = friendlyError(error, 'Failed to save pet');
       showAlert('Error', message);
@@ -925,7 +926,7 @@ export function PetFormScreen({ navigation, route }: Props) {
                 title="Done"
                 onPress={() => {
                   saveNow();
-                  navigation.goBack();
+                  safeGoBack(navigation);
                 }}
               />
             </View>
