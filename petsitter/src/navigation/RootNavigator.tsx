@@ -102,9 +102,12 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   // user can reach, bookmark and reload, and each silently answered that
   // reload with Home — the same class of bug as the sitter routes above, found
   // by diffing MainStackParamList against this list rather than by guessing.
-  // Onboarding and TripWizard stay off deliberately: their state lives in
-  // memory, so restoring the URL would drop you at step one of a wizard
-  // holding nothing, which is worse than starting from Home.
+  // Onboarding and TripWizard are absent from this list on purpose, but that
+  // no longer decides the question: App.tsx's linking config now names every
+  // Main route, and it resolves a hard-loaded URL before this ever runs. Both
+  // therefore open at step one on a direct hit, which is what clicking into
+  // them does anyway. This list's remaining job is the narrow window where the
+  // authed stack has not mounted yet.
   CheatSheets: noParams,
   Sitters: noParams,
   Memorial: noParams,
