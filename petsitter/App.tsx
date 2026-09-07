@@ -48,6 +48,26 @@ const linking = {
        * the authed stack does not exist yet because the Supabase session is
        * still being restored. This handles every navigation after it.
        */
+      /**
+       * The signed-out stack, for the same reason Main is listed below: React
+       * Navigation was already WRITING these paths through its fallback but
+       * could not read them back, so /Auth/SignUp resolved to nothing and
+       * bounced the visitor to the landing page.
+       *
+       * That became load-bearing when the landing page gained a "Sign Up as a
+       * Sitter" button, which produces /Auth/SignUp?role=sitter. Without this,
+       * reloading mid-signup — or sharing that link with a sitter, which is
+       * exactly what it is for — lost both the screen and the preselected role.
+       */
+      Auth: {
+        path: 'Auth',
+        screens: {
+          Landing: 'Landing',
+          Login: 'Login',
+          SignUp: 'SignUp',
+          ForgotPassword: 'ForgotPassword',
+        },
+      },
       Main: {
         path: 'Main',
         screens: {

@@ -5,3 +5,4 @@ export { useGuideWithPets } from './useGuideWithPets';
 export type { ResolvedGuide } from './useGuideWithPets';
 export { useResolvedPet } from './useResolvedPet';
 export type { ResolvedPet } from './useResolvedPet';
+export { useProfileRole } from './useProfileRole';

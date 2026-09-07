@@ -14,6 +14,7 @@ import { formatDate } from '../lib/dates';
 import type { CrownReceipt } from '../types';
 import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
+import { useProfileRole } from '../hooks';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import { hasPendingCrownCheckout } from './UnlockCrownScreen';
@@ -49,6 +50,8 @@ export function SettingsScreen({ navigation }: Props) {
     getCrownReceipt,
     pendingSitterInvites,
   } = useData();
+  // Landing preference only; RLS decides access.
+  const { isSitter } = useProfileRole();
 
   const [isImporting, setIsImporting] = useState(false);
 
@@ -346,7 +349,13 @@ export function SettingsScreen({ navigation }: Props) {
             (my_pending_sitter_invites, since an unaccepted row has no
             sitter_user_id), and without it a freshly invited sitter would sign
             up and find no way in at all. */}
-        {(sitterConnections.some((c) => c.status === 'active') ||
+        {/* `isSitter` is the third way in, added when sitters gained their own
+            sign-up: someone who joined as a sitter but has not been invited by
+            anybody yet has no connections and no pending invites, and without
+            this had no route to their own clients screen or to Sitter plans —
+            which is to say, no way to buy the subscription we sell them. */}
+        {(isSitter ||
+          sitterConnections.some((c) => c.status === 'active') ||
           pendingSitterInvites.length > 0) && (
           <Card className="mb-4">
             <Text className="text-lg font-semibold text-brown-800 mb-1">Sitting</Text>
@@ -360,6 +369,12 @@ export function SettingsScreen({ navigation }: Props) {
             <Button
               title="🐾 My Clients"
               onPress={() => navigation.navigate('SitterHome')}
+            />
+            <View className="h-3" />
+            <Button
+              title="Sitter plans"
+              onPress={() => navigation.navigate('SitterPlans')}
+              variant="outline"
             />
           </Card>
         )}

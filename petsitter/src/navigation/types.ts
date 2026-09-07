@@ -6,7 +6,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 export type AuthStackParamList = {
   Landing: undefined;
   Login: undefined;
-  SignUp: undefined;
+  // Preselects the role chooser. The landing page's sitter section sends
+  // 'sitter'; everything else leaves it unset and the chooser asks.
+  SignUp: { role?: 'owner' | 'sitter' } | undefined;
   ForgotPassword: undefined;
 };
 

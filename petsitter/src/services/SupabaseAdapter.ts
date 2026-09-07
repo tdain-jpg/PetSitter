@@ -971,6 +971,34 @@ export class SupabaseAdapter implements DataService {
     return url;
   }
 
+  /**
+   * The caller's landing preference. NEVER consulted for authorisation — RLS
+   * decides what anyone can see, and this only chooses which home to open on.
+   * Null is a real answer, and the historical default (owner dashboard).
+   */
+  async getMyRole(): Promise<'owner' | 'sitter' | null> {
+    const { data: userData } = await supabase.auth.getUser();
+    const id = userData?.user?.id;
+    if (!id) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const role = data?.role;
+    return role === 'owner' || role === 'sitter' ? role : null;
+  }
+
+  /** Set the caller's own landing preference. */
+  async setMyRole(role: 'owner' | 'sitter'): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    const id = userData?.user?.id;
+    if (!id) throw new Error('Not signed in.');
+    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
   /** Owner revokes a sitter's access. Returns false if it was already revoked. */
   async revokeSitter(connectionId: string): Promise<boolean> {
     const { data, error } = await supabase.rpc('revoke_sitter', {

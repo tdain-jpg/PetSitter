@@ -17,6 +17,7 @@ import {
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
 import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
+import { useProfileRole } from '../hooks';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -210,6 +211,8 @@ export function HomeScreen({ navigation }: Props) {
   })();
 
   const isFocused = useIsFocused();
+  // Landing preference only — never consulted for what this user may see.
+  const { isSitter, resolved: roleResolved } = useProfileRole();
 
   // First run only: load the sitter invitations the gate needs. Nothing else
   // on Home fetches them, and DataContext does not load them at startup.
@@ -299,9 +302,24 @@ export function HomeScreen({ navigation }: Props) {
       pendingSitterInvites.length === 0 &&
       !sitterGateResponse
     ) {
-      navigation.replace('Onboarding');
+      // A SITTER has no pets of their own, so the founder wizard ("tell us
+      // about your pets") is the wrong first screen — it is the reason a sitter
+      // who signed up without an invitation had nowhere sensible to land.
+      // Their own home handles the empty case properly and is the door to
+      // Sitter plans.
+      //
+      // `roleResolved` is checked, not just `isSitter`: null means "no
+      // preference, use the owner default" and is indistinguishable from "not
+      // loaded yet" if you only look at the value. Routing on the unresolved
+      // state would send a sitter to the founder wizard because a query had not
+      // come back — the same failure the household reads above already guard
+      // against by waiting for a clean answer.
+      if (!roleResolved) return;
+      navigation.replace(isSitter ? 'SitterHome' : 'Onboarding');
     }
   }, [
+    roleResolved,
+    isSitter,
     isFocused,
     loadingSettings,
     settings,

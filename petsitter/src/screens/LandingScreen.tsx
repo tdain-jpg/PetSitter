@@ -311,6 +311,17 @@ export function LandingScreen({ navigation }: Props) {
               Three client households free, permanently. Beyond that it is $9 a month or $60 a
               year, and it only lifts the client limit — every feature is included either way.
             </Text>
+            {/* This section spoke to sitters and its only button created an
+                OWNER account, which dropped a professional sitter on a
+                dashboard asking them to add their own pets. Its own door now,
+                with the role preselected. */}
+            <View className="w-full max-w-sm self-center mt-5">
+              <Button
+                title="Sign Up as a Sitter"
+                onPress={() => navigation.navigate('SignUp', { role: 'sitter' })}
+                variant="secondary"
+              />
+            </View>
           </ScreenContainer>
         </View>
 

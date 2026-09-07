@@ -8,6 +8,7 @@ import { isValidEmail } from '../utils';
 import { showAlert } from '../lib/showAlert';
 import { COLORS } from '../constants';
 import type { SignUpScreenProps } from '../navigation/types';
+import { setPendingRole, type ProfileRole } from '../lib/pendingRole';
 import { friendlyError } from '../lib/errors';
 
 // @ts-ignore
@@ -15,7 +16,21 @@ const logo = require('../../assets/logo.png');
 // @ts-ignore
 const wordmark = require('../../assets/wordmark.png');
 
-export function SignUpScreen({ navigation }: SignUpScreenProps) {
+export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
+  /**
+   * Which side of the product this person is here for.
+   *
+   * It decides ONE thing — which home they land on — and never what they may
+   * see; RLS decides that. It is asked here rather than inferred later because
+   * a sitter arriving from an invitation email has no pets to add, and the
+   * founder wizard ("tell us about your pets") is a baffling first screen for
+   * someone whose whole job is other people's animals.
+   *
+   * Defaults to 'owner' so the existing path is unchanged for anyone who does
+   * not engage with the question, and is preselected to 'sitter' when the
+   * landing page's sitter section sent them.
+   */
+  const [role, setRole] = useState<ProfileRole>(route.params?.role ?? 'owner');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -67,6 +82,10 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
     setIsSubmitting(true);
     try {
       await signUp(submittedEmail, password);
+      // Written to the profile on the first authenticated load, by
+      // useProfileRole. It cannot be written now: email confirmation is on, so
+      // there is no session yet and profiles is unwritable.
+      await setPendingRole(role);
       // If email confirmation is OFF, signUp creates a session and AuthContext
       // switches to the signed-in stack automatically — no banner needed.
       // If no session appeared, the account is pending email verification.
@@ -134,6 +153,47 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
 
             {/* Form */}
             <View className="mb-6">
+            {/* Who is signing up. Two large targets rather than a segmented
+                control: this is the first question on the screen and it decides
+                where they end up. */}
+            <View className="mb-6">
+              <Text className="text-brown-800 font-semibold mb-2 text-center">
+                What brings you here?
+              </Text>
+              <View className="flex-row" style={{ gap: 10 }}>
+                {([
+                  { key: 'owner' as const, title: 'My own pets', sub: 'Build guides for sitters' },
+                  { key: 'sitter' as const, title: 'I sit for others', sub: 'Look after clients’ pets' },
+                ]).map((option) => {
+                  const selected = role === option.key;
+                  return (
+                    <Pressable
+                      key={option.key}
+                      onPress={() => setRole(option.key)}
+                      accessibilityRole="radio"
+                      aria-checked={selected}
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`${option.title}. ${option.sub}`}
+                      style={{ minHeight: 44 }}
+                      className={`flex-1 rounded-xl border-2 px-3 py-3 ${
+                        selected ? 'border-primary-500 bg-primary-50' : 'border-tan-200 bg-cream-50'
+                      }`}
+                    >
+                      <Text
+                        className={`font-semibold ${selected ? 'text-primary-700' : 'text-brown-800'}`}
+                      >
+                        {option.title}
+                      </Text>
+                      <Text className="text-tan-500 text-sm">{option.sub}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text className="text-tan-500 text-sm mt-2 text-center">
+                You can change this later, and do both.
+              </Text>
+            </View>
+
               <Input
                 label="Email"
                 placeholder="you@example.com"
