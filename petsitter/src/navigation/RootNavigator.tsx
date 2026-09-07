@@ -176,6 +176,23 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   },
 };
 
+/**
+ * Name of the route actually in front, walking down through nested navigators.
+ */
+function focusedRouteName(state: any): string | undefined {
+  let node = state;
+  while (node && Array.isArray(node.routes)) {
+    const route = node.routes[node.index ?? 0];
+    if (!route) return undefined;
+    if (route.state) {
+      node = route.state;
+      continue;
+    }
+    return route.name;
+  }
+  return undefined;
+}
+
 /** Consume the captured URL; returns a route only for whitelisted /Main/ paths. */
 function consumePendingMainRoute(): {
   name: keyof MainStackParamList;
@@ -219,6 +236,26 @@ export function RootNavigator() {
 
     const route = consumePendingMainRoute();
     if (!route) return;
+
+    /**
+     * If the linking config already put us on this screen, STOP.
+     *
+     * Dispatching again looks harmless — same screen, same params — but it
+     * grows the stack by one, and React Navigation turns any positive history
+     * delta into history.push, whose own source notes that "path might not
+     * actually change here". The result was two consecutive history entries
+     * with the identical URL. Pressing Back moved between them and nothing
+     * happened: same address, same screen, a dead button. It only showed up
+     * after a reload, because only then does this restore run on a screen the
+     * linking config has just restored by itself.
+     *
+     * The dispatch is NOT removed, only skipped when redundant. It is still the
+     * safety net for the case where the URL survived but the linking config did
+     * not place us — most importantly the Stripe return to
+     * /Main/UnlockCrown?checkout=success, which is real money coming back and
+     * must not depend on a single mechanism.
+     */
+    if (focusedRouteName(navigation.getState?.()) === route.name) return;
 
     navigation.dispatch(
       CommonActions.navigate({
