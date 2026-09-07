@@ -4,6 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { showAlert } from '../lib/showAlert';
 import { uploadPetPhoto } from '../lib/petPhotos';
 import { resizeForUpload } from '../lib/resizeImage';
+import { PhotoCropper } from './PhotoCropper';
+import { Platform } from 'react-native';
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
 
@@ -30,6 +32,10 @@ export function PhotoPicker({
   // Only ever non-null during an upload; the persisted value stays the
   // public URL emitted through onChange.
   const [pendingUri, setPendingUri] = useState<string | undefined>(undefined);
+  // Set only on web, between picking and uploading, while the cropper is open.
+  // Native never uses it: expo-image-picker's allowsEditing already gave the
+  // user a real native cropper before we got here.
+  const [cropping, setCropping] = useState<string | undefined>(undefined);
 
   const pickImage = async () => {
     if (uploading) return;
@@ -63,6 +69,18 @@ export function PhotoPicker({
     // blob:/file: uri is exactly the bug this component used to have.
     // The asset's mimeType rides along because the upload body is an
     // ArrayBuffer, which has no type of its own.
+    // Web has no picker-provided editor, so a landscape photo would be
+    // centre-cropped by CSS at display time and a pet standing off to one side
+    // would lose its head. Offer the crop first; upload is what happens after.
+    if (Platform.OS === 'web') {
+      setCropping(localUri);
+      return;
+    }
+
+    await uploadPicked(localUri, asset.mimeType);
+  };
+
+  const uploadPicked = async (localUri: string, mimeType?: string) => {
     setPendingUri(localUri);
     setUploading(true);
     try {
@@ -76,7 +94,7 @@ export function PhotoPicker({
         // A resized image is re-encoded as JPEG, so the picker's original
         // mimeType would be a lie (and the upload body is an ArrayBuffer with
         // no type of its own). Untouched images keep theirs.
-        resized.untouched ? asset.mimeType : 'image/jpeg'
+        resized.untouched ? mimeType : 'image/jpeg'
       );
       onChange(publicUrl);
     } catch (error: any) {
@@ -106,6 +124,19 @@ export function PhotoPicker({
 
   return (
     <View className="mb-4">
+      {cropping ? (
+        <PhotoCropper
+          uri={cropping}
+          onCancel={() => setCropping(undefined)}
+          onCropped={(croppedUri) => {
+            setCropping(undefined);
+            // Crop first, then resize — cropping a 12MP original and shrinking
+            // the result keeps more detail than shrinking then cropping, and
+            // resizeForUpload is what guarantees the bucket accepts it.
+            void uploadPicked(croppedUri, 'image/jpeg');
+          }}
+        />
+      ) : null}
       {label && (
         <Text className="text-brown-600 font-medium mb-2">{label}</Text>
       )}
