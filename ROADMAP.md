@@ -143,7 +143,11 @@ component as real sheets so it always previews the true experience.
 Later candidates: `guide-editing` (first GuideForm open — explains autosave + Done),
 `crown-intro` (when Crown ships), a localStorage-only hint on the sitter share view.
 
-### [ ] Sitter accounts (second persona)
+### [x] Sitter accounts (second persona) — SHIPPED
+Migrations 0015-0020, 0023, 0025. Invite/accept/revoke, read-only client views, check-ins,
+task ticking, cheat-sheet read access, and the owner's contact per connection.
+
+### [x] (original plan) Sitter accounts
 Sitters today are anonymous link-openers with no account and no history. Give them a real
 account that lists every client they sit for, keeps those clients on their profile, and lets
 them invite clients into the app — or ask an existing owner to share a pet profile with them.
@@ -305,7 +309,10 @@ is a weak shield. NerdWallet is licensed in all 50 states; Policygenius is a lic
 ⚠️ Programs churn fast (ManyPets: active → fully exited in ~14 months). Re-verify before
 signing. All checks made 2026-08-15.
 
-### [ ] About Us page
+### [x] About Us page — SHIPPED
+/about, /privacy, /terms, /refunds, all reachable signed out for Stripe's reviewer.
+
+### [x] (original plan) About Us page
 Staff page with in-universe titles:
 - **Clark** (dog) — Chief Executive Pawficer
 - **Lillee** (dog) — Marketing Megamut
@@ -420,7 +427,11 @@ First run found five real defects, two already fixed.
 
 ## 4b. Known issues (from the 2026-08-14 full QA pass)
 
-### [ ] Pet photos were never persisted — needs Supabase Storage
+### [x] Pet photos persisted — FIXED
+`lib/petPhotos.ts` uploads to a Supabase Storage bucket and stores the public URL. Tim
+confirmed a real upload on 2026-09-07.
+
+### [x] (original finding) Pet photos were never persisted
 PhotoPicker stores the picker's transient URI verbatim in `pets.photo_url`. On web that is a
 `blob:` object URL that dies with the browser session (Clark's was
 `blob:http://localhost:8081/...` — it only ever rendered in the session that picked it); on
@@ -437,7 +448,11 @@ Fix design:
    delete the storage object too. Resize client-side (~800px) before upload.
 4. Applies to both the web blob path and native file path.
 
-### [ ] Browser back bypasses the unsaved-changes guard on web
+### [x] Browser back bypasses the unsaved-changes guard on web — FIXED (ee244a7)
+Not by intercepting the navigation, which is not possible — React Navigation replaces nav
+state on popstate rather than dispatching a vetoable action. Instead PetForm, GuideForm and
+TripWizard keep drafts that survive the exit and offer themselves back.
+
 React Navigation's `beforeRemove` does not intercept browser history navigation on web —
 popstate moves the stack before the listener can block it, so a dirty create-form discards
 silently on browser back (the in-app Cancel path confirms correctly, and refresh/close are
@@ -450,7 +465,11 @@ missing: the same form state raised the dialog correctly via the in-app Cancel i
 before browser Back discarded it. Suspect site is `PetFormScreen.tsx` (~line 513), where the
 guard hangs off the header control rather than a `beforeRemove` / `popstate` listener.
 
-### [ ] A dead session renders a normal signed-in Home with ZERO counts 🔴
+### [x] A dead session renders a normal signed-in Home with ZERO counts — FIXED (verified 2026-09-07)
+DataContext tracks `sessionExpired` and renders an explicit expired state via
+`lib/sessionExpired.ts` instead of an empty-but-happy Home. The note below is the original
+finding, kept for context.
+
 Found 2026-08-15 (Loop 5 QA). After an auth failure that occurs *post-mount*, Home renders as
 fully signed in — "Welcome, Tcdain!" — with **0 Pets, 0 Guides** and the "Add your first pet"
 empty state. It is pixel-indistinguishable from a wiped account. Console shows 401s and
@@ -463,7 +482,11 @@ generic to any post-mount auth failure, so treat it as plausible-in-the-wild rat
 observed-in-the-wild. Fix direction: treat a 401 from the data layer as a session-expired
 signal — route to sign-in or render an explicit expired state, never an empty-but-happy Home.
 
-### [ ] Authenticated deep links don't survive reload
+### [x] Authenticated deep links don't survive reload — FIXED
+RootNavigator captures the URL at module load and replays it through
+`RESTORABLE_MAIN_ROUTES` once auth resolves. Verified repeatedly this session on
+/Main/DailyRoutine, /Main/GuideForm, /Main/PetDetail and /Main/SitterHousehold.
+
 Hard-loading `/Main/PetForm?...` or `/Main/DailyRoutine?...` lands on Home after session
 restore — the navigator mounts before the session resolves, dropping the initial URL. Public
 routes (/share/:code, /install) are unaffected. Fix direction: defer NavigationContainer
