@@ -22,51 +22,51 @@ type Props = NativeStackScreenProps<MainStackParamList, 'SampleCheatSheet'>;
 const SAMPLE_CONTENT = `## ⏰ Daily Schedule
 
 **Banjo** (beagle mix, 6)
-- **7:00 AM:** Breakfast — 1 cup of kibble from the bin by the pantry
-- **7:30 AM:** Morning walk, about 20 minutes — use the front-clip harness hanging by the door
-- **5:30 PM:** Dinner — 1 cup of kibble
+- **7:00 AM:** Breakfast. 1 cup of kibble from the bin by the pantry
+- **7:30 AM:** Morning walk, about 20 minutes. Use the front-clip harness hanging by the door
+- **5:30 PM:** Dinner. 1 cup of kibble
 - **After dinner:** One joint chew from the jar on the counter
 - **9:30 PM:** Last backyard break before bed
 
 **Marmalade** (orange tabby, 4)
 - **7:00 AM:** Half a can of wet food on the kitchen windowsill
-- **6:00 PM:** Half a can of wet food — she starts campaigning at 5:45; this is normal
+- **6:00 PM:** Half a can of wet food. She starts campaigning at 5:45; this is normal
 - **Daily:** Scoop the litter box in the laundry room and refresh the water fountain
 
 **Tortellini** (red-eared slider turtle, 12)
-- **Weekday mornings:** 4–5 turtle pellets dropped into the tank
+- **Weekday mornings:** 4 to 5 turtle pellets dropped into the tank
 - **Mon & Thu:** A pinch of chopped greens (romaine bag in the fridge, bottom drawer)
-- **8:00 AM:** UVB lamp ON — switch on the power strip behind the tank
+- **8:00 AM:** UVB lamp ON: switch on the power strip behind the tank
 - **8:00 PM:** UVB lamp OFF
 - **Sunday:** Top up the tank to the fill line with the jug beside it
 
 ## 💊 Medications
 
-- **Banjo — joint chew:** 1 chew every evening with dinner (jar on the kitchen counter)
-- **Marmalade — hairball paste:** Mon / Wed / Fri, a pea-sized dab on her front paw — she licks it clean
-- **Tortellini:** No medications — just wash your hands after handling him
+- **Banjo: joint chew:** 1 chew every evening with dinner (jar on the kitchen counter)
+- **Marmalade: hairball paste:** Mon / Wed / Fri, a pea-sized dab on her front paw. She licks it clean
+- **Tortellini:** No medications: just wash your hands after handling him
 
 ## 🚨 Emergency Contacts
 
-- **Sam & Jordan (Owners):** 555-0163 — call or text anytime, day or night
-- **Alex Rivera (Neighbor):** 555-0142 — two doors down, has a spare key, knows all three pets
-- **Harborview Animal Clinic (Vet):** 555-0198 — all three pets are on file
-- **If a pet seems sick or hurt:** Call the vet first, then text us — do not wait for a reply
+- **Sam & Jordan (Owners):** 555-0163. Call or text anytime, day or night
+- **Alex Rivera (Neighbor):** 555-0142: two doors down, has a spare key, knows all three pets
+- **Harborview Animal Clinic (Vet):** 555-0198. All three pets are on file
+- **If a pet seems sick or hurt:** Call the vet first, then text us. Do not wait for a reply
 
 ## 🔑 Home Access
 
 - **Address:** 12 Sandcastle Court
 - **Front door code:** 4281
-- **WiFi:** CastleNet — password: DrawbridgeUp!
+- **WiFi:** CastleNet: password: DrawbridgeUp!
 - **Spare key:** Under the blue planter to the left of the front steps
 
 ## ⚠️ Important Reminders
 
-- Marmalade hides under the guest bed when new people arrive — leave that door open and she will appear by dinnertime
+- Marmalade hides under the guest bed when new people arrive. Leave that door open and she will appear by dinnertime
 - Keep Banjo leashed for the whole walk; squirrels override all of his training
 - Always wash your hands after feeding or handling Tortellini, or touching his tank water
 - Banjo is not allowed on the couch, no matter what face he makes
-- Please keep toilet lids down — Marmalade is curious and Banjo is thirsty`;
+- Please keep toilet lids down. Marmalade is curious and Banjo is thirsty`;
 
 export function SampleCheatSheetScreen({ navigation }: Props) {
   const { primaryHouseholdId } = useData();
@@ -142,12 +142,12 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
                 👑 Pawstructions Crown
               </Text>
               <Text className="text-brown-600 text-sm mb-3">
-                $5 once for your whole household — not a subscription. Crown
+                $5 once for your whole household: not a subscription. Crown
                 writes a sheet like this from your own guide, with no PREVIEW
                 watermark on screen or in the PDF.
               </Text>
               <Button
-                title="👑 Unlock Crown — $5"
+                title="👑 Unlock Crown. $5"
                 onPress={() => navigation.navigate('UnlockCrown')}
               />
             </Card>
@@ -159,7 +159,7 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
               </Text>
               <Text className="text-brown-600 text-sm">
                 Your household already has Crown. Open any guide and generate its
-                cheat sheet — yours comes out with no PREVIEW watermark.
+                cheat sheet: yours comes out with no PREVIEW watermark.
               </Text>
             </Card>
           )}

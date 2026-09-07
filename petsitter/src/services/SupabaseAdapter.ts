@@ -570,7 +570,7 @@ export class SupabaseAdapter implements DataService {
       // wrong failure to someone who is trying to pay us.
       switch (code) {
         case 'already_crowned':
-          throw new Error('This household already has Crown — there is nothing to pay.');
+          throw new Error('This household already has Crown. There is nothing to pay.');
         case 'household_not_found':
           // The function answers "no such household" and "not your household"
           // identically on purpose; this copy must not tell them apart either.

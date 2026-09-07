@@ -237,7 +237,7 @@ export function SitterHomeScreen({ navigation }: Props) {
             {hasAnyClient ? (
               <View className="mt-4">
                 <Button
-                  title="📋 Today — across all clients"
+                  title="📋 Today: across all clients"
                   onPress={() => navigation.navigate('SitterToday')}
                   variant="primary"
                 />

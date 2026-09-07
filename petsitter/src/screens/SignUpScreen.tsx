@@ -231,11 +231,11 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
               disabled={isSubmitting}
             />
 
-            {/* Confirmation-pending state (no session yet — email verification required) */}
+            {/* Confirmation-pending state (no session yet: email verification required) */}
             {confirmationSentTo && (
               <View className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-3">
                 <Text className="text-primary-700 text-sm text-center">
-                  ✉️ Check your email to verify your account — then sign in.
+                  ✉️ Check your email to verify your account. Then sign in.
                 </Text>
                 <Text className="text-primary-700 text-sm text-center font-semibold mt-1">
                   {confirmationSentTo}

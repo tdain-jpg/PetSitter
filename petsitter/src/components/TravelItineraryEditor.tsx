@@ -191,7 +191,7 @@ export function TravelItineraryEditor({
         onChangeText={(v) => updateItinerary({ destination: v || undefined })}
       />
 
-      {/* formatAsPhone like every other phone field in the app — this one was
+      {/* formatAsPhone like every other phone field in the app. This one was
           storing "6185200491" while the emergency contacts beside it stored
           "(618) 520-0491". A sitter reading them side by side should not have
           to work out that they are the same kind of thing. */}

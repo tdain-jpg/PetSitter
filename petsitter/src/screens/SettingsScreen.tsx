@@ -180,7 +180,7 @@ export function SettingsScreen({ navigation }: Props) {
         const confirmed = await showConfirm({
           title: `Replace Data in ${targetHousehold}?`,
           message:
-            `Importing a backup REPLACES every pet, guide, and share link in ${targetHousehold} with the backup's contents — ` +
+            `Importing a backup REPLACES every pet, guide, and share link in ${targetHousehold} with the backup's contents, ` +
             'including pets and guides that other members of it added, for everyone in it. ' +
             "Other households you've joined are not affected. " +
             'Share links stored in the backup keep working after the import.',
@@ -210,10 +210,10 @@ export function SettingsScreen({ navigation }: Props) {
     const confirmed = await showConfirm({
       title: `Delete Everything in ${targetHousehold}?`,
       message:
-        `This permanently deletes every pet, guide, and share link in ${targetHousehold} — ` +
+        `This permanently deletes every pet, guide, and share link in ${targetHousehold}, ` +
         'including any that other members of it added and still use. It affects everyone ' +
         "in that household. Other households you've joined are not affected. " +
-        'There is no undo — once deleted, this data cannot be recovered.',
+        'There is no undo: once deleted, this data cannot be recovered.',
       confirmLabel: 'Delete Everything',
       destructive: true,
     });
@@ -264,7 +264,7 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* Crown — hidden from a sitter who has no household to unlock. */}
+        {/* Crown: hidden from a sitter who has no household to unlock. */}
         <Card className="mb-4 bg-warm-50 border-warm-300">
           {isSitterWithNoPets ? (
             <>
@@ -273,7 +273,7 @@ export function SettingsScreen({ navigation }: Props) {
               </Text>
               <Text className="text-brown-600 text-sm">
                 Crown unlocks AI cheat sheets for a household&apos;s own pets, so
-                it is bought by the owners you sit for — not by you. The guides
+                it is bought by the owners you sit for: not by you. The guides
                 they share with you are already yours to read.
               </Text>
             </>
@@ -285,9 +285,9 @@ export function SettingsScreen({ navigation }: Props) {
                 👑 Crown is active
               </Text>
               <Text className="text-brown-600 text-sm mb-3">
-                {`Every AI cheat sheet in ${targetHousehold} is unlocked — no PREVIEW watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay.`}
+                {`Every AI cheat sheet in ${targetHousehold} is unlocked: no PREVIEW watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay.`}
               </Text>
-              {/* Answers "did I already pay for this?" — the only spend question
+              {/* Answers "did I already pay for this?", the only spend question
                   a one-time purchase raises. The date is OMITTED rather than
                   guessed when granted_at is null: grants predating migration
                   0012 have no timestamp, and inventing one would be worse than
@@ -307,7 +307,7 @@ export function SettingsScreen({ navigation }: Props) {
                   household, no watermark. */}
               <Text className="text-brown-600 text-sm mb-3">
                 AI-written cheat sheets for your sitter, with no PREVIEW
-                watermark — $5 once for a whole household, not a subscription.
+                watermark. $5 once for a whole household, not a subscription.
               </Text>
               <View className="mb-3">
                 <Button
@@ -323,7 +323,7 @@ export function SettingsScreen({ navigation }: Props) {
                     checkoutPending
                       ? '👑 Finish unlocking Crown'
                       : hasCrown === false
-                        ? '👑 Unlock Crown — $5'
+                        ? '👑 Unlock Crown. $5'
                         : '👑 About Crown'
                   }
                   onPress={() => navigation.navigate('UnlockCrown')}
@@ -444,7 +444,7 @@ export function SettingsScreen({ navigation }: Props) {
           {/* Named before the tap, not only in the confirm dialog. */}
           <Text className="text-tan-500 text-sm mb-4">
             {targetHouseholdName
-              ? `These apply to ${targetHouseholdName} — your default household.`
+              ? `These apply to ${targetHouseholdName}. Your default household.`
               : 'These apply to your default household.'}
           </Text>
 

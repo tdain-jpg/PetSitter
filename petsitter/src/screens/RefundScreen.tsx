@@ -14,7 +14,7 @@ export function RefundScreen(_props: RefundScreenProps) {
       lastUpdated={LAST_UPDATED}
       intro="Crown is a $5 one-time purchase, and we would rather give the $5 back than have you feel stuck with something you do not want."
     >
-      {/* The policy itself, up top, before any conditions — anyone landing
+      {/* The policy itself, up top, before any conditions: anyone landing
           here is looking for exactly one answer. */}
       <View className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6">
         <View className="flex-row items-center mb-2">
@@ -36,7 +36,7 @@ export function RefundScreen(_props: RefundScreenProps) {
       <TrustSection heading="What this covers">
         <TrustText>
           Crown is the only thing we sell: a single $5 (USD) payment that unlocks AI cheat sheets
-          for one household, permanently. It is not a subscription — it never renews, so there is
+          for one household, permanently. It is not a subscription. It never renews, so there is
           nothing to cancel and no future charge to stop.
         </TrustText>
       </TrustSection>
@@ -47,13 +47,13 @@ export function RefundScreen(_props: RefundScreenProps) {
           address on your Pawstructions account.
         </TrustBullet>
         <TrustBullet>
-          Say you would like a Crown refund. That is genuinely all we need — the account address
+          Say you would like a Crown refund. That is genuinely all we need: the account address
           is enough for us to find the purchase.
         </TrustBullet>
         <TrustBullet>
           We will confirm by email once the refund has been issued, and it goes back to the card
           or account you paid with. How quickly it appears on your statement is up to your bank,
-          usually within 5–10 business days.
+          usually within 5 to 10 business days.
         </TrustBullet>
       </TrustSection>
 
@@ -78,8 +78,8 @@ export function RefundScreen(_props: RefundScreenProps) {
           not do what you expected, we would much rather hear about it than keep your $5.
         </TrustText>
         <TrustText>
-          Duplicate or accidental purchases — the same household paid for twice, a purchase made
-          by someone who did not mean to — we refund whenever we hear about them, however long it
+          Duplicate or accidental purchases: the same household paid for twice, a purchase made
+          by someone who did not mean to. We refund whenever we hear about them, however long it
           has been.
         </TrustText>
       </TrustSection>

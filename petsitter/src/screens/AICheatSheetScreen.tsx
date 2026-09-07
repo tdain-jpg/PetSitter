@@ -234,12 +234,12 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
           // how often is the server's business, and the only figure repeated
           // is the wait it sent us (absent → describeRetryWait stays vague).
           setError(
-            `That's a lot of cheat sheets in a short time, so our AI helper is catching its breath. Nothing is locked and nothing is wrong with your account — please try again ${describeRetryWait(retryAfterMinutes)}.`
+            `That's a lot of cheat sheets in a short time, so our AI helper is catching its breath. Nothing is locked and nothing is wrong with your account. Please try again ${describeRetryWait(retryAfterMinutes)}.`
           );
           return;
         }
         if (code === 'ai_not_configured') {
-          setError('The AI helper is warming up — check back soon.');
+          setError('The AI helper is warming up. Check back soon.');
           return;
         }
         const message =
@@ -305,7 +305,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       // stated in words instead — and stated as a FEATURE state, never as a
       // doubt about the care details, which are the user's own.
       const filled = watermarked
-        ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own — Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
+        ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own. Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
         : body;
 
       // Plain text, not markdown. A clipboard has no renderer, so pasting the
@@ -336,7 +336,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       showAlert(
         "Couldn't Copy",
         Platform.OS === 'web'
-          ? 'This browser blocked the clipboard. Your cheat sheet is still on the screen behind this message — select the text and copy it by hand.'
+          ? 'This browser blocked the clipboard. Your cheat sheet is still on the screen behind this message. Select the text and copy it by hand.'
           : 'This device blocked the clipboard. Your cheat sheet is still on the screen behind this message, and it is included in the guide PDF.'
       );
     } catch (err) {
@@ -404,8 +404,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               </Text>
               <Text className="text-brown-600 text-center mb-6">
                 {canEdit
-                  ? "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them — $5 once for your whole household, not a subscription."
-                  : "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them, and it is the owner's to buy — ask them if you'd like another."}
+                  ? "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them ($5 once for your whole household, not a subscription)."
+                  : "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them, and it is the owner's to buy. Ask them if you'd like another."}
               </Text>
               <View className="w-full gap-3">
                 {/* Crown belongs to a HOUSEHOLD, and create-checkout-session
@@ -414,7 +414,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                     complete, for pets that are not theirs. */}
                 {canEdit ? (
                   <Button
-                    title="👑 Unlock Crown — $5"
+                    title="👑 Unlock Crown ($5)"
                     onPress={() => navigation.navigate('UnlockCrown', { guideId })}
                   />
                 ) : null}
@@ -444,7 +444,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                   : "The owner hasn't made a one-page summary of this guide yet. Everything you need is still in the guide itself."}
               </Text>
 
-              {/* Set the expectation BEFORE the free generation is spent —
+              {/* Set the expectation BEFORE the free generation is spent -
                   discovering the watermark afterwards feels like a bait.
                   Phrased without promising THIS sheet is free: the free
                   allowance is one per guide and lives server-side, so the
@@ -453,7 +453,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                 <Text className="text-brown-600 text-center mb-6">
                   Free cheat sheets arrive with a PREVIEW watermark across them.
                   Crown removes it and lets you rewrite the sheet whenever your
-                  details change — $5 once for your whole household.
+                  details change. $5 once for your whole household.
                 </Text>
               ) : null}
 
@@ -511,13 +511,13 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                 </Text>
                 <Text className="text-brown-600 text-center mb-6">
                   {canEdit
-                    ? 'Your free cheat sheet for this guide is above. Crown covers the cost of the AI, so you can rewrite it whenever the details change — $5 once for your whole household, not a subscription.'
+                    ? 'Your free cheat sheet for this guide is above. Crown covers the cost of the AI, so you can rewrite it whenever the details change. $5 once for your whole household, not a subscription.'
                     : "The free cheat sheet for this guide is above. Rewriting it needs Crown, which is the owner's to buy."}
                 </Text>
                 <View className="w-full">
                   {canEdit ? (
                     <Button
-                      title="👑 Unlock Crown — $5"
+                      title="👑 Unlock Crown ($5)"
                       onPress={() => navigation.navigate('UnlockCrown', { guideId })}
                     />
                   ) : null}

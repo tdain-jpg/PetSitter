@@ -1049,7 +1049,7 @@ export function DataProvider({ children }: DataProviderProps) {
         if (userIdRef.current !== userId) return; // user changed mid-flight
         await refreshHouseholds();
         throw new Error(
-          "We couldn't confirm the change — check your connection and reopen this screen."
+          "We couldn't confirm the change. Check your connection and reopen this screen."
         );
       }
       if (userIdRef.current !== userId) return; // user changed mid-flight

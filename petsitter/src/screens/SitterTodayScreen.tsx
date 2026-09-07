@@ -154,7 +154,7 @@ export function SitterTodayScreen({ navigation }: SitterTodayScreenProps) {
               </Text>
               <Text className="text-brown-700 leading-6 mb-4">
                 Your list is not showing because the app could not reach the server. It is not
-                that there is nothing to do — pull down to try again.
+                that there is nothing to do. Pull down to try again.
               </Text>
               <Button title="Try again" onPress={() => void load()} />
             </Card>

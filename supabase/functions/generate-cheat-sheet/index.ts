@@ -640,6 +640,7 @@ STRICT FORMATTING RULES:
 - NEVER use markdown tables — do not output the | character at all.
 - NEVER use horizontal rules — do not output lines of dashes.
 - No HTML. Bold the truly critical values: times, doses, phone numbers.
+- NEVER use an em dash or an en dash. Use a comma, a colon, or a full stop instead. This applies to every line of the sheet.
 - Keep the whole sheet tight — a fridge-door reference that fits on 1-2 printed pages.
 
 STRICT CONTENT RULES — a sitter reading the sheet cannot tell your words from the owner's, so every word has to be the owner's:
@@ -657,6 +658,25 @@ STRICT PLACEHOLDER RULES:
 // ----------------------------------------------------------------------------
 // Handler
 // ----------------------------------------------------------------------------
+
+/**
+ * No em or en dashes anywhere in a generated sheet.
+ *
+ * The prompt asks for this, and a style instruction is a request rather than a
+ * guarantee — models reach for an em dash constantly. The sheet is read by a
+ * sitter and printed onto a fridge, so it is product copy like any other, and
+ * the rest of the app has none.
+ *
+ * A dash between spaces was joining two clauses, so it becomes a comma. One
+ * without spaces is doing a range's job ("8-10am"), so it becomes a hyphen.
+ * Owner-written text passes through here too, which is intended: the rule is
+ * about what appears on the sheet, not about who typed it.
+ */
+function stripLongDashes(text: string): string {
+  return text
+    .replace(/\s+[—–]\s+/g, ', ')
+    .replace(/[—–]/g, '-');
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -1011,10 +1031,12 @@ Deno.serve(async (req) => {
     return json(502, { error: 'ai_failed' });
   }
 
-  const content = message.content
-    .filter((block) => block.type === 'text')
-    .map((block) => ('text' in block ? block.text : ''))
-    .join('');
+  const content = stripLongDashes(
+    message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => ('text' in block ? block.text : ''))
+      .join('')
+  );
   if (content.length === 0) {
     console.error('claude returned no text content');
     await releaseClaim('an empty sheet');

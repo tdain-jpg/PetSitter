@@ -127,7 +127,7 @@ export default function App() {
               // Without a formatter, web tab titles fall back to route names
               // (or "undefined" before the first route resolves).
               formatter: (options) =>
-                options?.title ? `${options.title} — Pawstructions` : 'Pawstructions',
+                options?.title ? `${options.title} | Pawstructions` : 'Pawstructions',
             }}
           >
             <RootNavigator />

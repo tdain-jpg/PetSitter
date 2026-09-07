@@ -805,7 +805,7 @@ export function HomeScreen({ navigation }: Props) {
                 is how somebody hands out the wrong one. */}
             <Button
               title="💌 Invite Family"
-              subtitle="A partner or housemate — full access, permanently"
+              subtitle="A partner or housemate: full access, permanently"
               onPress={() => navigation.navigate('Household')}
               variant="outline"
             />
@@ -872,7 +872,7 @@ export function HomeScreen({ navigation }: Props) {
                     You&apos;re here to sit
                   </Text>
                   <Text className="text-tan-500 text-center mb-4">
-                    The households you look after are under My Clients — their
+                    The households you look after are under My Clients: their
                     pets, their guides and today&apos;s checklist. Nothing here
                     needs setting up first.
                   </Text>

@@ -526,7 +526,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                             ⏰ {formatTaskTime(task.time)}
                           </Text>
                         ) : null}
-                        {/* Only once it's done, and only when we know — rows
+                        {/* Only once it's done, and only when we know: rows
                             predating 0026 have no author and say nothing
                             rather than guessing. */}
                         {completed && completedByLabel(task.id) ? (
@@ -542,7 +542,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                       </View>
                     </Pressable>
 
-                    {/* Edit/Delete/Move buttons for custom tasks — owner only;
+                    {/* Edit/Delete/Move buttons for custom tasks: owner only;
                         a sitter ticks tasks, they don't author them. */}
                     {task.is_custom && canEdit && (
                       <View className="flex-row justify-end gap-2 mt-1 px-2">

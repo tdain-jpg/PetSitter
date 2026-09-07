@@ -155,7 +155,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
     // reporting a failure with no way out.
     showAlert(
       "Couldn't Copy",
-      'This device blocked the clipboard. The full link is shown on the card — select it and copy it by hand.'
+      'This device blocked the clipboard. The full link is shown on the card. Select it and copy it by hand.'
     );
   };
 

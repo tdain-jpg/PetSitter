@@ -35,5 +35,5 @@ export function sitterLimitMessage(error: unknown): string {
   const ceiling = counts
     ? `You are caring for ${counts.active} households, which is the ${counts.limit} included for free.`
     : 'You have reached the number of client households included for free.';
-  return `${ceiling}\n\nA subscription lifts the limit entirely. Nothing you already have is affected — your current clients stay exactly as they are.`;
+  return `${ceiling}\n\nA subscription lifts the limit entirely. Nothing you already have is affected. Your current clients stay exactly as they are.`;
 }

@@ -44,7 +44,7 @@ export async function announceJoinDestination(options: {
   const switchNow = await showConfirm({
     title: `You joined ${invite.household_name}`,
     message: currentName
-      ? `New pets and guides you add will still go to ${currentName} — nobody in ${invite.household_name} will see them. Add new ones to ${invite.household_name} instead?`
+      ? `New pets and guides you add will still go to ${currentName}. Nobody in ${invite.household_name} will see them. Add new ones to ${invite.household_name} instead?`
       : `Add new pets and guides to ${invite.household_name} so everyone there can see them?`,
     confirmLabel: `Use ${invite.household_name}`,
     cancelLabel: currentName ? `Keep ${currentName}` : 'Not now',

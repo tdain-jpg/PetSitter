@@ -327,7 +327,7 @@ export function CheatSheetView({
           <Text className="text-brown-600 text-sm">
             {isOwner
               ? 'This is your own sheet, written from your guide. Crown clears the watermark here and in the PDF, and lets you rewrite the sheet whenever your details change.'
-              : "The content underneath is real and complete — nothing has been left out. The watermark is the owner's to clear."}
+              : "The content underneath is real and complete. Nothing has been left out. The watermark is the owner's to clear."}
           </Text>
           {onUnlockPress ? (
             <View className="mt-3">
@@ -336,7 +336,7 @@ export function CheatSheetView({
                   the last thing read before the decision. Matches
                   AICheatSheetScreen's Crown CTA. */}
               <Button
-                title="👑 Unlock Crown — $5"
+                title="👑 Unlock Crown ($5)"
                 onPress={onUnlockPress}
                 variant="outline"
               />

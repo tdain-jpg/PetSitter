@@ -88,7 +88,7 @@ export function CheatSheetsScreen({ navigation }: Props) {
                 const generatedAt = sheetDates.get(guide.id);
                 const written = generatedAt
                   ? `Written ${formatDate(generatedAt.slice(0, 10), { dateStyle: 'medium' })}`
-                  : 'No cheat sheet yet — tap to write one';
+                  : 'No cheat sheet yet. Tap to write one';
                 return (
                   <Card key={guide.id} className="mb-3">
                     <Pressable

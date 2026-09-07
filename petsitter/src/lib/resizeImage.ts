@@ -83,7 +83,7 @@ export async function resizeForUpload(uri: string): Promise<ResizedImage> {
 
   const mb = (n: number) => `${(n / 1024 / 1024).toFixed(1)} MB`;
   throw new Error(
-    `This photo is unusually large — even shrunk right down it is still ${mb(last)}, ` +
+    `This photo is unusually large: even shrunk right down it is still ${mb(last)}, ` +
       'and the limit is 5 MB. Try a different photo, or a screenshot of this one.'
   );
 }

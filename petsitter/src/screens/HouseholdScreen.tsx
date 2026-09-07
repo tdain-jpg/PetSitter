@@ -176,7 +176,7 @@ export function HouseholdScreen() {
       showAlert(
         "Couldn't confirm the change",
         `${friendlyError(error?.message, 'Something went wrong.')} ` +
-          'The Default badge now shows where things actually stand — check it before trying again.'
+          'The Default badge now shows where things actually stand. Check it before trying again.'
       );
     } finally {
       setSettingDefaultId(null);
@@ -207,7 +207,7 @@ export function HouseholdScreen() {
       // the part we can actually promise.
       showAlert(
         'Invite sent',
-        `We've emailed ${email} an invitation — they'll also see it in the app when they sign in.`
+        `We've emailed ${email} an invitation. They'll also see it in the app when they sign in.`
       );
     } catch (error: any) {
       showAlert(
@@ -503,7 +503,7 @@ export function HouseholdScreen() {
               )}
             </View>
 
-            {/* Which household is the default — for new pets and guides, and
+            {/* Which household is the default: for new pets and guides, and
                 for Backup / Import / Clear All Data in Settings. Only offered
                 on the cards that aren't already the default. The accessibility
                 label starts with the VISIBLE text so voice control ("tap make
@@ -617,7 +617,7 @@ export function HouseholdScreen() {
             </View>
           )}
 
-        {/* Sitters moved to their own screen. They are NOT members — they read
+        {/* Sitters moved to their own screen. They are NOT members. They read
             what you share and can change nothing — and sitting that next to
             "add a family member, who gets everything forever" made two very
             different grants look like one feature. This is a signpost now,
@@ -627,7 +627,7 @@ export function HouseholdScreen() {
             <Text className="text-lg font-semibold text-brown-800 mb-1">🐾 Pet sitters</Text>
             <Text className="text-tan-500 mb-3">
               Sitters aren&apos;t household members. They read the pets and guides you
-              share, tick off today&apos;s tasks, and can change nothing — and you can
+              share, tick off today&apos;s tasks, and can change nothing. And you can
               remove them at any time.
             </Text>
             <Button
@@ -665,7 +665,7 @@ export function HouseholdScreen() {
             </Text>
           </Card>
 
-          {/* Invites addressed to the signed-in user — mirrors the Home banner
+          {/* Invites addressed to the signed-in user: mirrors the Home banner
               so invitations are findable here too. Hidden when there are none. */}
           {pendingInvites.length > 0 && (
             <View className="mb-4">

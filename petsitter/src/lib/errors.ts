@@ -49,7 +49,7 @@ const RPC_MESSAGES: Record<string, string> = {
   'that email already has a live connection to this household':
     'That person is already connected as a sitter here.',
   'your account has no confirmed email address':
-    'Please confirm your email address first — check your inbox for the confirmation link.',
+    'Please confirm your email address first. Check your inbox for the confirmation link.',
 };
 
 /**

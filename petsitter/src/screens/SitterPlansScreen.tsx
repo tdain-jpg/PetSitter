@@ -73,7 +73,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
     // can land a second or two after the browser does. Say something true
     // rather than something certain.
     showAlert(
-      'Thanks — setting up your plan',
+      'Thanks: setting up your plan',
       "Your subscription is being confirmed. If it doesn't show here within a minute, pull the screen to refresh."
     );
   }, [checkout]);
@@ -154,7 +154,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                 </Text>
                 {plan?.status === 'past_due' ? (
                   <Text className="text-warm-700 leading-6 mt-2">
-                    Your last payment did not go through. Nothing has been cut off — update
+                    Your last payment did not go through. Nothing has been cut off. Update
                     your card in Manage subscription when you get a moment.
                   </Text>
                 ) : null}
@@ -182,7 +182,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
               </Text>
               <Text className="text-brown-700 leading-6 mb-4">
                 Change plan, update your card, or cancel. Cancelling takes effect at the end
-                of the period you have already paid for — you are never cut off mid-month.
+                of the period you have already paid for. You are never cut off mid-month.
               </Text>
               <Button
                 title={busy === 'portal' ? 'Opening…' : 'Manage subscription'}
@@ -197,7 +197,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                   Unlimited clients
                 </Text>
                 <Text className="text-brown-700 leading-6 mb-4">
-                  Everything else stays exactly as it is — every guide, routine and cheat
+                  Everything else stays exactly as it is. Every guide, routine and cheat
                   sheet is already included, for free, for every sitter. The subscription
                   buys one thing: as many client households as you can handle.
                 </Text>
@@ -208,7 +208,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                 />
                 <View className="h-3" />
                 <Button
-                  title={busy === 'yearly' ? 'Opening…' : `${YEARLY_LABEL} — save $48`}
+                  title={busy === 'yearly' ? 'Opening…' : `${YEARLY_LABEL}, save $48`}
                   onPress={() => openBilling('yearly')}
                   variant="secondary"
                   disabled={busy !== null}

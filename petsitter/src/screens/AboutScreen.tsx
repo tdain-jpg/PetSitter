@@ -40,7 +40,7 @@ const STAFF: { icon: IconName; name: string; title: string; bio: string }[] = [
     name: 'Tim',
     title: 'Technical Orchestrator',
     bio:
-      'Tim builds and runs the software — the app, the database rules that keep a household’s information inside that household, and the safeguards that keep your door codes away from the AI. When something breaks, he is the one fixing it.',
+      'Tim builds and runs the software: the app, the database rules that keep a household’s information inside that household, and the safeguards that keep your door codes away from the AI. When something breaks, he is the one fixing it.',
   },
 ];
 
@@ -72,8 +72,8 @@ export function AboutScreen(_props: AboutScreenProps) {
       <TrustSection heading="What Pawstructions is">
         <TrustText>
           Pawstructions is a web app for pet owners, at pawstructions.com. You enter your pets’
-          details — feeding, medication, vet, routines, the small habits nobody thinks to write
-          down — along with the practical facts about your home, and Pawstructions turns them
+          details: feeding, medication, vet, routines, the small habits nobody thinks to write
+          down: along with the practical facts about your home, and Pawstructions turns them
           into a care guide you can share.
         </TrustText>
         <TrustText>
@@ -91,19 +91,19 @@ export function AboutScreen(_props: AboutScreenProps) {
         </TrustText>
         <TrustText>
           Crown is a single $5 (USD) payment for one household, and it
-          unlocks AI-written cheat sheets — the one-page summary a sitter can keep on the fridge.
+          unlocks AI-written cheat sheets: the one-page summary a sitter can keep on the fridge.
           It is not a subscription. It does not renew, there is nothing to cancel, and buying it
           once covers that household permanently. Every guide you write gets one free cheat sheet
           before you decide, shown with a PREVIEW watermark. A duplicated guide is a new guide, so
           it gets its own free sheet. That watermark marks the state of the feature, not the
-          quality of the content — the care details on a preview sheet are your own, and a sitter
+          quality of the content: the care details on a preview sheet are your own, and a sitter
           can follow them exactly as written.
         </TrustText>
         <TrustText>
           The second is for sitters, not owners. Anyone sitting for up to three households uses
           Pawstructions free, permanently; beyond that it is $9 a month or $60 a year. It unlocks
-          no features — every guide, routine and cheat sheet a sitter can see is already included
-          for free — it lifts the limit on how many clients they can take on. If you are a pet
+          no features. Every guide, routine and cheat sheet a sitter can see is already included
+          for free. It lifts the limit on how many clients they can take on. If you are a pet
           owner, this will never apply to you.
         </TrustText>
       </TrustSection>
@@ -112,11 +112,11 @@ export function AboutScreen(_props: AboutScreenProps) {
         <TrustText>
           Pawstructions is an independent product built and run by a small family team. There is
           no advertising, no analytics scripts following you around, and nobody buying your pets’
-          data — the software is paid for by people choosing to buy Crown and by sitters
+          data: the software is paid for by people choosing to buy Crown and by sitters
           subscribing, and that is the whole business model.
         </TrustText>
         <TrustText>
-          For anything at all — a question, a bug, a refund, deleting your account — email
+          For anything at all: a question, a bug, a refund, deleting your account: email
           support@pawstructions.com and a person will read it.
         </TrustText>
       </TrustSection>
@@ -136,7 +136,7 @@ export function AboutScreen(_props: AboutScreenProps) {
           of them.
         </TrustBullet>
         <TrustBullet>
-          Your door codes and wifi password are yours. They are never sent to an AI provider —
+          Your door codes and wifi password are yours. They are never sent to an AI provider -
           see our privacy policy for exactly how that works.
         </TrustBullet>
         <TrustBullet>

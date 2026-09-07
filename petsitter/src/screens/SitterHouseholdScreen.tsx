@@ -184,7 +184,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
                     <Text className="font-medium text-brown-800">{guide.title}</Text>
                     {guide.start_date && guide.end_date && (
                       <Text className="text-sm text-tan-500 mt-1">
-                        {formatDate(guide.start_date)} – {formatDate(guide.end_date)}
+                        {formatDate(guide.start_date)}, {formatDate(guide.end_date)}
                       </Text>
                     )}
                   </Card>

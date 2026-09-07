@@ -402,7 +402,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         // watermark explains itself before it can make anyone hesitate over a
         // dose. The sales line waits for the footer.
         const note =
-          '<p class="preview-note"><strong>PREVIEW</strong> — the watermark marks a free Pawstructions cheat sheet. The care details below are the real ones from this guide.</p>';
+          '<p class="preview-note"><strong>PREVIEW</strong>, the watermark marks a free Pawstructions cheat sheet. The care details below are the real ones from this guide.</p>';
         const footer =
           '<p class="preview-footer">Pawstructions Crown ($5, one-time) removes this watermark.</p>';
         cheatSheetSection = `<div class="cheat-sheet preview">${PDF_WATERMARK_WASH}<div class="cheat-sheet-body"><h2>🤖 AI Cheat Sheet</h2>${note}<div>${sheetBody}</div>${footer}</div></div>`;
@@ -961,12 +961,12 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             </Text>
             <Text className="text-brown-600 text-sm mb-3">
               {canEdit
-                ? 'Everything in this PDF is your own information, and the rest of it exports clean. Crown removes the watermark from the cheat sheet — $5 once for your whole household.'
-                : "The watermark sits over the cheat sheet only — every other page exports clean, and nothing is missing from it. Removing it is the owner's to buy."}
+                ? 'Everything in this PDF is your own information, and the rest of it exports clean. Crown removes the watermark from the cheat sheet ($5 once for your whole household.'
+                : "The watermark sits over the cheat sheet only. Every other page exports clean, and nothing is missing from it. Removing it is the owner's to buy."}
             </Text>
             {canEdit ? (
               <Button
-                title="👑 Unlock Crown — $5"
+                title="👑 Unlock Crown ($5)"
                 variant="outline"
                 onPress={() => navigation.navigate('UnlockCrown', { guideId })}
               />
@@ -974,7 +974,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           </Card>
         ) : null}
 
-        {/* Tip for cheat sheet — owner only. A sitter cannot generate one, so
+        {/* Tip for cheat sheet: owner only. A sitter cannot generate one, so
             telling them to "generate one first" is an instruction they cannot
             follow, about a document that is not theirs to commission. */}
         {!cheatSheetContent && canEdit && (

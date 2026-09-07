@@ -161,7 +161,7 @@ export function LandingScreen({ navigation }: Props) {
         >
           <ScreenContainer variant="content">
           <View className="items-center">
-            {/* Logo lockup — the two-color wordmark needs a light surface to read */}
+            {/* Logo lockup: the two-color wordmark needs a light surface to read */}
             <View className="bg-cream-50 rounded-2xl px-5 pt-2 pb-4 mb-4 shadow-lg items-center">
               <Image
                 source={logo}
@@ -175,7 +175,7 @@ export function LandingScreen({ navigation }: Props) {
                 accessibilityLabel="Pawstructions"
               />
             </View>
-            {/* White on primary-500 — the only body-size pairing that clears 4.5:1 */}
+            {/* White on primary-500: the only body-size pairing that clears 4.5:1 */}
             <Text style={{ color: COLORS.white }} className="text-lg text-center mb-6 italic">
               Where Pets Rule the Kingdom!
             </Text>
@@ -284,7 +284,7 @@ export function LandingScreen({ navigation }: Props) {
                   Everything your sitter needs, in one place they can actually find it.
                 </Text>
                 <Text className="text-tan-600 text-center">
-                  Feeding times, medications, the vet's number, which neighbour has a key —
+                  Feeding times, medications, the vet's number, which neighbour has a key -
                   written down once, instead of remembered in a hurry on the way to the airport.
                 </Text>
               </View>
@@ -309,7 +309,7 @@ export function LandingScreen({ navigation }: Props) {
             </Text>
             <Text className="text-tan-600 text-center leading-6">
               Three client households free, permanently. Beyond that it is $9 a month or $60 a
-              year, and it only lifts the client limit — every feature is included either way.
+              year, and it only lifts the client limit. Every feature is included either way.
             </Text>
             {/* This section spoke to sitters and its only button created an
                 OWNER account, which dropped a professional sitter on a

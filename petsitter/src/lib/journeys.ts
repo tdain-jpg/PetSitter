@@ -57,7 +57,7 @@ export const JOURNEYS: Record<string, JourneyDef> = {
       {
         id: 'add-pet',
         title: 'Add your first pet',
-        body: 'Start with a profile — name, feeding, meds, and quirks.',
+        body: 'Start with a profile: name, feeding, meds, and quirks.',
         cta: { label: 'Add a Pet', screen: 'PetForm', params: { mode: 'create' } },
         isComplete: (data) => data.activePets.length > 0,
       },
@@ -72,7 +72,7 @@ export const JOURNEYS: Record<string, JourneyDef> = {
         // No predicate — completes when its CTA is tapped.
         id: 'share-guide',
         title: 'Share it with a sitter',
-        body: "Sitters don't need an account — send them a share link straight from any guide.",
+        body: "Sitters don't need an account. Send them a share link straight from any guide.",
         cta: { label: 'View Guides', screen: 'Guides' },
       },
       {
@@ -98,7 +98,7 @@ export const JOURNEYS: Record<string, JourneyDef> = {
         // silently receives anything they create. Tracked in ROADMAP as the
         // joiner-primary-household fix.
         title: 'The household’s pets are all here',
-        body: 'You can open and edit every pet and guide your household has already set up — nothing to re-create.',
+        body: 'You can open and edit every pet and guide your household has already set up. Nothing to re-create.',
       },
       {
         id: 'live-edits',
@@ -108,7 +108,7 @@ export const JOURNEYS: Record<string, JourneyDef> = {
       {
         id: 'sitter-links',
         title: "Sitters don't need accounts",
-        body: "When a guide is ready, send its share link — that's how guides go out to sitters.",
+        body: "When a guide is ready, send its share link. That's how guides go out to sitters.",
       },
     ],
   },

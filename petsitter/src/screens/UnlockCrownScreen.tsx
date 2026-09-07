@@ -709,7 +709,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                 👑 Crown is active
               </Text>
               <Text className="text-brown-600 mb-4">
-                {`Every cheat sheet in ${householdLabel} is unlocked — no watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay, ever.`}
+                {`Every cheat sheet in ${householdLabel} is unlocked: no watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay, ever.`}
               </Text>
               <Button
                 title={guideId ? 'Back to your cheat sheet' : 'Done'}
@@ -730,16 +730,16 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
               {checkoutReturn === 'success' && (
                 <Card className="mb-4 bg-warm-50 border-warm-300">
                   <Text className="text-brown-800 font-semibold mb-1">
-                    Thanks — finishing up
+                    Thanks: finishing up
                   </Text>
                   <Text className="text-brown-600 text-sm">
                     {pollExhausted
                       ? hasCrown === false
-                        ? "Crown still isn't showing on this household. If your payment went through it will land here — tap Refresh, and if it still doesn't appear, get in touch rather than paying again."
-                        : "We still haven't been able to check this household. Tap Refresh — and if that keeps failing, get in touch rather than paying again."
+                        ? "Crown still isn't showing on this household. If your payment went through it will land here. Tap Refresh, and if it still doesn't appear, get in touch rather than paying again."
+                        : "We still haven't been able to check this household. Tap Refresh. And if that keeps failing, get in touch rather than paying again."
                       : hasCrown === false
-                        ? "Crown isn't showing on this household yet. Confirmations usually reach us within a few seconds, and we're re-checking automatically — nothing for you to do."
-                        : "We're checking this household now. It usually takes a few seconds, and we're re-checking automatically — Refresh is there if you'd rather not wait."}
+                        ? "Crown isn't showing on this household yet. Confirmations usually reach us within a few seconds, and we're re-checking automatically. Nothing for you to do."
+                        : "We're checking this household now. It usually takes a few seconds, and we're re-checking automatically. Refresh is there if you'd rather not wait."}
                   </Text>
                 </Card>
               )}
@@ -776,7 +776,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                 {/* Said plainly and early: the single question a $5 button has
                     to answer is "will this bill me again?". */}
                 <Text className="text-tan-500 text-sm mb-4">
-                  One payment. Not a subscription — nothing renews, and there is
+                  One payment. Not a subscription. Nothing renews, and there is
                   no second charge.
                 </Text>
 
@@ -791,7 +791,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                   <View className="flex-row gap-3">
                     <Text className="text-warm-600">✓</Text>
                     <Text className="text-brown-600 flex-1">
-                      No PREVIEW watermark — on screen, and in the PDF you
+                      No PREVIEW watermark: on screen, and in the PDF you
                       actually hand your sitter.
                     </Text>
                   </View>
@@ -835,7 +835,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                         loading={checking}
                         disabled={checking || starting}
                       />
-                      {/* Says what WE have done, not what the bank did — the
+                      {/* Says what WE have done, not what the bank did: the
                           same rule the banners above follow. */}
                       <Text className="text-tan-500 text-xs text-center mt-3">
                         You&apos;ve already been through Stripe&apos;s payment
@@ -844,7 +844,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                       </Text>
                       <View className="mt-3">
                         <Button
-                          title="I didn't finish paying — start over"
+                          title="I didn't finish paying. Start over"
                           variant="outline"
                           onPress={handleAbandonCheckout}
                           disabled={starting}
@@ -854,7 +854,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                   ) : (
                     <>
                       <Button
-                        title="👑 Unlock Crown — $5"
+                        title="👑 Unlock Crown ($5)"
                         onPress={handleCheckout}
                         loading={starting}
                         disabled={starting || checking}
@@ -868,7 +868,7 @@ export function UnlockCrownScreen({ navigation, route }: UnlockCrownScreenProps)
                 </View>
               </Card>
 
-              {/* The webhook can land a beat after the buyer does — this is the
+              {/* The webhook can land a beat after the buyer does. This is the
                   path back for anyone who returns before it has. Hidden while
                   awaitingWebhook, where the offer card above already carries
                   Refresh as its primary action. */}

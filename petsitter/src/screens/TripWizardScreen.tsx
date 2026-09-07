@@ -416,7 +416,7 @@ export function TripWizardScreen({ navigation }: Props) {
                     {pet.breed && ` - ${pet.breed}`}
                   </Text>
                 </View>
-                {/* Same commissioned avatar the pet list and pet detail show —
+                {/* Same commissioned avatar the pet list and pet detail show -
                     the emoji ladder this replaced had no reptile branch, so a
                     gecko fell to a generic paw here while its card showed the
                     gecko. */}

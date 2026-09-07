@@ -124,7 +124,7 @@ export function ResetPasswordScreen() {
               disabled={isSubmitting}
             />
 
-            {/* Cancel path — keep the existing password and continue signed in */}
+            {/* Cancel path. Keep the existing password and continue signed in */}
             <View className="items-center mt-6">
               <Pressable
                 onPress={clearPasswordRecovery}

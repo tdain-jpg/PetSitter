@@ -12,7 +12,7 @@ export function PrivacyScreen(_props: PrivacyScreenProps) {
       route="Privacy"
       title="Privacy Policy"
       lastUpdated={LAST_UPDATED}
-      intro="Pawstructions holds some of the most sensitive information in your house — where the spare key is, what the alarm code is, which medication your dog cannot miss. This page says plainly what we do with it."
+      intro="Pawstructions holds some of the most sensitive information in your house: where the spare key is, what the alarm code is, which medication your dog cannot miss. This page says plainly what we do with it."
     >
       <TrustSection heading="The short version">
         <TrustBullet>
@@ -132,7 +132,7 @@ export function PrivacyScreen(_props: PrivacyScreenProps) {
         <TrustText>
           A share link contains a long random code, so it cannot be guessed or found by browsing.
           But it is a key, not a password: anyone holding that link can open that guide, without
-          signing in, including the sensitive values it contains — those are hidden behind a tap
+          signing in, including the sensitive values it contains. Those are hidden behind a tap
           in the shared view, not withheld.
         </TrustText>
         <TrustText>

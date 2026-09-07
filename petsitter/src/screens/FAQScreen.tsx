@@ -51,7 +51,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         <QA q="What is it for?">
           Everything you know about looking after your
           pets lives in your head. Pawstructions gets it out of your head and into one guide you
-          can hand to whoever is looking after them next — a sitter, a neighbour, your mother.
+          can hand to whoever is looking after them next: a sitter, a neighbour, your mother.
         </QA>
         <QA q="Do I need to install anything?">
           No. It runs in any modern browser
@@ -61,7 +61,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         <QA q="Does my sitter need an account?">
           Not to read a guide. You can
           send a share link that opens in any browser with no sign-up at all. An account is only
-          needed if they want the sitter side — their own list of clients, and the ability to
+          needed if they want the sitter side: their own list of clients, and the ability to
           tick off tasks as they go.
         </QA>
       </TrustSection>
@@ -72,14 +72,14 @@ export function FAQScreen(_props: FAQScreenProps) {
           checklists, PDF export, share links, and inviting the rest of your household so you all
           work from the same information.
         </TrustText>
-        <QA q="Crown — $5 once, for pet owners.">
+        <QA q="Crown: $5 once, for pet owners.">
           Unlocks AI-written cheat sheets
           for your whole household: the one-page summary a sitter keeps on the fridge. It is a
           single payment, not a subscription. It does not renew and there is nothing to cancel.
           Every guide you write gets one free cheat sheet first, marked PREVIEW, so you can see
           exactly what you would be buying.
         </QA>
-        <QA q="Sitter subscription — $9 a month or $60 a year, for sitters.">
+        <QA q="Sitter subscription: $9 a month or $60 a year, for sitters.">
           Every sitter can look after three client households free, permanently. The subscription
           only lifts that limit. It buys no extra features: every guide, routine and cheat sheet
           a sitter can see is already included for free. Cancel any time, and you keep running
@@ -94,7 +94,7 @@ export function FAQScreen(_props: FAQScreenProps) {
 
       <TrustSection heading="For pet owners">
         <TrustBullet>
-          Add each pet once — feeding, medication, vet details, health notes, the small habits
+          Add each pet once: feeding, medication, vet details, health notes, the small habits
           nobody thinks to write down.
         </TrustBullet>
         <TrustBullet>
@@ -106,7 +106,7 @@ export function FAQScreen(_props: FAQScreenProps) {
           Share it as a read-only link, or export a PDF to print and leave on the counter.
         </TrustBullet>
         <TrustBullet>
-          Invite family to your household — full, permanent access to everything, for a partner
+          Invite family to your household: full, permanent access to everything, for a partner
           or housemate. That is a different thing from inviting a sitter, which is read-only and
           you can take it back at any time.
         </TrustBullet>
@@ -134,7 +134,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         </TrustBullet>
         <TrustBullet>
           Read the cheat sheet and export the guide as a PDF. You cannot edit an owner&apos;s
-          guide, delete anything, or create share links — that is the owner&apos;s to control.
+          guide, delete anything, or create share links. That is the owner&apos;s to control.
         </TrustBullet>
         <TrustBullet>
           Three client households free, permanently. Beyond that, $9 a month or $60 a year.
@@ -145,7 +145,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         <QA q="Who can see my information?">
           Your household, and anyone you
           deliberately share with. Household separation is enforced by the database itself, not
-          just by the screens — the rules live below the app, so a bug in a screen cannot leak one
+          just by the screens: the rules live below the app, so a bug in a screen cannot leak one
           household&apos;s information to another.
         </QA>
         <QA q="What about door codes and WiFi passwords?">
@@ -173,7 +173,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         <TrustText>
           Crown is a one-off payment, so there is nothing to cancel. A sitter subscription is
           managed through Stripe&apos;s own billing portal, reachable from Sitter plans inside
-          the app — change plan, update your card, or cancel there.
+          the app: change plan, update your card, or cancel there.
         </TrustText>
         <TrustText>
           If a subscription payment fails, nothing is switched off immediately. Your clients stay

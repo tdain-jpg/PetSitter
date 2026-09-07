@@ -767,7 +767,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
           )}
 
           {/* Quiet secondary actions at the bottom */}
-          {/* Hidden entirely for a sitter — see canEdit. */}
+          {/* Hidden entirely for a sitter. See canEdit. */}
           {canEdit ? (
             <View className="gap-3 mt-2 mb-8">
               {pet.status === 'active' ? (

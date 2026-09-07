@@ -57,7 +57,7 @@ export function SessionExpiredNotice({ onSignIn }: { onSignIn: () => Promise<voi
             </Text>
             <Text className="text-brown-700 leading-6 text-center mb-6">
               This is a sign-in problem, not a data problem. Your pets, guides and share links
-              are all still on your account — signing in again brings them straight back.
+              are all still on your account: signing in again brings them straight back.
             </Text>
             <Button
               title="Sign in again"

@@ -84,8 +84,8 @@ export function TermsScreen(_props: TermsScreenProps) {
           Use Pawstructions for pets in your care, and for households you belong to.
         </TrustBullet>
         <TrustBullet>
-          Do not enter someone else’s personal information — a sitter’s phone number, a
-          neighbour’s address — without their agreement.
+          Do not enter someone else’s personal information: a sitter’s phone number, a
+          neighbour’s address: without their agreement.
         </TrustBullet>
         <TrustBullet>
           Do not use Pawstructions for anything unlawful, or to store material you have no right
@@ -111,7 +111,7 @@ export function TermsScreen(_props: TermsScreenProps) {
           Every guide you write gets one free AI cheat sheet before you buy anything, shown with
           a PREVIEW watermark. A duplicate is a new guide, so it gets its own free sheet; to keep
           that from being abused, free sheets are rate-limited per account rather than per guide.
-          The watermark marks the state of the feature, not the quality of the content — the
+          The watermark marks the state of the feature, not the quality of the content: the
           instructions on a preview sheet are your real instructions. Refunds are covered by our
           refund policy.
         </TrustText>
@@ -121,7 +121,7 @@ export function TermsScreen(_props: TermsScreenProps) {
         <TrustText>
           Pawstructions is provided as it is, without warranties of any kind. We work hard to
           keep it running, but we do not promise it will always be available, always error-free,
-          or that a guide will load at the exact moment a sitter needs it — networks and phones
+          or that a guide will load at the exact moment a sitter needs it: networks and phones
           being what they are.
         </TrustText>
         <TrustText>
@@ -135,7 +135,7 @@ export function TermsScreen(_props: TermsScreenProps) {
         <TrustText>
           To the fullest extent the law allows, we are not liable for indirect, incidental or
           consequential losses arising from your use of Pawstructions, and our total liability to
-          you is limited to what you have actually paid us — which for most people is nothing,
+          you is limited to what you have actually paid us: which for most people is nothing,
           and at most $5. Some places do not allow limits like these; where that is the case,
           they do not apply to you.
         </TrustText>

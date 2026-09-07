@@ -752,7 +752,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
                     value={contactForm.relationship || ''}
                     onChangeText={(v) => setContactForm((prev) => ({ ...prev, relationship: v }))}
                   />
-                  {/* Both of these were not only 40x20 but UNLABELLED — a
+                  {/* Both of these were not only 40x20 but UNLABELLED: a
                       screen reader announced a bare switch. They are row-only
                       controls (this one appears after "+ Add Contact", the next
                       only when the type is Neighbor), which is why three

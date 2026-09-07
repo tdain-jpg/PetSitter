@@ -50,7 +50,7 @@ export function InviteGate({
           <View className="mb-3" />
         )}
         <Text className="text-brown-600 text-center mb-4">
-          {"Accept to see the household's pets and guides — or start your own space."}
+          {"Accept to see the household's pets and guides, or start your own space."}
         </Text>
         {extraCount > 0 && (
           <Text className="text-tan-500 text-center mb-4">
