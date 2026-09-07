@@ -36,6 +36,7 @@ export type MainStackParamList = {
 
   // Guide Sub-screens
   DailyRoutine: { guideId: string };
+  VisitHistory: { guideId: string };
   HomeCare: { guideId: string };
 
   // Share & Export
@@ -107,6 +108,7 @@ export type SitterHomeScreenProps = NativeStackScreenProps<MainStackParamList, '
 export type SitterHouseholdScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterHousehold'>;
 export type SitterPlansScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterPlans'>;
 export type SitterTodayScreenProps = NativeStackScreenProps<MainStackParamList, 'SitterToday'>;
+export type VisitHistoryScreenProps = NativeStackScreenProps<MainStackParamList, 'VisitHistory'>;
 
 export type OnboardingScreenProps = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 

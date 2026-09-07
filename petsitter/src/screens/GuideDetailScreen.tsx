@@ -303,6 +303,15 @@ export function GuideDetailScreen({ navigation, route }: Props) {
           <View className="gap-3 mt-4">
             <Button title="📋 Daily Routine Checklist" onPress={handleDailyRoutine} variant="primary" />
             <Button title="🏠 Home Care Details" onPress={handleHomeCare} variant="outline" />
+            {/* Deliberately available to BOTH roles. For an owner it answers
+                "has anyone been in since Tuesday" without having to ask; for a
+                sitter it is the record of work they did, which is the half that
+                matters if it is ever questioned. */}
+            <Button
+              title="🕘 Visit History"
+              onPress={() => (navigation as any).navigate('VisitHistory', { guideId })}
+              variant="outline"
+            />
           </View>
 
           {/* Action Buttons */}

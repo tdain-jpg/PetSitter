@@ -113,6 +113,7 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   },
   GuideDetail: guideParams,
   DailyRoutine: guideParams,
+  VisitHistory: guideParams,
   HomeCare: guideParams,
   ShareGuide: guideParams,
   PDFPreview: guideParams,
