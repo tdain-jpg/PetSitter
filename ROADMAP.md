@@ -786,9 +786,11 @@ the owner's email or phone number in front of the sitter, and whose call that is
 and whether it should be opt-in per connection, is Tim's to make rather than
 mine. Three shapes, cheapest first:
 
-1. **Reuse what exists.** Owners already list emergency contacts — prompt them to
-   add themselves as one when they invite a sitter. No schema, no new exposure,
-   and the owner chooses what number to give. **Still open.**
+1. **Reuse what exists.** — ✅ **SHIPPED 2026-09-06.** The sitter-invite confirmation now
+   asks the owner to add themselves as an emergency contact on the guides they share,
+   said at the one moment they are thinking about that sitter. No schema, no new
+   exposure, the owner picks which number to give, and it lands in a list the sitter
+   already reads and can already dial.
 2. **A per-connection contact field** on `sitter_connections`, set by the owner at
    invite time and shown on the sitter's household screen. Explicit, revocable
    with the connection, and never touches the account's own address.
@@ -1032,11 +1034,10 @@ Prefer one shared component so the timezone handling is written once, not per sc
   every HouseholdScreen alert through `lib/errors.ts` friendlyError. Remaining polish: add a space after the emoji in the info-card header; "Joined" dates for
   migration-backfilled members show the migration date — accepted semantics (it is when the
   household was created), revisit only if users find it confusing.
-- **Edit-form closure (polish):** duplicate the SaveStatusIndicator at the BOTTOM of
-  PetForm/GuideForm edit modes and add a single "Done" button that flushes any pending
-  autosave (the hook's unused `saveNow()`) and navigates back. Deliberately NO "Save"
-  button — a save button beside working autosave manufactures doubt — and the saved state
-  is never styled red (red is reserved for the error state the indicator already has).
+- ~~**Edit-form closure**~~ ✅ ALREADY DONE (found stale 2026-09-06). Both PetForm and
+  GuideForm carry a bottom SaveStatusIndicator and a Done button that calls `saveNow()`
+  before `goBack()`. No Save button; red confined to the error branch. `saveNow` is no
+  longer unused.
 
 - ~~**DailyRoutineScreen date helpers**~~ ✅ DONE 2026-09-06 — consolidated into
   `lib/dates.ts`, which gained `toLocalDateKey(Date)` as the inverse of `parseLocalDate`.

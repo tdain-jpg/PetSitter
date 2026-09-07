@@ -70,9 +70,23 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
       // No delivery claim: unlike the household path, invite_sitter sends no
       // email at all — the invitation exists only in the app. Telling the owner
       // it was "sent" is how a sitter never learns to go looking for it.
+      //
+      // The second paragraph is the cheapest answer to a real gap QA found in
+      // the sitter journey: a sitter has no way to reach the OWNER. The
+      // emergency contact and the vet both have tap-to-call; the person who
+      // owns the animal appears nowhere. So a pet that stops eating on day
+      // three leaves the sitter with a check-in note or the neighbour.
+      //
+      // Rather than put the owner's phone number in front of a sitter — a
+      // privacy decision that is Tim's, not this component's — this asks the
+      // owner to add THEMSELVES as an emergency contact. They choose which
+      // number to give, it costs no schema, and it lands in a list the sitter
+      // already reads and can already dial. Said here because this is the one
+      // moment the owner is thinking about that sitter.
       showAlert(
         'Invitation created',
-        `${trimmedEmail} will see the invitation on their home screen when they sign in. We don't email sitter invites yet, so let them know it's waiting.`
+        `${trimmedEmail} will see the invitation on their home screen when they sign in. We don't email sitter invites yet, so let them know it's waiting.\n\n` +
+          'One more thing worth doing: add yourself as an emergency contact on the guides you share. Your sitter can reach the vet and your neighbour from inside the app, but not you.'
       );
     } catch (err: any) {
       showAlert('Could not invite', friendlyError((err as Error)?.message, 'Something went wrong. Please try again.'));
