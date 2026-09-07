@@ -143,9 +143,21 @@ component as real sheets so it always previews the true experience.
 Later candidates: `guide-editing` (first GuideForm open — explains autosave + Done),
 `crown-intro` (when Crown ships), a localStorage-only hint on the sitter share view.
 
-### [x] Sitter accounts (second persona) — SHIPPED
+### [~] Sitter accounts (second persona) — HALF SHIPPED
 Migrations 0015-0020, 0023, 0025. Invite/accept/revoke, read-only client views, check-ins,
 task ticking, cheat-sheet read access, and the owner's contact per connection.
+
+⚠️ **This was marked [x] and it should not have been.** The original design below called for
+a role on `profiles` and said the invite "has to work in both directions — owner invites
+sitter, sitter invites owner", calling that the best distribution idea on the list. Only the
+owner→sitter direction was built. There is no role, no sitter sign-up, and no sitter entry
+point: `pendingSitterInvites` is the entire mechanism by which a sitter comes to exist, so
+no invite means no sitter.
+
+That became urgent on 2026-09-07, when we started SELLING a sitter subscription
+($9/mo, $60/yr) to people who cannot create an account to buy it, and added a landing-page
+section addressed to sitters whose only button creates an OWNER account. Scoped as item 0 of
+`SITTER-TOOLS-LOOP.md`.
 
 ### [x] (original plan) Sitter accounts
 Sitters today are anonymous link-openers with no account and no history. Give them a real

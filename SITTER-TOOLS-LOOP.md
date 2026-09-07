@@ -1,8 +1,9 @@
 # Gauntlet loop — sitter tools 1 & 2 (designed 2026-09-07, NOT launched)
 
-Two sitter enhancements Tim picked. Ideas 3 and 4 are parked in `ROADMAP.md`
-under "Sitter-side enhancements". Neither item here is required by the sitter
-subscription, which ships without them.
+Item 0 is a hole found on 2026-09-07 and is a PREREQUISITE — do it first.
+Items 1 and 2 are the two sitter enhancements Tim picked; ideas 3 and 4 are
+parked in `ROADMAP.md` under "Sitter-side enhancements". Items 1 and 2 are not
+required by the sitter subscription. Item 0 is.
 
 Launch with `/loop` and the **Loop prompt** at the bottom. Read the decisions
 first — two of them change what gets built.
@@ -46,6 +47,49 @@ off the guide, because it is the only view that spans dates and the routine
 screen is already one day at a time.*
 
 ---
+
+## Item 0 — a sitter can actually become one (PREREQUISITE)
+
+**The hole.** A sitter exists only because an owner invited them. There is no
+role on the account, nothing in sign-up, and no sitter entry point;
+`pendingSitterInvites` is the whole mechanism. So a professional sitter cannot
+join, cannot reach Sitter plans, and cannot buy the subscription we now sell —
+Settings only reveals the Sitting card once they already have connections.
+
+**Why it is urgent rather than merely missing.** On 2026-09-07 the landing page
+gained a section addressed to sitters, quoting $9/month, whose only button
+creates an OWNER account. A sitter who reads that pitch lands on a dashboard
+asking them to add their pets. We are marketing to an audience that cannot sign
+up, for a product they cannot buy.
+
+**Scope — the minimum that closes it:**
+- A role on `profiles` (`owner` / `sitter`), remembering the original design's
+  point that **a user can be both** — plenty of sitters own pets. Treat it as a
+  default landing preference, never as a permission: RLS already decides what
+  anyone can see, and a role that grants access would be a second, weaker
+  security model competing with the one that works.
+- A sitter path into sign-up. Either a question on the form ("Are you setting up
+  care for your own pets, or sitting for someone else?") or a distinct entry
+  point the landing page's sitter section points at. Do NOT leave that section
+  pointing at "Get Started Free".
+- A sitter with zero clients lands on `SitterHome`, not the owner dashboard.
+  Its empty state already exists and already reads well; the routing does not.
+- Settings shows the Sitting card for a sitter-role account with no connections.
+- Sitter plans reachable from the sitter side without needing a client first,
+  so the subscription can actually be bought.
+
+**Explicitly OUT of scope here** (do not let it swallow the item): the
+sitter→owner invite direction. The original design calls it the best
+distribution idea on the roadmap and it deserves its own slice, with its own
+thinking about what an owner receives and what they are agreeing to. Getting a
+sitter into the product at all comes first.
+
+**Verify:** sign up fresh choosing the sitter path → land on SitterHome with the
+empty state, reach Sitter plans, and see the Sitting card in Settings, all with
+zero connections. Then accept an invite and confirm the existing flow is
+unchanged. An owner-role account must see none of it. Confirm an existing
+invited sitter — a user who predates the role column — still works, since every
+sitter today has no role at all.
 
 ## Item 1 — one "Today" across all clients (sitter side)
 
@@ -125,9 +169,10 @@ sitter loses the read. All four by impersonation in SQL.
 
 ## Loop prompt
 
-> Build the two sitter tools specified in `SITTER-TOOLS-LOOP.md`, in order:
-> item 1 (one "Today" across all clients), then item 2 (visit history the owner
-> can see). Follow the recommendations for D1, D2 and D3 unless the code
+> Build the sitter work specified in `SITTER-TOOLS-LOOP.md`, in order: item 0
+> (a sitter can actually become one — this is a prerequisite and ships first),
+> then item 1 (one "Today" across all clients), then item 2 (visit history the
+> owner can see). Follow the recommendations for D1, D2 and D3 unless the code
 > contradicts them, and say so if it does. Honour every hard constraint in that
 > file. Commit each slice separately with a real explanation, do not push, and
 > when both are done run a qa-tester pass and fix what it surfaces. Then stop and
