@@ -492,6 +492,23 @@ export class SupabaseAdapter implements DataService {
     return (data as CheatSheet | null) ?? null;
   }
 
+  /**
+   * Which guides have a sheet, and when it was written — for the list screen.
+   *
+   * One query rather than one per guide. RLS scopes the rows already (household
+   * members by 0007, connected sitters by 0023), so this asks for everything
+   * visible and lets the caller match it against the guides it is showing.
+   * Content is deliberately NOT selected: the list needs a date and a boolean,
+   * and pulling every sheet's full text to render a badge would be wasteful.
+   */
+  async getCheatSheetIndex(): Promise<{ guide_id: string; generated_at: string }[]> {
+    const { data, error } = await supabase
+      .from('cheat_sheets')
+      .select('guide_id, generated_at');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as { guide_id: string; generated_at: string }[];
+  }
+
   // Cheat-sheet WRITES live server-side in the generate-cheat-sheet Edge
   // Function (Crown-gated); deletion rides the guides FK cascade. The client
   // deliberately has no write path that could bypass the Crown gate.

@@ -738,18 +738,30 @@ export function HomeScreen({ navigation }: Props) {
             {activePets.length > 0 && (
               <Button
                 title="✈️ Quick Trip Setup"
+                subtitle="Build a guide for a trip in four steps"
                 onPress={() => navigation.navigate('TripWizard')}
                 variant="primary"
               />
             )}
+            {/* Subtitles, not tooltips: this is a PWA, most taps are from a
+                phone, and hover does not exist there. "View Guides" told you
+                nothing about what a guide IS. */}
             <Button
               title="Manage Pets"
+              subtitle="Feeding, medication, vet and health details"
               onPress={navigateToPets}
               variant={activePets.length > 0 ? 'outline' : 'primary'}
             />
             <Button
               title="View Guides"
+              subtitle="What you hand a sitter for a trip"
               onPress={navigateToGuides}
+              variant="outline"
+            />
+            <Button
+              title="🤖 Cheat Sheets"
+              subtitle="One-page summaries, written for your sitter"
+              onPress={() => navigation.navigate('CheatSheets')}
               variant="outline"
             />
             {/* Discoverable household invite: families who can't find this
@@ -757,6 +769,7 @@ export function HomeScreen({ navigation }: Props) {
                 Household still exists for management; this is the front door. */}
             <Button
               title="💌 Invite Family"
+              subtitle="Share your pets with a partner or housemate"
               onPress={() => navigation.navigate('Household')}
               variant="outline"
             />

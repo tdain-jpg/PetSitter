@@ -182,6 +182,8 @@ interface DataContextType {
   // AI Cheat Sheets (writes happen server-side in the generate-cheat-sheet
   // Edge Function; the client only reads)
   getCheatSheet: (guideId: string) => Promise<CheatSheet | null>;
+  /** Which guides have a cheat sheet, in one query. See the adapter. */
+  getCheatSheetIndex: () => Promise<{ guide_id: string; generated_at: string }[]>;
 
   // Settings
   settings: AppSettings | null;
@@ -940,6 +942,10 @@ export function DataProvider({ children }: DataProviderProps) {
   // ============================================
   // AI Cheat Sheet Operations
   // ============================================
+  const getCheatSheetIndex = useCallback(async () => {
+    return (dataService as any).getCheatSheetIndex();
+  }, []);
+
   const getCheatSheet = useCallback(async (guideId: string) => {
     return dataService.getCheatSheet(guideId);
   }, []);
@@ -1273,6 +1279,7 @@ export function DataProvider({ children }: DataProviderProps) {
 
       // AI Cheat Sheets
       getCheatSheet,
+      getCheatSheetIndex,
 
       // Settings
       settings,
@@ -1361,6 +1368,7 @@ export function DataProvider({ children }: DataProviderProps) {
       getSharedGuide,
       getSharedGuidePets,
       getCheatSheet,
+      getCheatSheetIndex,
       settings,
       loadingSettings,
       settingsError,

@@ -7,6 +7,15 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'danger';
   disabled?: boolean;
   loading?: boolean;
+  /**
+   * A second line under the title, saying what the button is FOR.
+   *
+   * Deliberately not a tooltip. This ships as a PWA, so most taps come from a
+   * phone where hover does not exist — a hover-only explanation is an
+   * explanation most users never see. It also joins the accessible name, so a
+   * screen reader hears the purpose rather than just the label.
+   */
+  subtitle?: string;
 }
 
 export function Button({
@@ -15,6 +24,7 @@ export function Button({
   variant = 'primary',
   disabled = false,
   loading = false,
+  subtitle,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -33,7 +43,7 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       style={{
         backgroundColor: bgColor,
@@ -55,9 +65,18 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <Text style={{ color: textColor, fontSize: 16, fontWeight: '600' }}>
-          {title}
-        </Text>
+        <>
+          <Text style={{ color: textColor, fontSize: 16, fontWeight: '600' }}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text
+              style={{ color: textColor, fontSize: 12, opacity: 0.85, marginTop: 2, textAlign: 'center' }}
+            >
+              {subtitle}
+            </Text>
+          ) : null}
+        </>
       )}
     </Pressable>
   );
