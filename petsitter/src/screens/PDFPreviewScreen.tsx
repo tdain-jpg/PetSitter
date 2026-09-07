@@ -18,6 +18,7 @@ import { useGuideWithPets } from '../hooks';
 import { supabase } from '../lib/supabase';
 import { COLORS } from '../constants';
 import { fillCheatSheetTokens } from '../lib/cheatSheetTokens';
+import { markdownToPrintHtml } from '../lib/markdownToPrintHtml';
 import { showAlert } from '../lib/showAlert';
 import { escapeHtml } from '../lib/escapeHtml';
 import { formatDate, todayLocal } from '../lib/dates';
@@ -365,9 +366,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
     // a wash layer and two lines of copy to this one block.
     let cheatSheetSection = '';
     if (sections.aiCheatSheet && cheatSheetContent) {
-      const sheetBody = esc(
+      // Was esc(...).replace(/\n/g, '<br>'), which printed the markdown
+      // syntax itself — readers saw "## Feeding Schedule" and "**Rex**" on the
+      // page. markdownToPrintHtml does its own escaping FIRST and then builds
+      // real headings and nested lists, so do not wrap this in esc() again.
+      const sheetBody = markdownToPrintHtml(
         fillCheatSheetTokens(cheatSheetContent, guide.home_info)
-      ).replace(/\n/g, '<br>');
+      );
 
       if (cheatSheetWatermarked) {
         // Written for the SITTER first, who is the one holding this page: the
@@ -557,6 +562,42 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           .cheat-sheet-body {
             position: relative;
             z-index: 1;
+          }
+          /* The sheet is real markup now rather than one <br>-joined blob, so
+             it needs print styling. Bullets are indented properly and nested
+             levels step in again, which is what Tim asked for in place of the
+             raw ## and ** the old escape-and-<br> approach printed. */
+          .cheat-sheet-body h2 {
+            font-size: 15px;
+            margin: 14px 0 6px 0;
+            color: ${COLORS.secondary};
+          }
+          .cheat-sheet-body h2:first-child { margin-top: 0; }
+          .cheat-sheet-body h3 {
+            font-size: 13px;
+            margin: 10px 0 4px 0;
+            color: ${COLORS.brown};
+          }
+          .cheat-sheet-body p { margin: 0 0 6px 0; }
+          .cheat-sheet-body ul,
+          .cheat-sheet-body ol {
+            margin: 0 0 8px 0;
+            padding-left: 22px;
+          }
+          /* Nested lists tuck in a little further and lose the outer margin, so
+             a sub-item reads as belonging to the item above it. */
+          .cheat-sheet-body ul ul,
+          .cheat-sheet-body ol ol,
+          .cheat-sheet-body ul ol,
+          .cheat-sheet-body ol ul {
+            margin: 2px 0 2px 0;
+            padding-left: 18px;
+          }
+          .cheat-sheet-body li { margin: 0 0 3px 0; }
+          .cheat-sheet-body hr {
+            border: none;
+            border-top: 1px solid ${COLORS.tanLight};
+            margin: 10px 0;
           }
           .preview-note {
             white-space: normal;

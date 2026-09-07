@@ -397,7 +397,12 @@ export interface TaskCompletion {
   guide_id: string;
   date: string; // ISO date string
   completed_at?: string; // ISO datetime string
-  completed_by?: string; // sitter name or ID
+  /**
+   * auth.uid() of whoever ticked it, pinned server-side by a trigger (0026) —
+   * never sent by the client. Null on rows created before that migration.
+   * Compare it to the signed-in user's id rather than displaying it.
+   */
+  completed_by?: string | null;
   notes?: string;
 }
 

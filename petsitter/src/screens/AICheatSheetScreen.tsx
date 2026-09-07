@@ -363,9 +363,20 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
         <ScreenContainer variant="content">
           <View className="flex-row items-center justify-between">
             <Button title="← Back" onPress={() => navigation.goBack()} variant="outline" />
-            {cheatSheet && (
-              <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
-            )}
+            {cheatSheet ? (
+              <View className="flex-row" style={{ gap: 8 }}>
+                <Button title="📋 Copy" onPress={handleCopyToClipboard} variant="secondary" />
+                {/* Print/export lives HERE as well as on the guide. The moment
+                    you most want this on paper is the moment you have just
+                    read it, and sending someone back two screens to find
+                    "Export as PDF" is asking them to remember where it was. */}
+                <Button
+                  title="🖨️ Print"
+                  onPress={() => (navigation as any).navigate('PDFPreview', { guideId })}
+                  variant="secondary"
+                />
+              </View>
+            ) : null}
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">🤖 AI Cheat Sheet</Text>

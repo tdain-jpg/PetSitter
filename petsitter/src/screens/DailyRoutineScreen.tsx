@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, ScreenContainer, SwitchRow } from '../components';
-import { useData } from '../contexts';
+import { useAuth, useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { parseLocalDate, toLocalDateKey } from '../lib/dates';
 import { COLORS } from '../constants';
@@ -53,6 +53,7 @@ const generateId = () => `custom-${Date.now()}-${Math.random().toString(36).subs
 
 export function DailyRoutineScreen({ navigation, route }: Props) {
   const { guideId } = route.params;
+  const { user } = useAuth();
   const {
     getTaskCompletions,
     markTaskComplete,
@@ -258,6 +259,23 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     return completions.some((c) => c.task_id === taskId);
   };
 
+  /**
+   * "you" or "your sitter", never a name.
+   *
+   * completed_by holds a user id (0026), and comparing it to our own is enough
+   * to answer the question an owner actually has — did I do this, or did the
+   * person I am paying? Resolving it to a name would mean reading auth.users
+   * for somebody else, which RLS rightly refuses.
+   *
+   * Null for rows written before 0026; those say nothing rather than guessing.
+   */
+  const completedByLabel = (taskId: string): string | null => {
+    const who = completions.find((c) => c.task_id === taskId)?.completed_by;
+    if (!who) return null;
+    if (who === user?.id) return 'you';
+    return canEdit ? 'your sitter' : 'the owner';
+  };
+
   const handleToggleTask = async (task: RoutineTask) => {
     // Ignore taps while a toggle for this task is already in flight
     if (pendingTaskIds.current.has(task.id)) return;
@@ -274,6 +292,10 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
           guide_id: guideId,
           date: selectedDate,
           completed_at: new Date().toISOString(),
+          // completed_by is deliberately NOT sent: migration 0026 pins it to
+          // auth.uid() in a trigger. Sending one would imply the client's
+          // opinion counted, and the person with the most reason to misreport
+          // who fed the dog is the person who was supposed to.
         });
         setCompletions((prev) => [
           ...prev.filter((c) => c.task_id !== task.id),
@@ -626,6 +648,14 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         {task.time ? (
                           <Text className={`text-sm ${completed ? 'text-primary-500' : 'text-tan-500'}`}>
                             ⏰ {task.time}
+                          </Text>
+                        ) : null}
+                        {/* Only once it's done, and only when we know — rows
+                            predating 0026 have no author and say nothing
+                            rather than guessing. */}
+                        {completed && completedByLabel(task.id) ? (
+                          <Text className="text-sm text-primary-500">
+                            ✓ done by {completedByLabel(task.id)}
                           </Text>
                         ) : null}
                         {pet && (
