@@ -791,10 +791,15 @@ mine. Three shapes, cheapest first:
    said at the one moment they are thinking about that sitter. No schema, no new
    exposure, the owner picks which number to give, and it lands in a list the sitter
    already reads and can already dial.
-2. **A per-connection contact field** on `sitter_connections`, set by the owner at
-   invite time and shown on the sitter's household screen. Explicit, revocable
-   with the connection, and never touches the account's own address.
-   **Still open — this is the one that needs a privacy call.**
+2. **A per-connection contact field** — ✅ **CHOSEN by Tim 2026-09-06.** Database half
+   shipped as migration 0025: `sitter_connections.owner_contact`, set by the owner at
+   invite time, returned by `my_sitter_connections()` **only while the connection is
+   active** — a revoked sitter keeps the row in their history but not the number.
+   Per-connection on purpose: a dog walker used twice a year and a sister-in-law with a
+   key are not owed the same access, and it dies with the connection rather than needing
+   separate cleanup. Nothing is ever populated from `auth.users`; only what the owner
+   typed. Client half (invite field + tap-to-call on the sitter's household screen) is
+   next.
 3. **Notify on check-in.** — ✅ **SHIPPED 2026-08-29**, migration 0024. A sitter
    check-in now enqueues a `sitter_checkin` outbox row to every household member,
    drained by the existing `notify` cron. Restricted to check-ins whose author is
