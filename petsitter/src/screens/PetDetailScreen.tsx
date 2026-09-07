@@ -6,6 +6,7 @@ import { todayLocal } from '../lib/dates';
 import { displayablePhotoUrl } from '../lib/petPhotos';
 import { Button, SectionHeader, ScreenContainer, Icon, speciesIconName } from '../components';
 import { useData } from '../contexts';
+import { useResolvedPet } from '../hooks';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -85,26 +86,20 @@ export function PetDetailScreen({ navigation, route }: Props) {
    * `households` holds only households the user BELONGS to. Defaults to
    * editable while pets are still loading so an owner never sees their own
    * controls flicker away.
+   *
+   * Both the pet and canEdit come from useResolvedPet. Looking the pet up in
+   * activePets/deceasedPets — which hold only the caller's OWN households —
+   * meant this screen answered "Pet not found" to every sitter, so the
+   * read-only view described above had never actually been reachable. The
+   * resolver checks context first and falls back to a by-id read, where RLS is
+   * the real boundary.
    */
-  const canEdit = useMemo(() => {
-    const found = [...activePets, ...deceasedPets].find((p) => p.id === petId);
-    if (!found?.household_id) return true; // pre-household pet, or not loaded yet
-    return households.some((h) => h.id === found.household_id);
-  }, [activePets, deceasedPets, petId, households]);
-
-  const [pet, setPet] = useState<Pet | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { pet, loading, canEdit } = useResolvedPet(petId);
   const [movingHousehold, setMovingHousehold] = useState(false);
   // Destination list expanded — only ever used when there's more than one
   // household to move to; a single destination moves straight away.
   const [choosingTarget, setChoosingTarget] = useState(false);
 
-  useEffect(() => {
-    const allPets = [...activePets, ...deceasedPets];
-    const foundPet = allPets.find((p) => p.id === petId);
-    setPet(foundPet || null);
-    setLoading(false);
-  }, [petId, activePets, deceasedPets]);
 
   const handleEdit = () => {
     (navigation as any).navigate('PetForm', { mode: 'edit', petId });

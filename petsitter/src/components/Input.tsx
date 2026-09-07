@@ -89,6 +89,7 @@ export function Input({
             accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
             className="absolute right-3 top-0 bottom-0 justify-center"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
           >
             <Text className="text-lg">{isPasswordVisible ? '🙈' : '👁️'}</Text>
           </Pressable>

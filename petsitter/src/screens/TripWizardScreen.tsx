@@ -15,6 +15,7 @@ import {
   ScreenContainer,
   speciesIconName,
   DateField,
+  SwitchRow,
 } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
@@ -479,24 +480,17 @@ export function TripWizardScreen({ navigation }: Props) {
       </Text>
 
       <Card className="mb-4">
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-brown-700">Overnight Stay?</Text>
-          <Pressable
-            onPress={() => setSchedule((prev) => ({ ...prev, overnight: !prev.overnight }))}
-            accessibilityRole="switch"
-            accessibilityLabel="Overnight stay"
-            accessibilityState={{ checked: schedule.overnight }}
-            className={`w-12 h-7 rounded-full justify-center ${
-              schedule.overnight ? 'bg-primary-500' : 'bg-tan-200'
-            }`}
-          >
-            <View
-              className={`w-5 h-5 rounded-full bg-white mx-1 ${
-                schedule.overnight ? 'self-end' : 'self-start'
-              }`}
-            />
-          </Pressable>
-        </View>
+        {/* Was a hand-rolled Pressable pretending to be a switch: 48x28, a
+            label that did nothing, and accessibilityState that never reached
+            the DOM — so a screen reader said "Overnight stay, switch" and never
+            on or off. It survived the sweep that fixed the other fifteen
+            because that sweep grepped for `<Switch`, and this was not one. */}
+        <SwitchRow
+          label="Overnight Stay?"
+          value={schedule.overnight}
+          onValueChange={(overnight) => setSchedule((prev) => ({ ...prev, overnight }))}
+          className="mb-4"
+        />
 
         {!schedule.overnight && (
           <>

@@ -149,6 +149,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 accessibilityRole="button"
                 accessibilityLabel="Forgot password"
                 hitSlop={12}
+                style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
                 className="self-end"
               >
                 <Text className="text-primary-600 text-sm">Forgot password?</Text>
@@ -205,6 +206,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 accessibilityRole="link"
                 accessibilityLabel="Sign up for a new account"
                 hitSlop={12}
+                style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
               >
                 <Text className="text-primary-600 font-semibold">Sign Up</Text>
               </Pressable>

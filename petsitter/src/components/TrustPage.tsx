@@ -110,6 +110,7 @@ export function TrustPage({ route, title, intro, lastUpdated, children }: TrustP
                   accessibilityRole="button"
                   accessibilityLabel={`Read ${PAGE_LABELS[page]}`}
                   hitSlop={8}
+                  style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
                   className="mr-4 mb-2"
                 >
                   <Text className="text-primary-600 text-sm font-semibold">
@@ -122,6 +123,7 @@ export function TrustPage({ route, title, intro, lastUpdated, children }: TrustP
                 accessibilityRole="button"
                 accessibilityLabel="Back to Pawstructions"
                 hitSlop={8}
+                style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
                 className="mr-4 mb-2"
               >
                 <Text className="text-primary-600 text-sm font-semibold">

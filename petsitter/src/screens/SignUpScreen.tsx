@@ -206,6 +206,7 @@ export function SignUpScreen({ navigation }: SignUpScreenProps) {
                 accessibilityRole="link"
                 accessibilityLabel="Sign in to your existing account"
                 hitSlop={12}
+                style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
               >
                 <Text className="text-primary-600 font-semibold">Sign In</Text>
               </Pressable>

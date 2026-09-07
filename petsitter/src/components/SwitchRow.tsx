@@ -87,6 +87,13 @@ export function SwitchRow({
             trackColor={trackColor}
             thumbColor={thumbColor}
             focusable={false}
+            // focusable={false} does NOT emit tabindex="-1" on
+            // react-native-web — measured: the inner input had no tabindex at
+            // all, so it stayed in sequential tab order INSIDE an aria-hidden
+            // wrapper. That is the axe `aria-hidden-focus` violation, and on
+            // PetForm it meant 26 tab stops for 13 settings, every other one
+            // landing on a control with no accessible name.
+            tabIndex={-1}
           />
         </View>
       </View>

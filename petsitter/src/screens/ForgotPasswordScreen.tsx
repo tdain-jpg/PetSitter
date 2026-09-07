@@ -116,6 +116,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
                 accessibilityRole="link"
                 accessibilityLabel="Back to sign in"
                 hitSlop={12}
+                style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
               >
                 <Text className="text-primary-600 font-semibold">Back to Sign In</Text>
               </Pressable>
