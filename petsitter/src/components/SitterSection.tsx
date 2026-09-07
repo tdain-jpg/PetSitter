@@ -23,6 +23,10 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  // What the owner wants THIS sitter to reach them on. Per-connection by
+  // design (migration 0025): a dog walker used twice a year and a
+  // sister-in-law with a key are not owed the same access.
+  const [ownerContact, setOwnerContact] = useState('');
   const [sending, setSending] = useState(false);
   
   const { inviteSitter, getSitterConnections, revokeSitter } = useData();
@@ -62,8 +66,9 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
 
     try {
       setSending(true);
-      await inviteSitter(householdId, trimmedEmail);
+      await inviteSitter(householdId, trimmedEmail, ownerContact.trim() || undefined);
       setEmail('');
+      setOwnerContact('');
       // Reload sitters after successful invite
       const data = await getSitterConnections(householdId);
       setSitters(data.filter(s => s.status === 'invited' || s.status === 'active'));
@@ -190,6 +195,22 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
           keyboardType="email-address"
           label="Invite a sitter"
         />
+        {/* The answer to the gap QA found in the sitter journey: the emergency
+            contact and the vet both have tap-to-call, and the person who owns
+            the animal appeared nowhere. Optional on purpose — an owner who
+            would rather not share a number can still invite a sitter, and the
+            helper text says what leaving it blank means. */}
+        <Input
+          value={ownerContact}
+          onChangeText={setOwnerContact}
+          placeholder="e.g. 555-0100 (cell, after 6pm)"
+          keyboardType="phone-pad"
+          label="How this sitter can reach you (optional)"
+        />
+        <Text className="text-tan-500 text-sm -mt-2 mb-3">
+          Shown only to this sitter, only while they are connected. Leave it
+          blank and they will reach you through check-ins instead.
+        </Text>
         <View className="mt-2">
           <Button
             title="Send invitation"

@@ -109,7 +109,7 @@ interface DataContextType {
   refreshSitterConnections: () => Promise<void>;
   respondToSitterInvite: (connectionId: string, accept: boolean) => Promise<boolean>;
   /** Owner invites a sitter by email. Server rejects a non-owner. */
-  inviteSitter: (householdId: string, email: string) => Promise<void>;
+  inviteSitter: (householdId: string, email: string, ownerContact?: string) => Promise<void>;
   /** Sitter connections ON a household, for the owner who manages them. */
   getSitterConnections: (householdId: string) => Promise<SitterInviteRow[]>;
   /** Owner revokes a sitter's access. Takes effect immediately. */
@@ -617,10 +617,10 @@ export function DataProvider({ children }: DataProviderProps) {
     [refreshSitterConnections, refreshPets, refreshGuides]
   );
 
-  const inviteSitter = useCallback(async (householdId: string, email: string) => {
+  const inviteSitter = useCallback(async (householdId: string, email: string, ownerContact?: string) => {
     // Server messages here are written for people ("that email already has a
     // live connection to this household") — surface them as-is.
-    await dataService.inviteSitter(householdId, email);
+    await dataService.inviteSitter(householdId, email, ownerContact);
   }, []);
 
   const getSitterConnections = useCallback(

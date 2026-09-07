@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, ScrollView, Text, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Text, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, ScreenContainer } from '../components';
 import { useData } from '../contexts';
@@ -23,10 +23,13 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
   // a reloaded URL does not, because a household's name has no business coming
   // out of a query string. Either way the connection list is authoritative —
   // it is the same list that decided this screen was reachable at all.
-  const householdName =
-    sitterConnections.find((c) => c.household_id === householdId)?.household_name ??
-    passedName ??
-    'Client household';
+  const connection = sitterConnections.find((c) => c.household_id === householdId);
+  const householdName = connection?.household_name ?? passedName ?? 'Client household';
+
+  // What the owner chose to give this sitter (0025). my_sitter_connections
+  // returns it only while the connection is active, so there is nothing to
+  // gate here — a revoked sitter simply gets null.
+  const ownerContact = connection?.owner_contact ?? null;
 
   useFocusEffect(
     useCallback(() => {
@@ -124,6 +127,31 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
       </View>
       <ScrollView className="flex-1">
         <ScreenContainer variant="content">
+          {/* First card on the screen, above the pets, because the moment you
+              need it is the moment something is wrong. QA's sitter journey:
+              "the one thing I'd actually want and couldn't find" — the vet and
+              the neighbour both had tap-to-call, and the owner appeared
+              nowhere. */}
+          {ownerContact ? (
+            <Card className="mb-6 p-4">
+              <Text className="text-lg font-bold text-brown-800 mb-1">
+                Reach the owner
+              </Text>
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${ownerContact.replace(/[^0-9+]/g, '')}`)}
+                accessibilityRole="button"
+                accessibilityLabel={`Call the owner of ${householdName} on ${ownerContact}`}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text className="text-secondary-600 text-base">📞 {ownerContact}</Text>
+              </Pressable>
+              <Text className="text-tan-500 text-sm mt-1">
+                Given to you by the owner. For anything urgent, call before you
+                post a check-in.
+              </Text>
+            </Card>
+          ) : null}
+
           <Card className="mb-6 bg-warm-50 border border-warm-300 p-4">
             <Text className="text-lg font-bold text-brown-800 mb-3">Pets</Text>
             {householdPets.length === 0 ? (

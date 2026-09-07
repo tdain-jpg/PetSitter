@@ -854,10 +854,18 @@ export class SupabaseAdapter implements DataService {
   }
 
   /** Owner invites a sitter by email. Server rejects a non-owner. */
-  async inviteSitter(householdId: string, email: string): Promise<string> {
+  async inviteSitter(
+    householdId: string,
+    email: string,
+    ownerContact?: string
+  ): Promise<string> {
     const { data, error } = await supabase.rpc('invite_sitter', {
       h: householdId,
       sitter_email: email,
+      // Omitted rather than sent as null when blank: PostgREST resolves this
+      // RPC by argument NAME, and the parameter has a default, so leaving it
+      // out is what makes the two-argument shape keep working.
+      ...(ownerContact ? { owner_contact: ownerContact } : {}),
     });
     if (error) throw new Error(error.message);
     return data as string;

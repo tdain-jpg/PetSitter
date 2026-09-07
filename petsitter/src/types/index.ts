@@ -61,6 +61,13 @@ export interface SitterConnection {
   /** Null means no bound. Access is permanent by default; a window is opt-in. */
   starts_on: string | null;
   ends_on: string | null;
+  /**
+   * What the OWNER chose to give THIS sitter to reach them by (0025).
+   * Per-connection and revoked with it — my_sitter_connections returns it only
+   * while the connection is active, so a revoked sitter keeps the row in their
+   * history but not the number.
+   */
+  owner_contact: string | null;
 }
 
 /**
