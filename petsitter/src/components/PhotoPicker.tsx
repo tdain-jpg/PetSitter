@@ -3,6 +3,7 @@ import { View, Text, Image, Pressable, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { showAlert } from '../lib/showAlert';
 import { uploadPetPhoto } from '../lib/petPhotos';
+import { resizeForUpload } from '../lib/resizeImage';
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
 
@@ -65,7 +66,18 @@ export function PhotoPicker({
     setPendingUri(localUri);
     setUploading(true);
     try {
-      const publicUrl = await uploadPetPhoto(localUri, asset.mimeType);
+      // Resize BEFORE uploading. The picker's `quality` re-encodes but never
+      // changes dimensions, so a phone photo stayed 3-8 MB and the bucket's
+      // 5 MB cap rejected it — a failure the user could do nothing about,
+      // since they don't control what their camera writes.
+      const resized = await resizeForUpload(localUri);
+      const publicUrl = await uploadPetPhoto(
+        resized.uri,
+        // A resized image is re-encoded as JPEG, so the picker's original
+        // mimeType would be a lie (and the upload body is an ArrayBuffer with
+        // no type of its own). Untouched images keep theirs.
+        resized.untouched ? asset.mimeType : 'image/jpeg'
+      );
       onChange(publicUrl);
     } catch (error: any) {
       // Keep the previous value: onChange is not called on failure.
