@@ -1,6 +1,7 @@
 export { Button } from './Button';
 export { Input } from './Input';
 export { DateField } from './DateField';
+export { SwitchRow } from './SwitchRow';
 export { Card } from './Card';
 export { Select } from './Select';
 export { PhotoPicker } from './PhotoPicker';

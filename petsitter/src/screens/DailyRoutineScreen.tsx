@@ -9,7 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, Select, ScreenContainer } from '../components';
+import { Button, Card, Input, Select, ScreenContainer, SwitchRow } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { parseLocalDate, toLocalDateKey } from '../lib/dates';
@@ -804,15 +804,14 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
               )}
 
               {/* Is Recurring */}
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-sm font-medium text-brown-600">Daily Recurring Task</Text>
-                <Switch
-                  value={taskForm.is_recurring}
-                  onValueChange={(value) => setTaskForm((f) => ({ ...f, is_recurring: value }))}
-                  trackColor={{ false: COLORS.border, true: COLORS.primary100 }}
-                  thumbColor={taskForm.is_recurring ? COLORS.primary : COLORS.tan}
-                />
-              </View>
+              <SwitchRow
+                label="Daily Recurring Task"
+                value={taskForm.is_recurring}
+                onValueChange={(value) => setTaskForm((f) => ({ ...f, is_recurring: value }))}
+                trackColor={{ false: COLORS.border, true: COLORS.primary100 }}
+                thumbColor={taskForm.is_recurring ? COLORS.primary : COLORS.tan}
+                className="mb-6"
+              />
 
               {/* Action Buttons */}
               <View className="gap-3">

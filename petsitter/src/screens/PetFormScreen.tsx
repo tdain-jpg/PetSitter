@@ -23,6 +23,7 @@ import {
   ScreenHeader,
   ScreenContainer,
   SaveStatusIndicator,
+  SwitchRow,
 } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
@@ -620,14 +621,12 @@ export function PetFormScreen({ navigation, route }: Props) {
               options={sexOptions}
               onValueChange={(v) => updateField('sex', v as PetSex)}
             />
-            <View className="flex-row items-center mb-4">
-              <Switch
-                value={formData.is_neutered}
-                onValueChange={(v) => updateField('is_neutered', v)}
-                accessibilityLabel="Spayed or neutered"
-              />
-              <Text className="ml-2 text-brown-600">Spayed/Neutered</Text>
-            </View>
+            <SwitchRow
+              label="Spayed/Neutered"
+              value={formData.is_neutered}
+              onValueChange={(v) => updateField('is_neutered', v)}
+              className="mb-4"
+            />
 
             <Input
               label="Age (years)"

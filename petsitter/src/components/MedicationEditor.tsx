@@ -1,5 +1,6 @@
-import { View, Text, Pressable, Switch } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Input } from './Input';
+import { SwitchRow } from './SwitchRow';
 import { Select } from './Select';
 import { generateId } from '../services';
 import type { Medication } from '../types';
@@ -147,16 +148,12 @@ export function MedicationEditor({
             ))
           }
 
-          <View className="flex-row items-center mb-4">
-            <Switch
-              value={med.with_food || false}
-              onValueChange={(with_food) =>
-                updateMedication(med.id, { with_food })
-              }
-              accessibilityLabel="Give with food"
-            />
-            <Text className="ml-2 text-brown-600">Give with food</Text>
-          </View>
+          <SwitchRow
+            label="Give with food"
+            value={med.with_food || false}
+            onValueChange={(with_food) => updateMedication(med.id, { with_food })}
+            className="mb-4"
+          />
 
           <Input
             label="Notes (optional)"

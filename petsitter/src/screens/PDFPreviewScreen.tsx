@@ -12,7 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { Button, Card, ScreenContainer } from '../components';
+import { Button, Card, ScreenContainer, SwitchRow } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { supabase } from '../lib/supabase';
@@ -732,70 +732,58 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
           {/* Section Toggles */}
           <View className="gap-3">
-            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
-              <Text className="text-brown-600">🚨 Emergency Contacts</Text>
-              <Switch
-                value={sections.emergencyContacts}
-                accessibilityLabel="Include emergency contacts"
-                onValueChange={() => toggleSection('emergencyContacts')}
-                trackColor={{ true: COLORS.primary }}
-              />
-            </View>
+            <SwitchRow
+              label="🚨 Emergency Contacts"
+              value={sections.emergencyContacts}
+              onValueChange={() => toggleSection('emergencyContacts')}
+              trackColor={{ true: COLORS.primary }}
+              className="py-2 border-b border-tan-200"
+            />
 
-            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
-              <Text className="text-brown-600">🏠 Home Information</Text>
-              <Switch
-                value={sections.homeInfo}
-                accessibilityLabel="Include home information"
-                onValueChange={() => toggleSection('homeInfo')}
-                trackColor={{ true: COLORS.primary }}
-              />
-            </View>
+            <SwitchRow
+              label="🏠 Home Information"
+              value={sections.homeInfo}
+              onValueChange={() => toggleSection('homeInfo')}
+              trackColor={{ true: COLORS.primary }}
+              className="py-2 border-b border-tan-200"
+            />
 
-            <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
-              <Text className="text-brown-600">🐾 Pet Details</Text>
-              <Switch
-                value={sections.pets}
-                accessibilityLabel="Include pet profiles"
-                onValueChange={() => toggleSection('pets')}
-                trackColor={{ true: COLORS.primary }}
-              />
-            </View>
+            <SwitchRow
+              label="🐾 Pet Details"
+              value={sections.pets}
+              onValueChange={() => toggleSection('pets')}
+              trackColor={{ true: COLORS.primary }}
+              className="py-2 border-b border-tan-200"
+            />
 
             {guide.travel_itinerary && (
-              <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
-                <Text className="text-brown-600">✈️ Travel Itinerary</Text>
-                <Switch
-                  value={sections.travelItinerary}
-                accessibilityLabel="Include travel itinerary"
-                  onValueChange={() => toggleSection('travelItinerary')}
-                  trackColor={{ true: COLORS.primary }}
-                />
-              </View>
+              <SwitchRow
+                label="✈️ Travel Itinerary"
+                value={sections.travelItinerary}
+                onValueChange={() => toggleSection('travelItinerary')}
+                trackColor={{ true: COLORS.primary }}
+                className="py-2 border-b border-tan-200"
+              />
             )}
 
             {cheatSheetContent && (
-              <View className="flex-row items-center justify-between py-2 border-b border-tan-200">
-                <Text className="text-brown-600">🤖 AI Cheat Sheet</Text>
-                <Switch
-                  value={sections.aiCheatSheet}
-                accessibilityLabel="Include AI cheat sheet"
-                  onValueChange={() => toggleSection('aiCheatSheet')}
-                  trackColor={{ true: COLORS.primary }}
-                />
-              </View>
+              <SwitchRow
+                label="🤖 AI Cheat Sheet"
+                value={sections.aiCheatSheet}
+                onValueChange={() => toggleSection('aiCheatSheet')}
+                trackColor={{ true: COLORS.primary }}
+                className="py-2 border-b border-tan-200"
+              />
             )}
 
             {guide.additional_notes && (
-              <View className="flex-row items-center justify-between py-2">
-                <Text className="text-brown-600">📝 Additional Notes</Text>
-                <Switch
-                  value={sections.additionalNotes}
-                accessibilityLabel="Include additional notes"
-                  onValueChange={() => toggleSection('additionalNotes')}
-                  trackColor={{ true: COLORS.primary }}
-                />
-              </View>
+              <SwitchRow
+                label="📝 Additional Notes"
+                value={sections.additionalNotes}
+                onValueChange={() => toggleSection('additionalNotes')}
+                trackColor={{ true: COLORS.primary }}
+                className="py-2"
+              />
             )}
           </View>
         </Card>
@@ -812,7 +800,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                   onPress={selectAllPets}
                   accessibilityRole="button"
                   accessibilityLabel="Select all pets"
-                  style={{ minHeight: 44, justifyContent: 'center' }}
+                  // "All" / "None" are two- and four-character labels, so the
+                  // measured box was 16px and 34px wide — the narrowest targets
+                  // in the app, and they passed every height-only check.
+                  style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
                 >
                   <Text className="text-primary-600 text-sm">All</Text>
                 </Pressable>
@@ -821,7 +812,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                   onPress={deselectAllPets}
                   accessibilityRole="button"
                   accessibilityLabel="Deselect all pets"
-                  style={{ minHeight: 44, justifyContent: 'center' }}
+                  // "All" / "None" are two- and four-character labels, so the
+                  // measured box was 16px and 34px wide — the narrowest targets
+                  // in the app, and they passed every height-only check.
+                  style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}
                 >
                   <Text className="text-tan-500 text-sm">None</Text>
                 </Pressable>

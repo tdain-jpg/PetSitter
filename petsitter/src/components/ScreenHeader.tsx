@@ -60,7 +60,9 @@ export function ScreenHeader({
             onPress={handleHome}
             accessibilityRole="button"
             accessibilityLabel="Go to home"
-            style={{ minHeight: 44, justifyContent: 'center' }}
+            // minWidth as well as minHeight: "Home" is a short word, so the box
+            // was 38px wide and passed a height-only audit.
+            style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' }}
           >
             <Text className="text-tan-500 text-sm">Home</Text>
           </Pressable>

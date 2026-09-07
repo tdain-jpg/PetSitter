@@ -10,7 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, SecurityNote, TravelItineraryEditor, Select, DateField } from '../components';
+import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveStatusIndicator, SecurityNote, TravelItineraryEditor, Select, DateField, SwitchRow } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { useFormDraft } from '../hooks';
@@ -18,6 +18,7 @@ import { generateId } from '../services';
 import { COLORS } from '../constants';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { isValidDateString, todayLocal } from '../lib/dates';
+import { isValidPhoneNumber } from '../utils';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { EmergencyContact, HomeInfo, TravelItinerary, ContactType } from '../types';
@@ -424,10 +425,21 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const handleSaveContact = () => {
     const name = contactForm.name;
     const phone = contactForm.phone;
-    if (!name || !phone) {
+    // Presence was the only test here, so "(555) 010-0" saved happily — seven
+    // digits, uncallable — and then rendered on the guide, the sitter's view,
+    // the public share link and the AI cheat sheet as if it were a number you
+    // could ring. This is the field somebody dials at 2am when an animal is in
+    // trouble; it is the last one that should go unchecked.
+    //
+    // isValidPhoneNumber already existed in utils and simply was not called.
+    if (!name || !phone || !isValidPhoneNumber(phone)) {
       setContactErrors({
         name: name ? undefined : 'Name is required',
-        phone: phone ? undefined : 'Phone is required',
+        phone: !phone
+          ? 'Phone is required'
+          : !isValidPhoneNumber(phone)
+            ? 'Enter a complete 10-digit phone number'
+            : undefined,
       });
       return;
     }
@@ -707,21 +719,24 @@ export function GuideFormScreen({ navigation, route }: Props) {
                     value={contactForm.relationship || ''}
                     onChangeText={(v) => setContactForm((prev) => ({ ...prev, relationship: v }))}
                   />
-                  <View className="flex-row items-center mb-4">
-                    <Switch
-                      value={contactForm.is_primary || false}
-                      onValueChange={(v) => setContactForm((prev) => ({ ...prev, is_primary: v }))}
-                    />
-                    <Text className="ml-2 text-brown-600">Primary Contact</Text>
-                  </View>
+                  {/* Both of these were not only 40x20 but UNLABELLED — a
+                      screen reader announced a bare switch. They are row-only
+                      controls (this one appears after "+ Add Contact", the next
+                      only when the type is Neighbor), which is why three
+                      earlier sweeps never rendered them. */}
+                  <SwitchRow
+                    label="Primary Contact"
+                    value={contactForm.is_primary || false}
+                    onValueChange={(v) => setContactForm((prev) => ({ ...prev, is_primary: v }))}
+                    className="mb-4"
+                  />
                   {contactForm.contact_type === 'neighbor' && (
-                    <View className="flex-row items-center mb-4">
-                      <Switch
-                        value={contactForm.has_key || false}
-                        onValueChange={(v) => setContactForm((prev) => ({ ...prev, has_key: v }))}
-                      />
-                      <Text className="ml-2 text-brown-600">Has a key to the house</Text>
-                    </View>
+                    <SwitchRow
+                      label="Has a key to the house"
+                      value={contactForm.has_key || false}
+                      onValueChange={(v) => setContactForm((prev) => ({ ...prev, has_key: v }))}
+                      className="mb-4"
+                    />
                   )}
                   <View className="flex-row gap-2">
                     <Button title="Save" onPress={handleSaveContact} variant="primary" />

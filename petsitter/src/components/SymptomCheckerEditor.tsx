@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Switch } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Button } from './Button';
 import { Input } from './Input';
+import { SwitchRow } from './SwitchRow';
 import { generateId } from '../services';
 import type { HealthProtocol, HealthSymptom } from '../types';
 import { DEFAULT_HEALTH_SYMPTOMS } from '../types';
@@ -98,20 +99,15 @@ export function SymptomCheckerEditor({
           className="bg-cream-200 rounded-lg p-3 mb-2 border border-tan-200"
         >
           <View>
-            <View className="flex-row items-center">
-              <Switch
-                value={symptom.is_enabled}
-                onValueChange={() => toggleSymptom(symptom.id)}
-                accessibilityLabel={symptom.name}
-              />
-              <Text
-                className={`ml-3 text-base ${
-                  symptom.is_enabled ? 'text-brown-800' : 'text-tan-500 line-through'
-                }`}
-              >
-                {symptom.name}
-              </Text>
-            </View>
+            {/* Twelve of these stack on one screen at 40x20 each. Missing one
+                with a thumb silently arms or disarms a health alert about
+                somebody's animal — not a cosmetic miss. */}
+            <SwitchRow
+              label={symptom.name}
+              value={symptom.is_enabled}
+              onValueChange={() => toggleSymptom(symptom.id)}
+              strikeThroughWhenOff
+            />
             {symptom.is_enabled && (
               <View className="mt-2 ml-12">
                 <Input
@@ -139,20 +135,13 @@ export function SymptomCheckerEditor({
             >
               <View>
                 <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center flex-1">
-                    <Switch
-                      value={symptom.is_enabled}
-                      onValueChange={() => toggleSymptom(symptom.id)}
-                      accessibilityLabel={symptom.name}
-                    />
-                    <Text
-                      className={`ml-3 text-base ${
-                        symptom.is_enabled ? 'text-brown-800' : 'text-tan-500 line-through'
-                      }`}
-                    >
-                      {symptom.name}
-                    </Text>
-                  </View>
+                  <SwitchRow
+                    label={symptom.name}
+                    value={symptom.is_enabled}
+                    onValueChange={() => toggleSymptom(symptom.id)}
+                    strikeThroughWhenOff
+                    className="flex-1"
+                  />
                   <Pressable
                     onPress={() => removeCustomSymptom(symptom.id)}
                     accessibilityRole="button"

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, ScreenContainer } from '../components';
+import { Button, Card, ScreenContainer , SwitchRow } from '../components';
 import { formatDate } from '../lib/dates';
 import type { CrownReceipt } from '../types';
 import { useAuth, useData } from '../contexts';
@@ -335,33 +335,20 @@ export function SettingsScreen({ navigation }: Props) {
         <Card className="mb-4">
           <Text className="text-lg font-semibold text-brown-800 mb-4">Preferences</Text>
 
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="flex-1">
-              <Text className="text-brown-800">Auto-Save</Text>
-              <Text className="text-tan-500 text-sm">
-                Automatically save changes as you type
-              </Text>
-            </View>
-            <Switch
-              value={settings?.auto_save_enabled ?? true}
-              onValueChange={(v) => handleToggleSetting('auto_save_enabled', v)}
-              accessibilityLabel="Auto-save changes as you type"
-            />
-          </View>
+          <SwitchRow
+            label="Auto-Save"
+            description="Automatically save changes as you type"
+            value={settings?.auto_save_enabled ?? true}
+            onValueChange={(v) => handleToggleSetting('auto_save_enabled', v)}
+            className="mb-4"
+          />
 
-          <View className="flex-row justify-between items-center">
-            <View className="flex-1">
-              <Text className="text-brown-800">Notifications</Text>
-              <Text className="text-tan-500 text-sm">
-                Receive reminders and updates
-              </Text>
-            </View>
-            <Switch
-              value={settings?.notifications_enabled ?? true}
-              onValueChange={(v) => handleToggleSetting('notifications_enabled', v)}
-              accessibilityLabel="Receive reminders and updates"
-            />
-          </View>
+          <SwitchRow
+            label="Notifications"
+            description="Receive reminders and updates"
+            value={settings?.notifications_enabled ?? true}
+            onValueChange={(v) => handleToggleSetting('notifications_enabled', v)}
+          />
         </Card>
 
         {/* Household */}
