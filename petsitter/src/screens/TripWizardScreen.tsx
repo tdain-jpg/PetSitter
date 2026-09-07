@@ -23,6 +23,7 @@ import { formatDate, isValidDateString } from '../lib/dates';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import { friendlyError } from '../lib/errors';
+import { useFormDraft } from '../hooks';
 
 
 type Props = NativeStackScreenProps<MainStackParamList, 'TripWizard'>;
@@ -55,6 +56,26 @@ export function TripWizardScreen({ navigation }: Props) {
   // Set once the user tries to leave the dates step, so the "required" errors
   // only appear after an attempt rather than on a pristine form.
   const [datesSubmitAttempted, setDatesSubmitAttempted] = useState(false);
+
+  /**
+   * The whole wizard as one draft value.
+   *
+   * `step` is in here deliberately. Four screens of answers restored onto step
+   * one would make the user page forward through work they had already done,
+   * wondering each time whether it had actually been kept — so the draft puts
+   * them back where they were.
+   *
+   * QA lost a complete four-step wizard to a single browser back-press: no
+   * confirm, no draft, no recovery. The confirm this screen HAS is wired to its
+   * own Cancel button, and browser back never reaches it — React Navigation
+   * replaces the whole nav state on popstate rather than dispatching anything
+   * beforeRemove could veto. So the fix here is the same one PetForm and
+   * GuideForm got: stop trying to block the exit and make it survivable.
+   */
+  const draftValue = useMemo(
+    () => ({ step, selectedPetIds, tripTitle, startDate, endDate, schedule }),
+    [step, selectedPetIds, tripTitle, startDate, endDate, schedule]
+  );
 
   const steps: { key: WizardStep; label: string; number: number }[] = [
     { key: 'pets', label: 'Select Pets', number: 1 },
@@ -166,6 +187,25 @@ export function TripWizardScreen({ navigation }: Props) {
     trimmedEndDate !== '' ||
     schedule.special_instructions.trim() !== '';
 
+  const { clearDraft } = useFormDraft<typeof draftValue>({
+    kind: 'trip',
+    userId: user?.id,
+    // Always on: unlike PetForm and GuideForm there is no edit mode here — a
+    // trip wizard is only ever a create.
+    enabled: true,
+    value: draftValue,
+    isDirty: hasProgress,
+    noun: 'trip',
+    onRestore: (draft) => {
+      setStep(draft.step);
+      setSelectedPetIds(draft.selectedPetIds);
+      setTripTitle(draft.tripTitle);
+      setStartDate(draft.startDate);
+      setEndDate(draft.endDate);
+      setSchedule(draft.schedule);
+    },
+  });
+
   const handleExit = async () => {
     if (hasProgress) {
       const confirmed = await showConfirm({
@@ -176,6 +216,8 @@ export function TripWizardScreen({ navigation }: Props) {
         destructive: true,
       });
       if (!confirmed) return;
+      // "Discard Trip" means discard it — do not offer it back next time.
+      clearDraft();
     }
     navigation.goBack();
   };
@@ -241,6 +283,9 @@ export function TripWizardScreen({ navigation }: Props) {
         home_info: {},
         additional_notes: additionalNotes || undefined,
       });
+
+      // The trip is a guide now; there is nothing left to resume.
+      clearDraft();
 
       // Navigate to the new guide detail
       (navigation as any).reset({

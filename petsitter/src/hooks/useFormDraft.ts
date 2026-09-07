@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showConfirm } from '../lib/dialogs';
 
@@ -66,6 +67,20 @@ export function useFormDraft<T>({
 }: Options<T>) {
   const key = storageKey(kind, userId);
 
+  /**
+   * Whether the screen asking the question is still the one in front.
+   *
+   * `cancelled` (set by the effect cleanup) closes the unmount case, but not
+   * this one: React Navigation keeps a screen MOUNTED underneath when you
+   * navigate away, so a slow storage read could resolve after the user had left
+   * and open "Resume unfinished pet?" over the pets list — a dialog about a
+   * screen that was no longer there, whose Resume button restored state nobody
+   * could see. Focus is the question that was actually being asked.
+   */
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
+
   // Read through refs inside the debounce so a re-render mid-timer doesn't
   // reschedule the write or persist a value the user has already moved past.
   const valueRef = useRef(value);
@@ -124,13 +139,12 @@ export function useFormDraft<T>({
         return;
       }
 
-      // Check `cancelled` BEFORE opening the dialog as well as after. QA hit
-      // the window between: type fast, save, and the screen unmounts while this
-      // read is still resolving — then a "Resume unfinished pet?" prompt opens
-      // over the pets list, offering a draft the successful save has already
-      // deleted. Harmless (Resume dismissed it and nothing was restored) but it
-      // is a dialog about a screen that no longer exists.
-      if (cancelled) return;
+      // Both guards, because they catch different things. `cancelled` covers
+      // the screen being torn down; `isFocusedRef` covers it still being
+      // mounted but no longer in front — which is what React Navigation
+      // actually does when you leave, and what left QA looking at a resume
+      // prompt over the pets list.
+      if (cancelled || !isFocusedRef.current) return;
 
       const resume = await showConfirm({
         title: `Resume unfinished ${noun}?`,
@@ -139,7 +153,7 @@ export function useFormDraft<T>({
         cancelLabel: 'Start fresh',
       });
       // And again after, since the user can leave while the dialog is open.
-      if (cancelled) return;
+      if (cancelled || !isFocusedRef.current) return;
 
       if (resume) {
         onRestoreRef.current(draft);
