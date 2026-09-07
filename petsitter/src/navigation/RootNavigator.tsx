@@ -98,6 +98,17 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   // clients on it and no obvious way back.
   SitterHome: noParams,
   SitterPlans: noParams,
+  // Param-free destinations that were simply never listed. Each is a screen a
+  // user can reach, bookmark and reload, and each silently answered that
+  // reload with Home — the same class of bug as the sitter routes above, found
+  // by diffing MainStackParamList against this list rather than by guessing.
+  // Onboarding and TripWizard stay off deliberately: their state lives in
+  // memory, so restoring the URL would drop you at step one of a wizard
+  // holding nothing, which is worse than starting from Home.
+  CheatSheets: noParams,
+  Sitters: noParams,
+  Memorial: noParams,
+  SampleCheatSheet: noParams,
   SitterHousehold: (query) => {
     const householdId = query.get('householdId');
     // householdName is deliberately NOT restored: the screen looks it up from
