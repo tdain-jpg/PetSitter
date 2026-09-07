@@ -32,7 +32,16 @@ they have ever been given, forever, and the feature is noise on day one.
 excluded from Today and reachable from the client list as now. Revisit once
 real sitters complain.*
 
-**D2 — is name-only attribution good enough for history?** `completed_by` is a
+**D2 — ⚠️ WITHDRAWN 2026-09-07, THE PREMISE WAS FALSE.** `completed_by` is not
+a display name. Migration 0026 pins it to `auth.uid()::text` and its header
+explains the choice: "The user ID, not a name. Names change, and resolving one
+here would mean reading auth.users inside a trigger and freezing a display
+string into a row forever." So the column this decision asked for already
+existed, under a different name, for the same reason it was wanted. No migration
+was written. The original text is kept below so the mistake is legible rather
+than tidied away.
+
+~~**D2 — is name-only attribution good enough for history?**~~ `completed_by` is a
 name. Two sitters called Dana are indistinguishable, and nothing links a row to
 an account. For "who fed the dog on the 3rd" that is probably fine. For anything
 a sitter might rely on in a dispute — which is half the value of item 2 — it is
@@ -97,13 +106,20 @@ The daily routine is per-guide, so a sitter with four clients opens four guides
 to find out what is due. Merge them into one list ordered by time of day, each
 row naming the household.
 
-**Server.** A `my_sitter_today()` RPC returning a flattened row per task for
+**Server.** ⚠️ NOT BUILT — see the correction under Item 1 in the git log.
+`guides.daily_routine` holds only CUSTOM tasks; feeding, medication, walks,
+litter and water are derived on the client from the guide's pets and stored
+nowhere. An RPC over that jsonb would have returned a day missing the feeding
+and the medication. The derivation moved to `lib/routineTasks.ts` and both
+screens call it instead. Original text follows.
+
+~~A `my_sitter_today()` RPC returning a flattened row per task for
 every ACTIVE client household whose guide covers today: household id and name,
 guide id, task id, label, time-of-day bucket, and whether it is already
 completed today. Flatten the jsonb server-side with `jsonb_array_elements` —
 doing it client-side means N round trips and N parsers, and the sitter is on a
 phone outside somebody's house. `security definer`, caller-scoped via
-`auth.uid()`, takes no user argument so it cannot be pointed at another sitter.
+`auth.uid()`, takes no user argument so it cannot be pointed at another sitter.~~
 
 **Client.** A `SitterToday` screen, the sitter's landing tab. Grouped by
 time-of-day bucket, not by household — the sitter's real question is "what is
