@@ -350,6 +350,124 @@ async function handleReversal(
   return json(200, { received: true, revoked: true });
 }
 
+/**
+ * Where the period end lives, across Stripe API versions.
+ *
+ * It used to sit on the Subscription. In the current API it sits on each
+ * subscription ITEM, and the SDK's types no longer admit the old name at all.
+ * Read the new shape first, fall back to the old, and treat "neither" as null
+ * rather than as an expired plan — sitter_has_unlimited_clients reads a null
+ * period end as "no expiry known", which keeps a paying sitter working.
+ */
+function subscriptionPeriodEnd(sub: Stripe.Subscription): string | null {
+  const loose = sub as unknown as Record<string, unknown>;
+  const legacy =
+    typeof loose.current_period_end === 'number' ? loose.current_period_end : undefined;
+  const fromItem = sub.items?.data?.[0]?.current_period_end;
+  const seconds = typeof fromItem === 'number' ? fromItem : legacy;
+  return typeof seconds === 'number' ? new Date(seconds * 1000).toISOString() : null;
+}
+
+/** Invoice → subscription id, across the same version split. */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
+  const loose = invoice as unknown as Record<string, any>;
+  const value = loose.parent?.subscription_details?.subscription ?? loose.subscription;
+  if (typeof value === 'string') return value;
+  return typeof value?.id === 'string' ? value.id : undefined;
+}
+
+/**
+ * Map a Stripe Subscription onto the sitter's row.
+ *
+ * The user id rides in the subscription's own metadata, set by sitter-billing
+ * when the checkout session was created — the one place it survives onto every
+ * later event about this subscription. If it is somehow absent (a subscription
+ * created by hand in the dashboard, say) we fall back to matching the Stripe
+ * customer we already stored, and give up rather than guess.
+ */
+async function handleSubscription(
+  sub: Stripe.Subscription,
+  event: Stripe.Event
+): Promise<Response> {
+  const supabase = serviceClient();
+
+  let userId = (sub.metadata?.user_id as string | undefined) ?? undefined;
+
+  if (!userId) {
+    const customer = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+    if (customer) {
+      const { data } = await supabase
+        .from('sitter_subscriptions')
+        .select('user_id')
+        .eq('stripe_customer_id', customer)
+        .maybeSingle();
+      userId = data?.user_id ?? undefined;
+    }
+  }
+
+  if (!userId) {
+    // 200, not an error: retrying will not conjure a user id, and a webhook
+    // that keeps failing gets the endpoint disabled by Stripe.
+    console.error(
+      `event ${event.id}: subscription ${sub.id} has no user_id in metadata and no known customer`
+    );
+    return json(200, { received: true, ignored: 'no_user' });
+  }
+
+  // A deleted subscription is over regardless of the status on the object.
+  const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
+  const periodEnd = subscriptionPeriodEnd(sub);
+
+  const { error } = await supabase.rpc('apply_sitter_subscription', {
+    p_user: userId,
+    p_customer: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id ?? null,
+    p_subscription: sub.id,
+    p_status: status,
+    p_price: sub.items?.data?.[0]?.price?.id ?? null,
+    p_period_end: periodEnd,
+    p_cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    // The EVENT's timestamp, not the subscription's. This is what lets the
+    // database drop an event that arrives after a newer one already landed.
+    p_event_at: new Date(event.created * 1000).toISOString(),
+  });
+
+  if (error) {
+    console.error(
+      `event ${event.id}: apply_sitter_subscription failed for user ${userId}: ${error.message}`
+    );
+    // 500 so Stripe retries — this one IS worth retrying.
+    return json(500, { error: 'apply_failed' });
+  }
+
+  return json(200, { received: true, user: userId, status });
+}
+
+/**
+ * Invoices carry money, not entitlement.
+ *
+ * Rather than infer a new state from the invoice, re-read the subscription and
+ * apply that. Stripe's own object is the authority on whether the plan is live,
+ * and inferring "paid, therefore active" would be wrong for an invoice paid
+ * against a subscription that has since been cancelled.
+ */
+async function handleInvoice(event: Stripe.Event, stripe: Stripe): Promise<Response> {
+  const invoice = event.data.object as Stripe.Invoice;
+  const subId = invoiceSubscriptionId(invoice);
+
+  if (!subId) {
+    // One-off invoices exist and are none of this handler's business.
+    return json(200, { received: true, ignored: 'invoice_without_subscription' });
+  }
+
+  try {
+    const sub = await stripe.subscriptions.retrieve(subId);
+    return await handleSubscription(sub, event);
+  } catch (e) {
+    console.error(`event ${event.id}: could not retrieve subscription ${subId}: ${e}`);
+    return json(500, { error: 'retrieve_failed' });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return json(405, { error: 'method_not_allowed' });
@@ -395,6 +513,43 @@ Deno.serve(async (req) => {
   }
 
   // Everything below is verified-authentic Stripe data.
+
+  // --- SITTER SUBSCRIPTIONS ------------------------------------------------
+  //
+  // A different product from Crown, sold to a USER rather than a household, so
+  // it lands in sitter_subscriptions via apply_sitter_subscription and never
+  // touches grant_crown. Routed first so a subscription event can never fall
+  // through into the one-off purchase handling below.
+  if (
+    event.type === 'customer.subscription.created' ||
+    event.type === 'customer.subscription.updated' ||
+    event.type === 'customer.subscription.deleted'
+  ) {
+    return await handleSubscription(
+      event.data.object as Stripe.Subscription,
+      event
+    );
+  }
+
+  if (event.type === 'invoice.paid' || event.type === 'invoice.payment_failed') {
+    return await handleInvoice(event, stripe);
+  }
+
+  // A subscription checkout completing is NOT a Crown purchase. Without this
+  // it would fall into the handling below, which reads a household id from
+  // metadata that a sitter checkout never sets, and would log an error on a
+  // perfectly successful sale. The authoritative state arrives moments later
+  // as customer.subscription.created, which carries the status, the price and
+  // the period end; the session carries none of them.
+  if (
+    (event.type === 'checkout.session.completed' ||
+      event.type === 'checkout.session.async_payment_succeeded') &&
+    (event.data.object as Stripe.Checkout.Session).mode === 'subscription'
+  ) {
+    return json(200, { received: true, ignored: `${event.type} (subscription)` });
+  }
+
+
   //
   // A refund or a lost chargeback undoes the purchase, so it has to undo the
   // entitlement too — see handleReversal for how the household is traced.
