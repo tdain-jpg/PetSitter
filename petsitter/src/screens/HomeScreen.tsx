@@ -767,10 +767,20 @@ export function HomeScreen({ navigation }: Props) {
             {/* Discoverable household invite: families who can't find this
                 create a SECOND account and re-type the same pets. Settings →
                 Household still exists for management; this is the front door. */}
+            {/* Two doors, because they grant two different things. Family
+                membership is everything, permanently; a sitter is read-only,
+                revocable, and only what you share. One button offering both
+                is how somebody hands out the wrong one. */}
             <Button
               title="💌 Invite Family"
-              subtitle="Share your pets with a partner or housemate"
+              subtitle="A partner or housemate — full access, permanently"
               onPress={() => navigation.navigate('Household')}
+              variant="outline"
+            />
+            <Button
+              title="🐾 Invite a Sitter"
+              subtitle="Read-only access you can take back any time"
+              onPress={() => navigation.navigate('Sitters')}
               variant="outline"
             />
             {/* A sitter who also keeps pets of their own lands on this Home,

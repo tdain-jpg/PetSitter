@@ -44,6 +44,7 @@ export type MainStackParamList = {
   AICheatSheet: { guideId: string };
   SampleCheatSheet: undefined;
   CheatSheets: undefined;
+  Sitters: undefined;
 
   // Crown purchase. guideId is optional so the screen can send the user back
   // to the sheet they were trying to unlock; entering from Settings has none.

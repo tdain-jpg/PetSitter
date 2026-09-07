@@ -16,6 +16,7 @@ import { PDFPreviewScreen } from '../screens/PDFPreviewScreen';
 import { AICheatSheetScreen } from '../screens/AICheatSheetScreen';
 import { SampleCheatSheetScreen } from '../screens/SampleCheatSheetScreen';
 import { CheatSheetsScreen } from '../screens/CheatSheetsScreen';
+import { SittersScreen } from '../screens/SittersScreen';
 import { SitterHomeScreen } from '../screens/SitterHomeScreen';
 import { SitterHouseholdScreen } from '../screens/SitterHouseholdScreen';
 import { SitterPlansScreen } from '../screens/SitterPlansScreen';
@@ -51,6 +52,7 @@ export function MainNavigator() {
       <Stack.Screen name="AICheatSheet" component={AICheatSheetScreen} />
       <Stack.Screen name="SampleCheatSheet" component={SampleCheatSheetScreen} />
       <Stack.Screen name="CheatSheets" component={CheatSheetsScreen} />
+      <Stack.Screen name="Sitters" component={SittersScreen} />
       <Stack.Screen name="SitterHome" component={SitterHomeScreen} />
       <Stack.Screen name="SitterHousehold" component={SitterHouseholdScreen} />
       <Stack.Screen name="SitterPlans" component={SitterPlansScreen} />

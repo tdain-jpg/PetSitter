@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenContainer, ScreenHeader } from '../components';
@@ -6,7 +7,6 @@ import { useAuth, useData } from '../contexts';
 import { isValidEmail } from '../utils';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { announceJoinDestination } from '../lib/inviteDestination';
-import { SitterSection } from '../components/SitterSection';
 import { CheckinFeed } from '../components/CheckinFeed';
 import { formatDate } from '../lib/dates';
 import { COLORS } from '../constants';
@@ -21,6 +21,7 @@ import { friendlyError } from '../lib/errors';
  * member list (remove/leave), and pending email invites (send/revoke).
  */
 export function HouseholdScreen() {
+  const navigation = useNavigation();
   const { user } = useAuth();
   const {
     households,
@@ -616,10 +617,26 @@ export function HouseholdScreen() {
             </View>
           )}
 
-        {/* Sitters are NOT members: they read this household's pets and guides
-            and tick tasks, and can change nothing. Kept in its own section so
-            the distinction is visible where the owner grants it. */}
-        <SitterSection householdId={household.id} isOwner={isOwner} />
+        {/* Sitters moved to their own screen. They are NOT members — they read
+            what you share and can change nothing — and sitting that next to
+            "add a family member, who gets everything forever" made two very
+            different grants look like one feature. This is a signpost now,
+            not the control. */}
+        {isOwner ? (
+          <Card className="mb-6">
+            <Text className="text-lg font-semibold text-brown-800 mb-1">🐾 Pet sitters</Text>
+            <Text className="text-tan-500 mb-3">
+              Sitters aren&apos;t household members. They read the pets and guides you
+              share, tick off today&apos;s tasks, and can change nothing — and you can
+              remove them at any time.
+            </Text>
+            <Button
+              title="Manage pet sitters"
+              onPress={() => (navigation as any).navigate('Sitters')}
+              variant="outline"
+            />
+          </Card>
+        ) : null}
 
         {/* The owner's side of the same feed. Members can post too: a household
             with two people usually has one travelling and one at home, and the
