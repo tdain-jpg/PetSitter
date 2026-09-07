@@ -259,6 +259,33 @@ miss.
   before taking a cent on someone else's behalf.
 - **Social presence** — already tracked in §3.
 
+### [ ] Sitter-side enhancements (2026-09-07) — parked, not scheduled
+Sketched while deciding what the sitter subscription should gate. Two of the four were
+picked up and scheduled; these two were not. Neither is needed by the subscription —
+that gates client COUNT (three free, then $9/mo or $60/yr) and ships without them.
+Both get MORE valuable the more clients a sitter has, which is the same axis the
+subscription charges on, so they strengthen it rather than replace it.
+
+- **Double-booking warnings.** Guides already carry `start_date` and `end_date`, so
+  overlapping jobs are already knowable and are currently invisible. A calendar of a
+  sitter's accepted jobs across every client, flagging clashes before they are agreed to.
+  Small build; the failure it prevents (two households expecting you on the same weekend,
+  discovered on the day) is expensive and is exactly the mistake a busy sitter makes.
+  ⚠️ Sitters take work outside Pawstructions too, so a clash-free calendar here is NOT a
+  promise of a clash-free week. Word it as "these two overlap", never "you are free".
+
+- **Check-in with a photo.** From the routine screen, send the owner "Juno's fed" plus a
+  picture. The notification plumbing exists (migration 0024) and photo upload now resizes
+  and crops. More retention than revenue — it is the moment an owner decides they like
+  this product, and it is the text message neither party wanted to compose.
+  ⚠️ Storage cost and moderation both arrive with this one: photos from sitters are
+  user-generated content going into someone else's household, and there is no reporting or
+  deletion path today. Also decide retention — a year of daily dog photos per client is
+  real storage, and "we kept them forever" is a privacy answer nobody wants to give.
+
+**Dropped, recorded so it is not re-proposed:** a printable per-day "run sheet". It is the
+cheat sheet that already exists, reprinted.
+
 ### [ ] Pet insurance affiliate — RESEARCHED 2026-08-15, do NOT build yet
 Full brief in the workflow output; the load-bearing conclusions:
 
