@@ -82,7 +82,12 @@ const PRINT_SCRIPT = `
     var post = function (msg) { try { parent.postMessage(msg, '*'); } catch (e) {} };
     window.addEventListener('afterprint', function () { post('${PRINT_DONE}'); });
     post('${PRINT_READY}');
-    setTimeout(function () { window.print(); }, 0);
+    // Print after load, not on a zero timeout. At timeout 0 the browser may
+    // still be laying out and loading fonts, and a print fired mid-layout is
+    // one way a preview renders and then blanks.
+    var go = function () { setTimeout(function () { window.print(); }, 150); };
+    if (document.readyState === 'complete') { go(); }
+    else { window.addEventListener('load', go); }
   })();
 </script>`;
 
@@ -506,7 +511,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
-            white-space: pre-wrap;
+            /* white-space: pre-wrap was REMOVED here. It existed to preserve
+               the newlines in a cheat sheet that was one <br>-joined blob of
+               text. The sheet is real block markup now, so pre-wrap only makes
+               the box taller and more fragile across a page break. */
           }
           /* --- Free-tier PREVIEW treatment (cheat sheet only) --------------
              Scoped to the cheat sheet: the rest of this document is the
@@ -594,6 +602,25 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             padding-left: 18px;
           }
           .cheat-sheet-body li { margin: 0 0 3px 0; }
+
+          /* PRINT RULES. There were none — the printed page used the screen
+             stylesheet and took whatever page breaks fell out.
+             The cheat sheet grew taller when it became real markup instead of
+             one <br>-joined blob, which is the change that first pushed it
+             across a page boundary. The watermark inside it is an absolutely
+             positioned SVG sized to 100% of that block (deliberately: browsers
+             drop CSS background graphics from print, so the wash has to be real
+             content). An abs-positioned child spanning a page break is a known
+             way to get a blank page out of Chrome, so keep the small things
+             whole and let the break land between them. */
+          @media print {
+            h2, h3 { break-after: avoid; page-break-after: avoid; }
+            li, .preview-note, .preview-footer {
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
+            .cheat-sheet-body p { break-inside: avoid; page-break-inside: avoid; }
+          }
           .cheat-sheet-body hr {
             border: none;
             border-top: 1px solid ${COLORS.tanLight};
