@@ -798,22 +798,57 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         )}
 
-        {/* Empty State */}
+        {/* Empty State.
+            Two of them, because two different people arrive here with no pets.
+            An owner has not started yet. A SITTER has nothing of their own and
+            never will — and the original copy told them to "add your first pet
+            to start creating care guides for your pet sitters", which is
+            addressed to the person who hired them. QA's read was that someone
+            opening this to feed a dog would think they had signed up for the
+            wrong product. They are still offered the pet form, because a sitter
+            may well keep their own animals; it just stops being the headline. */}
         {activePets.length === 0 && !loadingPets && (
           <Card className="mb-6">
             <View className="items-center py-8">
               <Text className="text-5xl mb-4">🐾</Text>
-              <Text className="text-xl font-semibold text-brown-800 mb-2">
-                Get Started
-              </Text>
-              <Text className="text-tan-500 text-center mb-4">
-                Add your first pet to start creating care guides for your pet sitters.
-              </Text>
-              <Button
-                title="Add Your First Pet"
-                onPress={() => navigation.navigate('PetForm', { mode: 'create' })}
-                variant="primary"
-              />
+              {hasActiveSitterConnection ? (
+                <>
+                  <Text className="text-xl font-semibold text-brown-800 mb-2">
+                    You&apos;re here to sit
+                  </Text>
+                  <Text className="text-tan-500 text-center mb-4">
+                    The households you look after are under My Clients — their
+                    pets, their guides and today&apos;s checklist. Nothing here
+                    needs setting up first.
+                  </Text>
+                  <Button
+                    title="🐾 Go to My Clients"
+                    onPress={() => navigation.navigate('SitterHome')}
+                    variant="primary"
+                  />
+                  <View className="mt-3">
+                    <Button
+                      title="Add a pet of my own"
+                      onPress={() => navigation.navigate('PetForm', { mode: 'create' })}
+                      variant="outline"
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text className="text-xl font-semibold text-brown-800 mb-2">
+                    Get Started
+                  </Text>
+                  <Text className="text-tan-500 text-center mb-4">
+                    Add your first pet to start creating care guides for your pet sitters.
+                  </Text>
+                  <Button
+                    title="Add Your First Pet"
+                    onPress={() => navigation.navigate('PetForm', { mode: 'create' })}
+                    variant="primary"
+                  />
+                </>
+              )}
             </View>
           </Card>
         )}

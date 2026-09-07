@@ -41,6 +41,7 @@ export function SettingsScreen({ navigation }: Props) {
     exportAllData,
     importData,
     clearAllData,
+    activePets,
     deceasedPets,
     households,
     primaryHouseholdId,
@@ -108,6 +109,23 @@ export function SettingsScreen({ navigation }: Props) {
   // one literally named "My Household". Name the real target instead.
   const targetHouseholdName =
     households.find((household) => household.id === primaryHouseholdId)?.name ?? null;
+
+  /**
+   * Somebody who sits for other people and keeps no animals of their own.
+   *
+   * Crown unlocks the cheat sheets for a household's OWN pets. Offering it to a
+   * sitter with no pets sells them nothing: there are no guides of theirs to
+   * unlock, and the sheets they read belong to the people who hired them.
+   *
+   * PETS, not households. My first attempt tested `households.length === 0`,
+   * which is unreachable — signup gives every account a primary household, so
+   * that branch would never have rendered. Checked against production rather
+   * than assumed: all seven users have at least one. The pet count is what
+   * actually separates the two people who land on this screen, and the sitter
+   * connection is what stops it catching an owner between pets.
+   */
+  const isSitterWithNoPets =
+    activePets.length === 0 && sitterConnections.some((c) => c.status === 'active');
   const targetHousehold = targetHouseholdName ?? 'your household';
 
   const handleSignOut = async () => {
@@ -242,8 +260,21 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* Crown */}
+        {/* Crown — hidden from a sitter who has no household to unlock. */}
         <Card className="mb-4 bg-warm-50 border-warm-300">
+          {isSitterWithNoPets ? (
+            <>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                👑 Pawstructions Crown
+              </Text>
+              <Text className="text-brown-600 text-sm">
+                Crown unlocks AI cheat sheets for a household&apos;s own pets, so
+                it is bought by the owners you sit for — not by you. The guides
+                they share with you are already yours to read.
+              </Text>
+            </>
+          ) : (
+          <>
           {hasCrown === true ? (
             <>
               <Text className="text-lg font-semibold text-brown-800 mb-1">
@@ -295,6 +326,8 @@ export function SettingsScreen({ navigation }: Props) {
                 />
               </View>
             </>
+          )}
+          </>
           )}
           <Button
             title="👀 See a Sample Cheat Sheet"
