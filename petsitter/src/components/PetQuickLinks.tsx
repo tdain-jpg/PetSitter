@@ -1,4 +1,4 @@
-import { View, Text, Image, Pressable, ScrollView } from 'react-native';
+import { View, Text, Image, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { displayablePhotoUrl } from '../lib/petPhotos';
 import { Icon, speciesIconName } from './Icon';
@@ -18,8 +18,10 @@ import type { Pet } from '../types';
  * already one tap from the list below. (Say so if the detail view would be
  * better — it is a one-line change.)
  *
- * SCROLLS SIDEWAYS. A household with six pets would otherwise crush the header
- * on a phone, and the header already wraps at narrow widths.
+ * A PLAIN ROW, not a scroller. The header itself scrolls horizontally, so
+ * nesting a second scroller here would fight it: two overlapping scroll
+ * regions on the same axis, where a swipe starting on a pet moves one and a
+ * swipe starting on the logo moves the other. The header owns the axis.
  *
  * LIVING PETS ONLY. A memorial pet appearing in a row of quick actions, to be
  * tapped by mistake on the way to Settings, is not a small thing to get wrong.
@@ -31,13 +33,7 @@ export function PetQuickLinks({ pets }: { pets: Pet[] }) {
   if (living.length === 0) return null;
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      // Full width of the header, below the logo/Settings row.
-      className="mt-3"
-      contentContainerStyle={{ alignItems: 'flex-start', paddingHorizontal: 4, gap: 12 }}
-    >
+    <View className="flex-row items-center" style={{ gap: 12, marginLeft: 12 }}>
       {living.map((pet) => {
         const photoUrl = displayablePhotoUrl(pet.photo_url);
         return (
@@ -73,6 +69,6 @@ export function PetQuickLinks({ pets }: { pets: Pet[] }) {
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }

@@ -585,11 +585,24 @@ export function HomeScreen({ navigation }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="wide">
-        {/* flex-wrap + shrinkable children: the fixed-size logo/wordmark row
-            previously forced ~437px of intrinsic width, so a 375px phone
-            rendered the header clipped with Settings off-screen. */}
-        <View className="flex-row justify-between items-center flex-wrap gap-y-2">
-          <View className="flex-row items-center shrink" style={{ minWidth: 0 }}>
+        {/* SCROLLS INSTEAD OF WRAPPING.
+            This row used to flex-wrap, because the logo/wordmark group forced
+            ~437px of intrinsic width and a 375px phone clipped Settings off
+            the edge. Wrapping solved the clipping by growing the header.
+            Putting the pets inline reopens that problem and no amount of
+            shrinking fixes it, so the row scrolls sideways instead: on a phone
+            you swipe the logo and the faces, and the header keeps one height.
+            SETTINGS IS DELIBERATELY OUTSIDE THE SCROLLER. It is the only way
+            off this screen, and a way out that can be scrolled out of sight is
+            not a way out. */}
+        <View className="flex-row items-center">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="flex-1"
+            contentContainerStyle={{ alignItems: 'center', paddingRight: 12 }}
+          >
+          <View className="flex-row items-center" style={{ minWidth: 0 }}>
             {/* Sized down from 72/160. QA measured the wrap threshold exactly:
                 the left group was a fixed 242px (logo 72 + margin 10 + wordmark
                 160), which left the right group ~116px in a 390px viewport
@@ -636,7 +649,10 @@ export function HomeScreen({ navigation }: Props) {
               widened the group past the row, and the wrapped line rendered
               right-aligned content inside a left-aligned block — the Settings
               button floating loose in the middle of the header. */}
-          <View className="items-end shrink ml-auto">
+          {/* Inline, between the wordmark and Settings. */}
+          <PetQuickLinks pets={activePets} />
+          </ScrollView>
+          <View className="items-end shrink-0 ml-3">
             <Button
               title="Settings"
               onPress={navigateToSettings}
@@ -655,14 +671,6 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         </View>
 
-        {/* Faces, on their own full-width row rather than beside Settings.
-            The row above is a measured fit: QA pinned the wrap threshold at
-            375px, where the logo group takes ~206px and Settings ~116px, so
-            there is no middle to put anything in — a pet row there would
-            re-open the clipping this header already had to be fixed for.
-            Here it gets the whole width, scrolls sideways, and still never
-            leaves the screen. */}
-        <PetQuickLinks pets={activePets} />
         </ScreenContainer>
       </View>
 
