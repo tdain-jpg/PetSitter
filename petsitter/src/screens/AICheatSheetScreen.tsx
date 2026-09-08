@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, CheatSheetView, ScreenContainer, SecurityNote } from '../components';
+import { Button, Card, CheatSheetView, ScreenContainer, SecurityNote , MissingPetsNotice } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { supabase } from '../lib/supabase';
@@ -396,6 +396,14 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
 
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
+        {/* Above everything, including the sheet itself. This is the screen
+            where the omission actually bites: you add a pet, press regenerate,
+            and get a sheet describing one animal with no explanation anywhere.
+            The cause is that the pet was never on the guide, and this is the
+            only place that says so before you conclude the AI is broken. */}
+        {resolvedGuide ? (
+          <MissingPetsNotice guide={resolvedGuide} canEdit={canEdit} />
+        ) : null}
         {!cheatSheet ? (
           showCrownPaywall ? (
             <Card className="items-center py-8 bg-warm-50 border-warm-300">

@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { safeGoBack } from '../lib/goBack';
-import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue, ScreenContainer } from '../components';
+import { Button, Card, SectionHeader, ContactCard, PetCard, SensitiveValue, ScreenContainer , MissingPetsNotice } from '../components';
 import { useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { COLORS } from '../constants';
@@ -132,6 +132,11 @@ export function GuideDetailScreen({ navigation, route }: Props) {
 
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
+          {/* A pet in this household that never made it onto this guide. Says
+              so rather than fixing it silently: a trip can legitimately cover
+              some animals and not others. */}
+          <MissingPetsNotice guide={guide} canEdit={canEdit} />
+
           {/* Pets Section */}
           <SectionHeader
             title={`Pets (${guidePets.length})`}
