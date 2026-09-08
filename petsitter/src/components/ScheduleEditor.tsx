@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { TimeField } from './TimeField';
 import { Input } from './Input';
 import { generateId } from '../services';
 import type { FeedingSchedule } from '../types';
@@ -61,11 +62,10 @@ export function ScheduleEditor({
           </View>
 
           <View className="gap-2">
-            <Input
+            <TimeField
               label="Time"
-              placeholder="08:00"
               value={schedule.time}
-              onChangeText={(time) => updateSchedule(schedule.id, { time })}
+              onChange={(time) => updateSchedule(schedule.id, { time })}
             />
             <Input
               label="Food Type"

@@ -1,4 +1,5 @@
 import { View, Text, Pressable } from 'react-native';
+import { TimeField } from './TimeField';
 import { Input } from './Input';
 import { SwitchRow } from './SwitchRow';
 import { Select } from './Select';
@@ -134,12 +135,11 @@ export function MedicationEditor({
 
           {getTimeCount(med.frequency) > 0 &&
             Array.from({ length: getTimeCount(med.frequency) }).map((_, timeIndex) => (
-              <Input
+              <TimeField
                 key={timeIndex}
                 label={getTimeLabel(med.frequency, timeIndex)}
-                placeholder="08:00"
                 value={(med.times && med.times[timeIndex]) || ''}
-                onChangeText={(time) => {
+                onChange={(time) => {
                   const newTimes = [...(med.times || [])];
                   newTimes[timeIndex] = time;
                   updateMedication(med.id, { times: newTimes });

@@ -17,6 +17,7 @@ import {
   speciesIconName,
   DateField,
   SwitchRow,
+  TimeField,
 } from '../components';
 import { useData, useAuth } from '../contexts';
 import { showAlert } from '../lib/showAlert';
@@ -495,18 +496,16 @@ export function TripWizardScreen({ navigation }: Props) {
 
         {!schedule.overnight && (
           <>
-            <Input
+            <TimeField
               label="Arrival Time"
-              placeholder="08:00"
               value={schedule.arrival_time}
-              onChangeText={(v) => setSchedule((prev) => ({ ...prev, arrival_time: v }))}
+              onChange={(v) => setSchedule((prev) => ({ ...prev, arrival_time: v }))}
             />
 
-            <Input
+            <TimeField
               label="Departure Time"
-              placeholder="18:00"
               value={schedule.departure_time}
-              onChangeText={(v) => setSchedule((prev) => ({ ...prev, departure_time: v }))}
+              onChange={(v) => setSchedule((prev) => ({ ...prev, departure_time: v }))}
             />
           </>
         )}

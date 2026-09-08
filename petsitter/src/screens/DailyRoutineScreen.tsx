@@ -10,7 +10,7 @@ import {
   Switch,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Button, Card, Input, Select, ScreenContainer, SwitchRow } from '../components';
+import { Button, Card, Input, Select, ScreenContainer, SwitchRow, TimeField } from '../components';
 import { useAuth, useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { parseLocalDate, toLocalDateKey } from '../lib/dates';
@@ -681,11 +681,10 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
               />
 
               {/* Specific Time */}
-              <Input
+              <TimeField
                 label="Specific Time (optional)"
                 value={taskForm.time}
-                onChangeText={(text) => setTaskForm((f) => ({ ...f, time: text }))}
-                placeholder="e.g., 14:30 or 2:30 PM"
+                onChange={(text) => setTaskForm((f) => ({ ...f, time: text }))}
               />
 
               {/* Category */}
