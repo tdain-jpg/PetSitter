@@ -126,10 +126,16 @@ export function PetDetailScreen({ navigation, route }: Props) {
 
   const handleMemorial = async () => {
     if (!pet) return;
+    // The wording matters more here than anywhere else in the app. Somebody
+    // doing this has almost certainly just lost an animal, and "Move to
+    // Memorial? You can restore them later" is filing language for a moment
+    // that is not filing. It says what is kept, uses the pet's name, and does
+    // not ask them to confirm a deletion, because nothing is being deleted.
     const ok = await showConfirm({
-      title: 'Move to Memorial',
-      message: `Move ${pet.name} to memorial? You can restore them later.`,
-      confirmLabel: 'Move',
+      title: `Remember ${pet.name}`,
+      message: `${pet.name}'s profile, photo and everything you wrote will be kept, moved to your memorial page rather than removed. You can bring them back at any time.`,
+      confirmLabel: `Move ${pet.name} to Memorial`,
+      cancelLabel: 'Not now',
     });
     if (!ok) return;
     // Local calendar day — toISOString() would stamp tomorrow's date for a
@@ -137,6 +143,12 @@ export function PetDetailScreen({ navigation, route }: Props) {
     const today = todayLocal();
     try {
       await markPetDeceased(petId, today);
+      // No cheerful confirmation, no tick, no "Success". Just an
+      // acknowledgement that the thing was kept.
+      showAlert(
+        `${pet.name} is on your memorial page`,
+        'Everything you wrote about them is still there whenever you want to read it.'
+      );
     } catch (error: any) {
       showAlert('Error', friendlyError(error, 'Failed to move pet to memorial'));
     }

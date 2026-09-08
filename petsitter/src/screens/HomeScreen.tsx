@@ -585,24 +585,13 @@ export function HomeScreen({ navigation }: Props) {
       {/* Header */}
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="wide">
-        {/* SCROLLS INSTEAD OF WRAPPING.
-            This row used to flex-wrap, because the logo/wordmark group forced
-            ~437px of intrinsic width and a 375px phone clipped Settings off
-            the edge. Wrapping solved the clipping by growing the header.
-            Putting the pets inline reopens that problem and no amount of
-            shrinking fixes it, so the row scrolls sideways instead: on a phone
-            you swipe the logo and the faces, and the header keeps one height.
-            SETTINGS IS DELIBERATELY OUTSIDE THE SCROLLER. It is the only way
-            off this screen, and a way out that can be scrolled out of sight is
-            not a way out. */}
-        <View className="flex-row items-center">
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="flex-1"
-            contentContainerStyle={{ alignItems: 'center', paddingRight: 12 }}
-          >
-          <View className="flex-row items-center" style={{ minWidth: 0 }}>
+        {/* Back to wrapping, now that the faces have moved to the page.
+            The horizontal scroller existed only to fit them beside the logo;
+            with nothing to fit, a scroll region around a logo is machinery
+            with no job. flex-wrap is what this header used before and what its
+            measurements were taken against. */}
+        <View className="flex-row justify-between items-center flex-wrap gap-y-2">
+          <View className="flex-row items-center shrink" style={{ minWidth: 0 }}>
             {/* Sized down from 72/160. QA measured the wrap threshold exactly:
                 the left group was a fixed 242px (logo 72 + margin 10 + wordmark
                 160), which left the right group ~116px in a 390px viewport
@@ -649,10 +638,7 @@ export function HomeScreen({ navigation }: Props) {
               widened the group past the row, and the wrapped line rendered
               right-aligned content inside a left-aligned block — the Settings
               button floating loose in the middle of the header. */}
-          {/* Inline, between the wordmark and Settings. */}
-          <PetQuickLinks pets={activePets} />
-          </ScrollView>
-          <View className="items-end shrink-0 ml-3">
+          <View className="items-end shrink ml-auto">
             <Button
               title="Settings"
               onPress={navigateToSettings}
@@ -781,6 +767,14 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         {/* A sitter asking for access. Renders nothing when there is none. */}
+
+        {/* Your pets, first thing on the page.
+            They started in the header, which is where they were asked for, and
+            testing said otherwise: on a phone the header became a sideways
+            scroll you had to discover, to reach something that was supposed to
+            be immediate. Here they are simply visible, at a size worth looking
+            at, and the header goes back to being a header. */}
+        <PetQuickLinks pets={activePets} />
 
         <SitterRequestCard />
 

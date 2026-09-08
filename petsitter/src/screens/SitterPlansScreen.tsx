@@ -33,7 +33,19 @@ import type { SitterPlansScreenProps } from '../navigation/types';
  * standard applies to a founder rate nobody can actually buy.
  */
 
-const FEEDBACK_EMAIL = 'sitters@pawstructions.com';
+/**
+ * The one address, and it is not a new one.
+ *
+ * support@pawstructions.com is already promised on Refunds, Privacy, Terms and
+ * About — six places, on the pages Stripe's reviewer read before approving the
+ * account. A second address for sitter feedback would fragment a mailbox that
+ * has to be watched anyway, and an address promised in one screen and nowhere
+ * else is the kind that quietly stops being read.
+ *
+ * Where the mail came FROM belongs in the subject line, not in a separate
+ * inbox: the domain already says which app, and the subject says which screen.
+ */
+const FEEDBACK_EMAIL = 'support@pawstructions.com';
 
 const MONTHLY_LABEL = '$9 / month';
 const YEARLY_LABEL = '$60 / year';
@@ -119,7 +131,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
   };
 
   const openFeedback = () => {
-    const subject = encodeURIComponent('Sitter feedback');
+    const subject = encodeURIComponent('[Pawstructions] Sitter feedback');
     const body = encodeURIComponent(
       'What would make Pawstructions genuinely useful for you?\n\n'
     );
@@ -191,6 +203,24 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
               </>
             )}
           </Card>
+
+          {/* Coming back from the portal having cancelled. Deliberately not a
+              survey: people leaving do not want a form, and Stripe already
+              collects a cancellation reason at the moment they give it. This is
+              only the courtesy of acknowledging it, and of saying plainly what
+              they keep and for how long. */}
+          {checkout === 'done' && plan?.cancelAtPeriodEnd ? (
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                Sorry to see you go
+              </Text>
+              <Text className="text-brown-700 leading-6">
+                You keep unlimited clients until the end of the period you have already paid
+                for, and nothing is removed from your account. You are welcome back any time,
+                and your clients will still be here.
+              </Text>
+            </Card>
+          ) : null}
 
           {subscribed ? (
             <Card className="mb-4">
