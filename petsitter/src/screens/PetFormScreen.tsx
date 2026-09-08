@@ -25,7 +25,7 @@ import {
   ScreenContainer,
   SaveStatusIndicator,
   SwitchRow,
-} from '../components';
+ CopyFromPet } from '../components';
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { useFormDraft } from '../hooks';
@@ -174,6 +174,14 @@ export function PetFormScreen({ navigation, route }: Props) {
     households,
     primaryHouseholdId,
   } = useData();
+
+  /**
+   * Other pets to copy from. Excludes the pet being edited, and deceased pets:
+   * a memorial pet's vet is very unlikely to be the answer, and offering it is
+   * a small unkindness in a form somebody is filling in about a living animal.
+   */
+  const editingPetId = params?.mode === 'edit' ? params.petId : undefined;
+  const otherPets = activePets.filter((p) => p.id !== editingPetId);
 
   // Which household a new pet lands in is decided server-side by the user's
   // default (see migration 0011) and was invisible on this form. Only worth
@@ -752,6 +760,31 @@ export function PetFormScreen({ navigation, route }: Props) {
 
           {/* Feeding Schedule */}
           <Card className="mb-4">
+            <CopyFromPet
+              pets={otherPets}
+              what="feeding schedule"
+              hasExisting={formData.feeding_schedule.length > 0}
+              hasValue={(p) => (p.feeding_schedule?.length ?? 0) > 0}
+              describe={(p) => {
+                const n = p.feeding_schedule?.length ?? 0;
+                return `${n} ${n === 1 ? 'feeding' : 'feedings'} a day`;
+              }}
+              onCopy={(p) =>
+                // Fresh ids. Not for collision safety — the generated task id
+                // is `feeding-<guide>-<pet>-<feeding>`, so the pet id already
+                // keeps two animals apart. It is so the copy is a separate
+                // record from the day it is made: editing one pet's 7am feed
+                // should never be confusable with another's, in this form or in
+                // anything that later keys on a feeding id alone.
+                updateField(
+                  'feeding_schedule',
+                  (p.feeding_schedule ?? []).map((f) => ({
+                    ...f,
+                    id: `feed-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                  }))
+                )
+              }
+            />
             <ScheduleEditor
               label="Feeding Schedule"
               schedules={formData.feeding_schedule}
@@ -773,6 +806,25 @@ export function PetFormScreen({ navigation, route }: Props) {
             <Text className="text-lg font-semibold text-brown-800 mb-4">
               Veterinarian Information
             </Text>
+
+            <CopyFromPet
+              pets={otherPets}
+              what="vet details"
+              hasExisting={Boolean(
+                formData.vet_name || formData.vet_clinic || formData.vet_phone
+              )}
+              hasValue={(p) => Boolean(p.vet_info?.name || p.vet_info?.clinic || p.vet_info?.phone)}
+              describe={(p) =>
+                [p.vet_info?.clinic, p.vet_info?.name].filter(Boolean).join(', ') || 'Vet on file'
+              }
+              onCopy={(p) => {
+                updateField('vet_name', p.vet_info?.name || '');
+                updateField('vet_clinic', p.vet_info?.clinic || '');
+                updateField('vet_phone', p.vet_info?.phone || '');
+                updateField('vet_address', p.vet_info?.address || '');
+                updateField('vet_emergency_phone', p.vet_info?.emergency_phone || '');
+              }}
+            />
 
             <Input
               label="Vet Name"
@@ -817,6 +869,26 @@ export function PetFormScreen({ navigation, route }: Props) {
             <Text className="text-lg font-semibold text-brown-800 mb-4">
               Pet Insurance
             </Text>
+
+            {/* Provider, claims phone and coverage terms are usually one policy
+                across the household. The POLICY NUMBER is not, and is
+                deliberately never copied: a wrong policy number is worse than a
+                blank one, because a blank one gets noticed and a wrong one gets
+                read out to a claims line during an emergency. */}
+            <CopyFromPet
+              pets={otherPets}
+              what="insurance details"
+              hasExisting={Boolean(
+                formData.insurance_provider || formData.insurance_claims_phone
+              )}
+              hasValue={(p) => Boolean(p.insurance?.provider || p.insurance?.claims_phone)}
+              describe={(p) => p.insurance?.provider || 'Insurance on file'}
+              onCopy={(p) => {
+                updateField('insurance_provider', p.insurance?.provider || '');
+                updateField('insurance_claims_phone', p.insurance?.claims_phone || '');
+                updateField('insurance_coverage_notes', p.insurance?.coverage_notes || '');
+              }}
+            />
 
             <Input
               label="Insurance Provider"
