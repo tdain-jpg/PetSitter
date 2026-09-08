@@ -14,6 +14,7 @@ import {
   ScreenContainer,
   SitterInviteGate,
   SitterRequestCard,
+  PetQuickLinks,
 } from '../components';
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
@@ -653,6 +654,15 @@ export function HomeScreen({ navigation }: Props) {
             </Text>
           </View>
         </View>
+
+        {/* Faces, on their own full-width row rather than beside Settings.
+            The row above is a measured fit: QA pinned the wrap threshold at
+            375px, where the logo group takes ~206px and Settings ~116px, so
+            there is no middle to put anything in — a pet row there would
+            re-open the clipping this header already had to be fixed for.
+            Here it gets the whole width, scrolls sideways, and still never
+            leaves the screen. */}
+        <PetQuickLinks pets={activePets} />
         </ScreenContainer>
       </View>
 
