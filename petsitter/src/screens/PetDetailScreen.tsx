@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { formatTaskTime } from '../lib/routineTasks';
 import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, Image, Pressable, Linking, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -593,7 +594,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   }`}
                 >
                   <View className="flex-row justify-between">
-                    <Text className="font-medium text-brown-800">{schedule.time}</Text>
+                    <Text className="font-medium text-brown-800">{formatTaskTime(schedule.time)}</Text>
                     <Text className="text-tan-500">{schedule.amount}</Text>
                   </View>
                   <Text className="text-tan-600">{schedule.food_type}</Text>
@@ -624,7 +625,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   {med.times && med.times.filter((t) => t).length > 0 && (
                     <Text className="text-tan-400 text-sm">
                       {med.times.filter((t) => t).length === 1 ? 'Time' : 'Times'}:{' '}
-                      {med.times.filter((t) => t).join(', ')}
+                      {med.times.filter((t) => t).map(formatTaskTime).join(', ')}
                     </Text>
                   )}
                   {med.with_food && (

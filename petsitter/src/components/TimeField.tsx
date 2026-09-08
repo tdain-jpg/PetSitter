@@ -89,7 +89,14 @@ export function TimeField({
     'aria-label': label || placeholder,
     'aria-invalid': error ? true : undefined,
     onChange: (e: { target: { value: string } }) => onChange(e.target.value),
-    onFocus: () => setIsFocused(true),
+    onFocus: () => {
+      setIsFocused(true);
+      // An empty time input opens its picker at the CURRENT time, so adding a
+      // feeding at 2:54pm proposed 2:54pm — a number with no meaning that is
+      // one careless tap from being saved. Noon is a neutral starting point
+      // that nobody will mistake for a real answer.
+      if (!toTimeInputValue(value)) onChange('12:00');
+    },
     onBlur: () => setIsFocused(false),
     style: {
       width: '100%',

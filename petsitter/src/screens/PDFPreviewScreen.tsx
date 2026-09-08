@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
+import { formatTaskTime } from '../lib/routineTasks';
 import { safeGoBack } from '../lib/goBack';
 import {
   View,
@@ -359,7 +360,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           <h3>Feeding Schedule</h3>
           <ul>
             ${pet.feeding_schedule.map((f) => `
-              <li><strong>${esc(f.time)}</strong>: ${esc(f.amount)} of ${esc(f.food_type)}${f.notes ? ` (${esc(f.notes)})` : ''}</li>
+              <li><strong>${esc(formatTaskTime(f.time))}</strong>: ${esc(f.amount)} of ${esc(f.food_type)}${f.notes ? ` (${esc(f.notes)})` : ''}</li>
             `).join('')}
           </ul>
         ` : ''}

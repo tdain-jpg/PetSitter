@@ -38,10 +38,15 @@ export function useProfileRole() {
       let current = await dataService.getMyRole();
 
       if (current === null) {
-        const pending = await takePendingRole();
-        if (pending) {
-          await dataService.setMyRole(pending);
-          current = pending;
+        // Device first (fast, and set the moment they chose), then the account
+        // metadata, which is the copy that survives signing up on a laptop and
+        // confirming the email on a phone. Without the second one, a sitter who
+        // changed device between those two steps silently became an owner and
+        // landed in the pet-owner wizard.
+        const claimed = (await takePendingRole()) ?? (await dataService.getSignupRole());
+        if (claimed) {
+          await dataService.setMyRole(claimed);
+          current = claimed;
         }
       }
 

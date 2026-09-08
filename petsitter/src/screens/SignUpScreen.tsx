@@ -81,7 +81,7 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
     const submittedEmail = email.trim();
     setIsSubmitting(true);
     try {
-      await signUp(submittedEmail, password);
+      await signUp(submittedEmail, password, role);
       // Written to the profile on the first authenticated load, by
       // useProfileRole. It cannot be written now: email confirmation is on, so
       // there is no session yet and profiles is unwritable.

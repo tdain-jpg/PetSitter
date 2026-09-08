@@ -12,7 +12,7 @@ interface AuthContextType {
    * RootNavigator renders ResetPasswordScreen while this is set. */
   isPasswordRecovery: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, role?: 'owner' | 'sitter') => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -87,12 +87,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(error.message);
   };
 
-  const signUp = async (email: string, password: string) => {
+  /**
+   * @param role Which home this person should land on. Carried in the signup
+   * METADATA, which travels with the account, because the device that filled in
+   * the form is often not the device that clicks the confirmation link — people
+   * sign up on a laptop and open their email on a phone. The local copy in
+   * AsyncStorage is the fast path; this is the one that survives.
+   */
+  const signUp = async (email: string, password: string, role?: 'owner' | 'sitter') => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
+        ...(role ? { data: { role } } : {}),
       },
     });
     if (error) throw new Error(error.message);

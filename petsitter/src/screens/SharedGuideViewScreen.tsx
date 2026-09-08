@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatTaskTime } from '../lib/routineTasks';
 import {
   View,
   Text,
@@ -220,7 +221,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                       <Text className="text-brown-700 font-medium mb-2">Feeding Schedule</Text>
                       {pet.feeding_schedule.map((schedule, idx) => (
                         <View key={idx} className="flex-row mb-1">
-                          <Text className="text-tan-500 w-20">{schedule.time}</Text>
+                          <Text className="text-tan-500 w-20">{formatTaskTime(schedule.time)}</Text>
                           <Text className="text-brown-600 flex-1">
                             {schedule.food_type} - {schedule.amount}
                           </Text>
@@ -242,7 +243,7 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                           </Text>
                           {med.times && med.times.filter(Boolean).length > 0 && (
                             <Text className="text-tan-500 text-sm">
-                              ⏰ {med.times.filter(Boolean).join(', ')}
+                              ⏰ {med.times.filter(Boolean).map(formatTaskTime).join(', ')}
                             </Text>
                           )}
                           {med.notes ? (

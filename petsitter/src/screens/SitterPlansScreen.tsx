@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, Linking, Platform, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -67,8 +67,25 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
     }, [load])
   );
 
+  // Fires ONCE. `checkout=success` lives in the URL, so without clearing it
+  // every reload re-announced a purchase that happened minutes ago — and the
+  // reload is exactly what someone does when they are checking whether it
+  // worked, so the reassurance arrived precisely when it read as a glitch.
+  const announcedRef = useRef(false);
   useEffect(() => {
-    if (checkout !== 'success') return;
+    if (checkout !== 'success' || announcedRef.current) return;
+    announcedRef.current = true;
+
+    // Take it out of the address bar too, so a bookmark or a browser reload
+    // cannot resurrect it. replaceState rather than push: this is the same
+    // page, not a new one to go back to.
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        // Not fatal. The ref above already stops it repeating in this session.
+      }
+    }
     // The webhook, not this screen, is what actually grants the plan, and it
     // can land a second or two after the browser does. Say something true
     // rather than something certain.

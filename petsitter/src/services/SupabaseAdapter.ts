@@ -1117,6 +1117,19 @@ export class SupabaseAdapter implements DataService {
     return role === 'owner' || role === 'sitter' ? role : null;
   }
 
+  /**
+   * The role chosen during sign-up, read from the account's own metadata.
+   *
+   * The device copy in AsyncStorage is lost whenever someone signs up on one
+   * device and clicks the confirmation link on another, which is ordinary
+   * behaviour, not an edge case. This copy travels with the account.
+   */
+  async getSignupRole(): Promise<'owner' | 'sitter' | null> {
+    const { data } = await supabase.auth.getUser();
+    const value = data?.user?.user_metadata?.role;
+    return value === 'owner' || value === 'sitter' ? value : null;
+  }
+
   /** Set the caller's own landing preference. */
   async setMyRole(role: 'owner' | 'sitter'): Promise<void> {
     const { data: userData } = await supabase.auth.getUser();
