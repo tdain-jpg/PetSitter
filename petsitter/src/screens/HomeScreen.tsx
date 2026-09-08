@@ -317,11 +317,33 @@ export function HomeScreen({ navigation }: Props) {
       // come back — the same failure the household reads above already guard
       // against by waiting for a clean answer.
       if (!roleResolved) return;
-      navigation.replace(isSitter ? 'SitterHome' : 'Onboarding');
+
+      /**
+       * Which home a brand new arrival lands on.
+       *
+       * The owner wizard opens by asking about YOUR pets, which is the wrong
+       * first question for someone whose whole job is other people's animals,
+       * and QA watched a sitter get it.
+       *
+       * Two ways to be a sitter here, and the second one matters as much as the
+       * first. `isSitter` is the stated preference, set at sign-up. But every
+       * sitter who existed before that column did not state anything, and
+       * nothing backfilled them — so an INFERENCE covers them: somebody with
+       * active clients and no pets of their own is a sitter, whatever the
+       * column says. That is a fact about their account rather than a guess,
+       * and it needs no migration and no question put to the user.
+       *
+       * An owner who also sits keeps the owner home, because they have pets and
+       * the inference requires having none.
+       */
+      const looksLikeSitter =
+        isSitter || (hasActiveSitterConnection && activePets.length === 0);
+      navigation.replace(looksLikeSitter ? 'SitterHome' : 'Onboarding');
     }
   }, [
     roleResolved,
     isSitter,
+    activePets,
     isFocused,
     loadingSettings,
     settings,
@@ -826,9 +848,15 @@ export function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('Household')}
               variant="outline"
             />
+            {/* Named for the SCREEN it opens, not for one thing you can do
+                there. It was "Invite a Sitter", which reads as a one-way
+                action, so an owner looking for where their sitters LIVE did not
+                recognise it and went hunting inside Household instead. The
+                screen already handles inviting, seeing who has access, and
+                taking it back; the button now says so. */}
             <Button
-              title="🐾 Invite a Sitter"
-              subtitle="Read-only access you can take back any time"
+              title="🐾 Pet Sitters"
+              subtitle="Invite someone, see who has access, or take it back"
               onPress={() => navigation.navigate('Sitters')}
               variant="outline"
             />
