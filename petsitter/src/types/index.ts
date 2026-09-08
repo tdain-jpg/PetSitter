@@ -636,3 +636,12 @@ export interface SitterTodayGroup {
   icon: string;
   rows: SitterTodayRow[];
 }
+
+/** A sitter's request that an owner connect with them. Grants nothing until accepted. */
+export interface PendingOwnerInvite {
+  id: string;
+  sitter_user_id: string;
+  /** Falls back to the sitter's email, then to a generic label, but never to nothing. */
+  sitter_name: string;
+  created_at: string;
+}

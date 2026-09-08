@@ -20,6 +20,7 @@ import type {
   OnboardingState,
   SitterPlan,
   SitterTodayGroup,
+  PendingOwnerInvite,
 } from '../types';
 import {
   DataService,
@@ -1044,6 +1045,57 @@ export class SupabaseAdapter implements DataService {
       icon: block.icon,
       rows: rows.filter((r) => r.task.time_block === block.id),
     })).filter((group) => group.rows.length > 0);
+  }
+
+  /**
+   * A sitter asks an owner to connect. Returns the invite id.
+   *
+   * This is a REQUEST and grants nothing: the row it creates confers no access
+   * at all until the owner accepts. The client limit is enforced server-side
+   * (0029), including here at send time, so the same upgrade prompt the accept
+   * path uses is reachable from this error.
+   */
+  async inviteOwner(email: string): Promise<string> {
+    const { data, error } = await supabase.rpc('invite_owner', { p_email: email });
+    if (error) throw new Error(error.message);
+    return data as string;
+  }
+
+  /** Asks addressed to the signed-in user's confirmed email. */
+  async getMyPendingOwnerInvites(): Promise<PendingOwnerInvite[]> {
+    const { data, error } = await supabase.rpc('my_pending_owner_invites');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as PendingOwnerInvite[];
+  }
+
+  /**
+   * The owner answers. Accepting creates the connection and returns its id;
+   * declining returns null.
+   */
+  async respondToOwnerInvite(inviteId: string, accept: boolean): Promise<string | null> {
+    const { data, error } = await supabase.rpc('respond_to_owner_invite', {
+      invite: inviteId,
+      accept,
+    });
+    if (error) {
+      // The sitter filled up between sending and answering. Say so plainly:
+      // the owner has done nothing wrong and needs to know it is not their
+      // problem to fix.
+      if (String(error.message).includes('sitter_at_capacity')) {
+        throw new Error(
+          "This sitter has reached the number of clients their plan allows. Ask them to upgrade, then accept again."
+        );
+      }
+      throw new Error(error.message);
+    }
+    return (data as string | null) ?? null;
+  }
+
+  /** A sitter withdraws an ask nobody has answered. */
+  async revokeOwnerInvite(inviteId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('revoke_owner_invite', { invite: inviteId });
+    if (error) throw new Error(error.message);
+    return data === true;
   }
 
   /**

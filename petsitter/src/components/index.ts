@@ -25,3 +25,4 @@ export { InviteGate } from './InviteGate';
 export { SitterInviteGate } from './SitterInviteGate';
 export { CheatSheetView } from './CheatSheetView';
 export { Icon, speciesIconName, type IconName } from './Icon';
+export { SitterRequestCard } from './SitterRequestCard';

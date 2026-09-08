@@ -149,6 +149,7 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   // clients on it and no obvious way back.
   SitterHome: noParams,
   SitterToday: noParams,
+  InviteClient: noParams,
   // Matched against the three values sitter-billing can send rather than
   // forwarded verbatim, so arbitrary query text never reaches route.params.
   SitterPlans: (query) => {

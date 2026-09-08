@@ -13,6 +13,7 @@ import {
   PetCard,
   ScreenContainer,
   SitterInviteGate,
+  SitterRequestCard,
 } from '../components';
 import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
@@ -760,6 +761,10 @@ export function HomeScreen({ navigation }: Props) {
             <Text className="text-tan-500">Guides</Text>
           </Card>
         </View>
+
+        {/* A sitter asking for access. Renders nothing when there is none. */}
+
+        <SitterRequestCard />
 
         {/* Quick Actions */}
         <Card className="mb-6">

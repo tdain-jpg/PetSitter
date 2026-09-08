@@ -257,6 +257,15 @@ export function SitterHomeScreen({ navigation }: Props) {
               sitter connection or invitation, so an owner never lands here and
               never sees a $9/month plan for a product they are not buying. */}
           <View className="mb-8 mt-2">
+            {/* The direction that grows the app: a sitter bringing their own
+                clients in. Above the pricing link because it is the thing a
+                sitter with an empty client list actually needs. */}
+            <Button
+              title="✉️ Invite a client"
+              onPress={() => navigation.navigate('InviteClient')}
+              variant="primary"
+            />
+            <View className="h-3" />
             <Button
               title="What this will cost"
               onPress={() => navigation.navigate('SitterPlans')}

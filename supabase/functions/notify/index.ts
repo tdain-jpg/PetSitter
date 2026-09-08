@@ -134,9 +134,27 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
         subject: "You're invited to share pet care on Pawstructions",
         html: emailShell(
           "You're invited to share pet care",
-          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> invited you to <strong>${household}</strong> on Pawstructions &mdash; shared pets, guides, and care instructions in one place.</p>
+          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> invited you to <strong>${household}</strong> on Pawstructions, shared pets, guides, and care instructions in one place.</p>
           ${ctaButton('Open Pawstructions')}
           <p style="margin: 0;">Sign up or sign in with THIS email address (<strong>${recipient}</strong>) and the invitation will be waiting on your home screen.</p>`
+        ),
+      };
+    }
+
+    case 'sitter_wants_to_connect': {
+      // The recipient usually has NO ACCOUNT. This email is the only way they
+      // learn the ask exists, so it names who is asking, says plainly that
+      // nothing has been shared yet, and tells them which address to use.
+      const sitter = escapeHtml(p.sitter_name || p.sitter_email || 'A pet sitter');
+      const recipient = escapeHtml(row.recipient_email);
+      return {
+        subject: `${subjectSafe(p.sitter_name || p.sitter_email, 'Your pet sitter')} would like to connect on Pawstructions`,
+        html: emailShell(
+          'Your sitter would like to connect',
+          `<p style="margin: 0 0 16px;"><strong>${sitter}</strong> uses Pawstructions to keep track of the pets they look after, and would like to be connected to yours.</p>
+          <p style="margin: 0 0 16px;"><strong>Nothing has been shared yet.</strong> Accepting is what gives them read-only access to your pets and guides, and you can take it back at any time.</p>
+          ${ctaButton('Open Pawstructions')}
+          <p style="margin: 0;">Sign up or sign in with THIS email address (<strong>${recipient}</strong>) and the request will be waiting on your home screen.</p>`
         ),
       };
     }
@@ -147,7 +165,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
         subject: `Your sitter opened ${subjectSafe(p.guide_title, 'your guide')}`,
         html: emailShell(
           `Your sitter opened ${title}`,
-          `<p style="margin: 0 0 16px;">Good news &mdash; your sitter just opened <strong>${title}</strong>.</p>
+          `<p style="margin: 0 0 16px;">Good news, your sitter just opened <strong>${title}</strong>.</p>
           <p style="margin: 0;">Feeding schedules, medications, and emergency contacts are all at their fingertips. Nothing for you to do; we just thought you'd like to know your pets are in the loop.</p>`
         ),
       };
@@ -192,7 +210,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           `${sitter} checked in`,
           `<p style="margin: 0 0 16px;">${sitter} left an update${wherePart}.</p>
           ${noteHtml}
-          <p style="margin: 0 0 16px;">Nothing for you to do &mdash; we just thought you would want to hear it.</p>
+          <p style="margin: 0 0 16px;">Nothing for you to do, we just thought you would want to hear it.</p>
           ${ctaButton('See the check-in')}`
         ),
       };
