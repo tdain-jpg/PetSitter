@@ -63,7 +63,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
   const isEditing = mode === 'edit' && guideId;
 
   const { user } = useAuth();
-  const { guides, pets, activePets, loadingPets, loadingGuides, petsError, createGuide, updateGuide } =
+  const { guides, pets, activePets, loadingPets, loadingGuides, petsError, createGuide, updateGuide, primaryHouseholdId } =
     useData();
 
   const [formData, setFormData] = useState<FormData>(initialFormData);
@@ -150,8 +150,43 @@ export function GuideFormScreen({ navigation, route }: Props) {
   // `guides` stays in the deps so a late-arriving fetch can still hydrate,
   // but the ref guard stops auto-save updates (which replace the guides
   // array) from resetting the form and clobbering in-flight keystrokes.
+  // Create mode only: guards the one-time pet prefill below.
+  const prefilledRef = useRef(false);
   const hydratedGuideIdRef = useRef<string | null>(null);
   useEffect(() => {
+    /**
+     * A NEW guide starts with every pet in the household already selected.
+     *
+     * It used to start with none, and nothing said so. A guide with no pets is
+     * a guide that covers nobody: its checklist is empty and its cheat sheet
+     * describes no animal. That is exactly how "Fall Cruise" came to describe
+     * one dog while the household had two, and how the AI got blamed for it.
+     *
+     * Selecting everyone is the right default because a trip usually is
+     * everyone, and the picker sits directly below — deselecting the cat going
+     * to the cattery is one tap, while remembering to add a pet you were never
+     * shown is not an action anyone can take.
+     *
+     * Scoped to the PRIMARY household, not to activePets, because a guide's
+     * pets must all live in one household (see lockedHouseholdId above) and
+     * activePets spans every household this user belongs to.
+     *
+     * Runs once, only before anything is typed: `prefilledRef` and the empty
+     * check together mean this can never overwrite a choice the user made,
+     * including deliberately clearing the list.
+     */
+    if (!isEditing && !prefilledRef.current && !loadingPets && !petsError) {
+      prefilledRef.current = true;
+      const householdPets = activePets.filter(
+        (p) => !primaryHouseholdId || p.household_id === primaryHouseholdId
+      );
+      if (householdPets.length > 0) {
+        setFormData((prev) =>
+          prev.pet_ids.length === 0 ? { ...prev, pet_ids: householdPets.map((p) => p.id) } : prev
+        );
+      }
+    }
+
     if (isEditing && guideId) {
       if (hydratedGuideIdRef.current === guideId) return;
       // Defer hydration until the pets load settles: pet_ids is pruned against
@@ -192,7 +227,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
       }
       setLoading(false);
     }
-  }, [isEditing, guideId, guides, pets, loadingPets, loadingGuides, petsError]);
+  }, [isEditing, guideId, guides, pets, activePets, primaryHouseholdId, loadingPets, loadingGuides, petsError]);
 
   // Create mode throws the form away on leave, so every exit needs a confirm.
   // Edit mode auto-saves, so leaving is always safe and must stay unguarded.
