@@ -6,7 +6,8 @@ import { useData } from '../contexts';
 import { Button, Card, JourneyCards, ScreenContainer } from '../components';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
-import { formatDate } from '../lib/dates';
+import { formatDate, toLocalDateKey } from '../lib/dates';
+import { dataService } from '../services';
 import { Icon } from '../components/Icon';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -208,6 +209,42 @@ export function SitterHomeScreen({ navigation }: Props) {
   // A pending invitation is not "no clients" — saying so directly above one is
   // the app arguing with itself.
   const hasAnyClient = sitterConnections.some((c) => c.status === 'active');
+
+  /**
+   * Today's numbers, loaded in the background.
+   *
+   * This screen used to be a list of clients with a button to Today. A list of
+   * clients answers "who am I sitting for", which is not a question anybody has
+   * at 7am; "what is still undone" is. So the number comes to the home screen
+   * rather than making the sitter go and look for it.
+   *
+   * Loaded WITHOUT blocking: the card renders immediately and the count fills
+   * in when it arrives, because assembling it costs a couple of reads per
+   * client household (the tasks are derived, not stored — see lib/routineTasks)
+   * and a home screen must not wait on that.
+   */
+  const [today, setToday] = useState<{ total: number; done: number } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const groups = await dataService.getSitterToday(toLocalDateKey(new Date()));
+          if (cancelled) return;
+          const rows = groups.flatMap((g) => g.rows);
+          setToday({ total: rows.length, done: rows.filter((r) => r.completed).length });
+        } catch {
+          // Silent: the card keeps its button, which still works. A failed
+          // count must never render as "nothing to do today".
+          if (!cancelled) setToday(null);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [sitterConnections])
+  );
   const subtitle = clientCount === 0
     ? pendingInvites.length > 0
       ? pendingInvites.length === 1
@@ -230,19 +267,6 @@ export function SitterHomeScreen({ navigation }: Props) {
             </View>
             <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
             <Text className="text-tan-500">{subtitle}</Text>
-            {/* The list of clients answers "who am I sitting for". Today
-                answers "what is next", which is the question a sitter actually
-                has while standing in somebody's kitchen — so it gets the
-                primary button, above the client list rather than below it. */}
-            {hasAnyClient ? (
-              <View className="mt-4">
-                <Button
-                  title="📋 Today: across all clients"
-                  onPress={() => navigation.navigate('SitterToday')}
-                  variant="primary"
-                />
-              </View>
-            ) : null}
           </View>
         </ScreenContainer>
       </View>
@@ -252,6 +276,37 @@ export function SitterHomeScreen({ navigation }: Props) {
               that one journey — the founder checklist and the joiner tour are
               about a household of your own, which is not what a sitter has. */}
           <JourneyCards surface="sitter" />
+
+          {/* FIRST, above the clients. */}
+          {hasAnyClient ? (
+            <Card className="mb-4 bg-primary-50 border border-primary-200">
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                {today === null
+                  ? 'Today'
+                  : today.total === 0
+                    ? 'Nothing scheduled today'
+                    : today.done === today.total
+                      ? 'Everything is done today'
+                      : `${today.total - today.done} still to do today`}
+              </Text>
+              <Text className="text-brown-700 leading-6 mb-4">
+                {today === null
+                  ? 'Every task due today, across all of your clients, in one list.'
+                  : today.total === 0
+                    ? 'None of your clients have a guide covering today. When an owner sets trip dates that include today, their routine appears here.'
+                    : today.done === today.total
+                      ? `All ${today.total} tasks across your clients are ticked off.`
+                      : `${today.done} of ${today.total} done, across every household you look after.`}
+              </Text>
+              <Button
+                title="Open today"
+                onPress={() => navigation.navigate('SitterToday')}
+                variant="primary"
+              />
+            </Card>
+          ) : null}
+
+          {/* THEN who they are. */}
           {renderContent()}
           {/* Sitter-only by construction: this screen is only reachable from a
               sitter connection or invitation, so an owner never lands here and
