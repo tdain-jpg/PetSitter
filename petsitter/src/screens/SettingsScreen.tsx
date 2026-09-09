@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { dataService } from '../services';
 import { safeGoBack } from '../lib/goBack';
 import {
   View,
@@ -41,11 +42,13 @@ export function SettingsScreen({ navigation }: Props) {
     settings,
     updateSettings,
     exportAllData,
-    importData,
     clearAllData,
     activePets,
     deceasedPets,
     households,
+    refreshPets,
+    refreshGuides,
+    refreshHouseholds,
     primaryHouseholdId,
     sitterConnections,
     getCrownReceipt,
@@ -54,7 +57,6 @@ export function SettingsScreen({ navigation }: Props) {
   // Landing preference only; RLS decides access.
   const { isSitter } = useProfileRole();
 
-  const [isImporting, setIsImporting] = useState(false);
 
   // Crown is bought per HOUSEHOLD, so this card is about the default household
   // — the same one Data Management targets. null = no answer yet (still
@@ -105,6 +107,44 @@ export function SettingsScreen({ navigation }: Props) {
       };
     }, [primaryHouseholdId, userId])
   );
+
+  const [merging, setMerging] = useState<string | null>(null);
+
+  /**
+   * Households this user could move their things into: every one they belong to
+   * except the one their things are already in. Empty for almost everybody,
+   * which is why the button only appears when it is not.
+   */
+  const mergeTargets = useMemo(
+    () => households.filter((h: { id: string }) => h.id !== primaryHouseholdId),
+    [households, primaryHouseholdId]
+  );
+
+  const handleMerge = async (targetId: string, targetName: string) => {
+    const confirmed = await showConfirm({
+      title: `Move everything into ${targetName}?`,
+      message:
+        `Every pet and guide you have will move into ${targetName}, where the people already there can see and edit them. ` +
+        'Nothing is deleted and nothing is copied: they move. This cannot be undone from inside the app.',
+      confirmLabel: 'Move everything',
+    });
+    if (!confirmed) return;
+
+    setMerging(targetId);
+    try {
+      const { pets, guides } = await dataService.mergeMyHouseholdInto(targetId);
+      // Pets, guides and households all changed household underneath us.
+      await Promise.all([refreshPets(), refreshGuides(), refreshHouseholds()]);
+      showAlert(
+        'Moved',
+        `${pets} ${pets === 1 ? 'pet' : 'pets'} and ${guides} ${guides === 1 ? 'guide' : 'guides'} are now in ${targetName}.`
+      );
+    } catch (error: any) {
+      showAlert("Couldn't move", friendlyError(error, 'Please try again.'));
+    } finally {
+      setMerging(null);
+    }
+  };
 
   // Import and Clear All Data target the DEFAULT household, whichever one that
   // is — and since migration 0011 that is often the SHARED family household,
@@ -161,50 +201,6 @@ export function SettingsScreen({ navigation }: Props) {
     }
   };
 
-  const handleImport = () => {
-    if (Platform.OS !== 'web') {
-      showAlert('Import Backup', 'Import is available on the web app.');
-      return;
-    }
-
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.style.display = 'none';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const confirmed = await showConfirm({
-          title: `Replace Data in ${targetHousehold}?`,
-          message:
-            `Importing a backup REPLACES every pet, guide, and share link in ${targetHousehold} with the backup's contents, ` +
-            'including pets and guides that other members of it added, for everyone in it. ' +
-            "Other households you've joined are not affected. " +
-            'Share links stored in the backup keep working after the import.',
-          confirmLabel: 'Import & Replace',
-          destructive: true,
-        });
-        if (!confirmed) return;
-
-        setIsImporting(true);
-        try {
-          const data = JSON.parse(String(reader.result));
-          await importData(data);
-          showAlert('Success', 'Backup imported successfully!');
-        } catch (error: any) {
-          showAlert('Import Failed', friendlyError(error, 'Could not import the backup file.'));
-        } finally {
-          setIsImporting(false);
-        }
-      };
-      reader.onerror = () => showAlert('Import Failed', 'Could not read the selected file.');
-      reader.readAsText(file);
-    };
-    input.click();
-  };
 
   const handleClearData = async () => {
     const confirmed = await showConfirm({
@@ -450,13 +446,23 @@ export function SettingsScreen({ navigation }: Props) {
 
           <View className="gap-3">
             <Button title="📤 Export Data" onPress={handleExport} variant="outline" />
-            <Button
-              title="📥 Import Backup"
-              onPress={handleImport}
-              variant="outline"
-              loading={isImporting}
-              disabled={isImporting}
-            />
+            {/* Replaces "Import Backup".
+                Import read a JSON file this app had exported and wrote it into
+                your default household. It is a developer's answer to a real
+                problem: two people move in together and want one account.
+                Nobody in that situation thinks "I will export my pets as JSON".
+                Same operation, named for the thing people are actually doing,
+                and only shown when there is somewhere to merge INTO. */}
+            {mergeTargets.map((h: { id: string; name: string }) => (
+              <Button
+                key={h.id}
+                title={`🏠 Move my pets into ${h.name}`}
+                onPress={() => handleMerge(h.id, h.name)}
+                variant="outline"
+                loading={merging === h.id}
+                disabled={merging !== null}
+              />
+            ))}
             <Button title="🗑️ Clear All Data" onPress={handleClearData} variant="outline" />
           </View>
         </Card>

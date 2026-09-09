@@ -1130,6 +1130,35 @@ export class SupabaseAdapter implements DataService {
     return value === 'owner' || value === 'sitter' ? value : null;
   }
 
+  /**
+   * Move my pets and guides into a household I have already joined.
+   *
+   * Replaces JSON import. It grants no access: you can only merge into a
+   * household somebody already invited you to, so this moves data and never
+   * reaches anywhere new.
+   */
+  async mergeMyHouseholdInto(targetHouseholdId: string): Promise<{ pets: number; guides: number }> {
+    const { data, error } = await supabase.rpc('merge_my_household_into', {
+      p_target: targetHouseholdId,
+    });
+    if (error) {
+      const message = String(error.message);
+      if (message.includes('household_has_other_members')) {
+        throw new Error(
+          'Somebody else is still in your current household, and their pets would move too. They need to leave it first.'
+        );
+      }
+      if (message.includes('household_has_sitters')) {
+        throw new Error(
+          'A sitter is connected to your current household. Revoke their access first, then invite them to the new one.'
+        );
+      }
+      throw new Error(message);
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    return { pets: row?.pets_moved ?? 0, guides: row?.guides_moved ?? 0 };
+  }
+
   /** Set the caller's own landing preference. */
   async setMyRole(role: 'owner' | 'sitter'): Promise<void> {
     const { data: userData } = await supabase.auth.getUser();
