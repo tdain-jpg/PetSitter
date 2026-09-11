@@ -40,6 +40,18 @@ import { parseHour24 } from '../lib/routineTasks';
 
 interface TimeFieldProps {
   label?: string;
+  /**
+   * Whether focusing an empty field should propose noon.
+   *
+   * True where a time is the point of the field (a feeding, a dose): the
+   * picker would otherwise open at whatever o'clock it happens to be, and
+   * "2:54 PM" is one careless tap from being saved as a feeding time.
+   *
+   * FALSE for genuinely optional fields. "Specific Time (optional)" went from
+   * empty to 12:00 just by being focused, with no way back to empty — so
+   * tabbing past it silently gave a task a time its author never chose.
+   */
+  defaultToNoon?: boolean;
   value: string;
   onChange: (value: string) => void;
   error?: string;
@@ -62,6 +74,7 @@ export function TimeField({
   onChange,
   error,
   placeholder = '08:00',
+  defaultToNoon = true,
 }: TimeFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -95,7 +108,7 @@ export function TimeField({
       // feeding at 2:54pm proposed 2:54pm — a number with no meaning that is
       // one careless tap from being saved. Noon is a neutral starting point
       // that nobody will mistake for a real answer.
-      if (!toTimeInputValue(value)) onChange('12:00');
+      if (defaultToNoon && !toTimeInputValue(value)) onChange('12:00');
     },
     onBlur: () => setIsFocused(false),
     style: {

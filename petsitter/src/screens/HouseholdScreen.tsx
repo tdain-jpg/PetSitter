@@ -751,7 +751,7 @@ export function HouseholdScreen() {
                   elsewhere. */}
               <Text className="text-brown-600 text-sm mb-3">
                 New pets you add go to your default household, and so does a new guide unless
-                you pick a pet from another one. Backup, import and Clear All Data in Settings
+                you pick a pet from another one. Export and Clear All Data in Settings
                 apply to the default too.
               </Text>
               {households.map(renderHousehold)}

@@ -187,20 +187,35 @@ export function ModalHost() {
               {current.message}
             </Text>
           ) : null}
-          <View className="flex-row justify-end mt-6">
+          {/* WRAPS, and every child may shrink.
+              This row was flex-row with neither, so two buttons whose combined
+              width exceeded the card simply overflowed it. A long confirm
+              label — "Move Journey Juno to Memorial" — pushed Cancel off the
+              LEFT edge: measured at 375px it sat at x = -90, entirely outside
+              the viewport and impossible to tap, leaving the backdrop as the
+              only way out of a dialog about deleting something. Labels are
+              written for clarity and some of them are long, so the row has to
+              cope rather than the copy being kept short enough to fit. */}
+          <View
+            className="flex-row flex-wrap justify-end mt-6"
+            style={{ gap: 12 }}
+          >
             {isConfirm ? (
               <>
-                <Button
-                  title={current.cancelLabel ?? 'Cancel'}
-                  variant="outline"
-                  onPress={() => settle(current, false)}
-                />
-                <View className="w-3" />
-                <Button
-                  title={current.confirmLabel ?? 'Confirm'}
-                  variant={current.destructive ? 'danger' : 'primary'}
-                  onPress={confirm}
-                />
+                <View className="shrink">
+                  <Button
+                    title={current.cancelLabel ?? 'Cancel'}
+                    variant="outline"
+                    onPress={() => settle(current, false)}
+                  />
+                </View>
+                <View className="shrink">
+                  <Button
+                    title={current.confirmLabel ?? 'Confirm'}
+                    variant={current.destructive ? 'danger' : 'primary'}
+                    onPress={confirm}
+                  />
+                </View>
               </>
             ) : (
               <Button title="OK" variant="primary" onPress={confirm} />

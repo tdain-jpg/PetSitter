@@ -132,7 +132,12 @@ export function VisitHistoryScreen({ navigation, route }: VisitHistoryScreenProp
 
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
-          <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+          {/* In a flex-row like every other screen's header. Without it the
+              button stretched to the full width of the container. */}
+          <View className="flex-row items-center justify-between">
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+            <Button title="Home" onPress={() => navigation.navigate('Home')} variant="outline" />
+          </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Visit history</Text>
             <Text className="text-tan-500">{guide?.title ?? 'What has been done, and when'}</Text>

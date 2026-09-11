@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { safeGoBack } from '../lib/goBack';
+import { formatTaskTime } from '../lib/routineTasks';
 import {
   View,
   Text,
@@ -42,7 +43,8 @@ interface SitterSchedule {
 
 export function TripWizardScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { activePets, createGuide } = useData();
+  const { activePets, createGuide, loadingPets, primaryHouseholdId } = useData();
+
 
   const [step, setStep] = useState<WizardStep>('pets');
   const [selectedPetIds, setSelectedPetIds] = useState<string[]>([]);
@@ -59,6 +61,27 @@ export function TripWizardScreen({ navigation }: Props) {
   // Set once the user tries to leave the dates step, so the "required" errors
   // only appear after an attempt rather than on a pristine form.
   const [datesSubmitAttempted, setDatesSubmitAttempted] = useState(false);
+
+  /**
+   * Every living pet starts selected, matching New Guide.
+   *
+   * These two flows create the same object and had opposite defaults: the
+   * guide form preselected everyone, the wizard preselected nobody. A wizard
+   * is the path taken by the LESS confident user, so it was the one where
+   * finishing with a guide covering no pets was more likely — and a guide with
+   * no pets has an empty checklist and a cheat sheet about no animal.
+   */
+  const prefilledPetsRef = useRef(false);
+
+  useEffect(() => {
+    if (prefilledPetsRef.current || loadingPets) return;
+    const living = activePets.filter(
+      (p) => !primaryHouseholdId || p.household_id === primaryHouseholdId
+    );
+    if (living.length === 0) return;
+    prefilledPetsRef.current = true;
+    setSelectedPetIds((prev) => (prev.length === 0 ? living.map((p) => p.id) : prev));
+  }, [activePets, primaryHouseholdId, loadingPets]);
 
   /**
    * The whole wizard as one draft value.
@@ -258,10 +281,14 @@ export function TripWizardScreen({ navigation }: Props) {
       const scheduleSummary = schedule.overnight
         ? 'Overnight stay'
         : [
+            // Formatted, not raw. These land in additional_notes, which is
+            // rendered on the guide AND on the public share link, so a raw
+            // "18:00" here was the one place 24-hour time still reached a
+            // reader after every other surface was converted.
             schedule.arrival_time.trim() &&
-              `arrival ${schedule.arrival_time.trim()}`,
+              `arrival ${formatTaskTime(schedule.arrival_time)}`,
             schedule.departure_time.trim() &&
-              `departure ${schedule.departure_time.trim()}`,
+              `departure ${formatTaskTime(schedule.departure_time)}`,
           ]
             .filter(Boolean)
             .join(', ');
@@ -550,7 +577,7 @@ export function TripWizardScreen({ navigation }: Props) {
             <Text className="text-brown-800 flex-1">
               {schedule.overnight
                 ? 'Overnight stay'
-                : `${schedule.arrival_time} - ${schedule.departure_time}`}
+                : `${formatTaskTime(schedule.arrival_time)} to ${formatTaskTime(schedule.departure_time)}`}
             </Text>
           </View>
         </View>

@@ -223,7 +223,12 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                         <View key={idx} className="flex-row mb-1">
                           <Text className="text-tan-500 w-20">{formatTaskTime(schedule.time)}</Text>
                           <Text className="text-brown-600 flex-1">
-                            {schedule.food_type} - {schedule.amount}
+                            {/* Joined from what exists: a blank amount used
+                                to leave a trailing dash on the page a sitter
+                                reads. */}
+                            {[schedule.food_type?.trim(), schedule.amount?.trim()]
+                              .filter(Boolean)
+                              .join(' - ')}
                           </Text>
                         </View>
                       ))}

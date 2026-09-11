@@ -176,11 +176,17 @@ export function GuideFormScreen({ navigation, route }: Props) {
      * including deliberately clearing the list.
      */
     if (!isEditing && !prefilledRef.current && !loadingPets && !petsError) {
-      prefilledRef.current = true;
       const householdPets = activePets.filter(
         (p) => !primaryHouseholdId || p.household_id === primaryHouseholdId
       );
+      // Latch only once there is actually something to select. On a cold load
+      // — a reload of /Main/GuideForm?mode=create, or the URL opened directly —
+      // `loadingPets` goes false a tick before activePets is populated, so
+      // latching on that alone burned the one chance and the form came up with
+      // nothing ticked. Waiting for a non-empty list costs nothing: a household
+      // with no pets has nothing to prefill either way.
       if (householdPets.length > 0) {
+        prefilledRef.current = true;
         setFormData((prev) =>
           prev.pet_ids.length === 0 ? { ...prev, pet_ids: householdPets.map((p) => p.id) } : prev
         );

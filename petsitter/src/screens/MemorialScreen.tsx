@@ -111,17 +111,22 @@ export function MemorialScreen({ navigation }: Props) {
 
                 <View className="flex-row gap-2">
                   <View className="flex-1">
+                    {/* Restore leads and Delete recedes. It was the other
+                        way round: Delete was the filled button and Restore the
+                        outlined one, so on a page about pets somebody has lost,
+                        the irreversible action read as the one being
+                        recommended. */}
                     <Button
                       title="Restore"
                       onPress={() => handleRestore(pet.id, pet.name)}
-                      variant="outline"
+                      variant="primary"
                     />
                   </View>
                   <View className="flex-1">
                     <Button
                       title="Delete"
                       onPress={() => handleDelete(pet.id, pet.name)}
-                      variant="secondary"
+                      variant="outline"
                     />
                   </View>
                 </View>

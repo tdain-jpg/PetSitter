@@ -412,6 +412,16 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
           ) : null}
         </View>
 
+        {/* Every other screen puts a large title under its controls; this one
+            went straight from the buttons to the date navigator, so a sitter
+            arriving from a link had nothing naming what they were looking at.
+            The guide's name rather than a generic label, because "which
+            household's routine is this" is the question a sitter actually has
+            with several clients open. */}
+        <Text className="text-2xl font-bold text-brown-800 px-4 pb-1">
+          {guide?.title ? `${guide.title}: routine` : 'Daily Routine'}
+        </Text>
+
         {/* Date Navigator */}
         <View className="flex-row items-center justify-between px-4 py-3">
           <Pressable
@@ -685,6 +695,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                 label="Specific Time (optional)"
                 value={taskForm.time}
                 onChange={(text) => setTaskForm((f) => ({ ...f, time: text }))}
+                defaultToNoon={false}
               />
 
               {/* Category */}

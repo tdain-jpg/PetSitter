@@ -119,7 +119,16 @@ export function buildGeneratedTasks(guideId: string, guidePets: Pet[]): RoutineT
           time_block: timeBlock,
           time: feeding.time,
           title: `Feed ${pet.name}`,
-          description: `${feeding.amount} of ${feeding.food_type}${feeding.notes ? ` - ${feeding.notes}` : ''}`,
+          // Built from the parts that EXIST. A blank amount used to render
+          // " of Evening Kibble" with a leading space and an orphan "of";
+          // a blank food type left a trailing dash. Both appear on a sitter's
+          // checklist, where a half-sentence reads as missing information.
+          description: [
+            [feeding.amount?.trim(), feeding.food_type?.trim()].filter(Boolean).join(' of '),
+            feeding.notes?.trim(),
+          ]
+            .filter(Boolean)
+            .join(' - '),
           is_recurring: true,
           is_custom: false,
           category: 'feeding',

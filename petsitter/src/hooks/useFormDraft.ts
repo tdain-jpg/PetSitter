@@ -93,6 +93,16 @@ export function useFormDraft<T>({
    */
   useEffect(() => {
     if (!isFocused) revalidateDialogs();
+    return () => {
+      // UNMOUNT, not just blur. Browser back tears this screen down without
+      // isFocused ever flipping, so the effect above never fires and the open
+      // dialog was left floating over whatever came next. The ref is lowered
+      // FIRST: isStale reads it through a closure that outlives the component,
+      // and would otherwise still report the screen as focused and keep the
+      // dialog alive.
+      isFocusedRef.current = false;
+      revalidateDialogs();
+    };
   }, [isFocused]);
 
   // Read through refs inside the debounce so a re-render mid-timer doesn't
