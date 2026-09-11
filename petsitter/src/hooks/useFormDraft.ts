@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showConfirm } from '../lib/dialogs';
+import { revalidateDialogs } from '../components/AppModal';
 
 /**
  * Keeps an in-progress create form on disk so leaving the screen cannot destroy
@@ -80,6 +81,19 @@ export function useFormDraft<T>({
   const isFocused = useIsFocused();
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
+
+  /**
+   * Leaving the screen takes this form's dialogs with it.
+   *
+   * The resume prompt is marked stale once the screen is no longer in front,
+   * which stops an unshown one surfacing later over somebody else's screen. A
+   * prompt that was ALREADY open when the user walked away needs a nudge:
+   * nothing re-asks the staleness question after a dialog has been shown. This
+   * is that nudge.
+   */
+  useEffect(() => {
+    if (!isFocused) revalidateDialogs();
+  }, [isFocused]);
 
   // Read through refs inside the debounce so a re-render mid-timer doesn't
   // reschedule the write or persist a value the user has already moved past.

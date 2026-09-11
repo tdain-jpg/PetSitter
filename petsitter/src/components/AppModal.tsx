@@ -41,6 +41,25 @@ let dialogHandler: DialogHandler | null = null;
  * mounted (e.g. very early startup) so the caller can fall back to legacy
  * alert behavior instead of silently dropping the dialog.
  */
+/**
+ * Ask the host to re-check whether the dialog CURRENTLY ON SCREEN has gone
+ * stale, and drop it if so.
+ *
+ * `isStale` is consulted when a request reaches the front of the queue, which
+ * closed the case where a dead screen's dialog blocked everything behind it.
+ * It could not close the other half: a dialog already VISIBLE when its screen
+ * unmounts stays visible, now floating over an unrelated screen, because
+ * nothing re-asks the question after it has been shown.
+ *
+ * A screen calls this as it goes away. Cheap, idempotent, and a no-op when no
+ * dialog is open or the open one is still valid.
+ */
+let revalidateHandler: (() => void) | null = null;
+
+export function revalidateDialogs(): void {
+  revalidateHandler?.();
+}
+
 export function pushDialogRequest(request: DialogRequest): boolean {
   if (!dialogHandler) {
     return false;
@@ -57,6 +76,9 @@ export function pushDialogRequest(request: DialogRequest): boolean {
 export function ModalHost() {
   // FIFO queue: requests arriving while a dialog is open wait their turn.
   const [queue, setQueue] = useState<DialogRequest[]>([]);
+  // Bumped by revalidateDialogs() to re-run the staleness check below against a
+  // dialog that is already on screen.
+  const [pulse, setPulse] = useState(0);
   const current = queue.length > 0 ? queue[0] : null;
 
   useEffect(() => {
@@ -64,9 +86,14 @@ export function ModalHost() {
       setQueue((prev) => [...prev, request]);
     };
     dialogHandler = handler;
+    const revalidate = () => setPulse((n) => n + 1);
+    revalidateHandler = revalidate;
     return () => {
       if (dialogHandler === handler) {
         dialogHandler = null;
+      }
+      if (revalidateHandler === revalidate) {
+        revalidateHandler = null;
       }
     };
   }, []);
@@ -89,7 +116,9 @@ export function ModalHost() {
     if (current?.isStale?.()) {
       settle(current, false);
     }
-  }, [current, settle]);
+    // `pulse` is a dependency so a screen on its way out can force this to run
+    // again against a dialog that is already visible.
+  }, [current, settle, pulse]);
 
   const confirm = useCallback(() => {
     if (current) {

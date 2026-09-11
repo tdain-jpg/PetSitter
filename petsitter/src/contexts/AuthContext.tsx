@@ -33,7 +33,6 @@ function sessionToUser(session: Session | null): User | null {
       (u.user_metadata?.full_name as string | undefined) ??
       (u.user_metadata?.name as string | undefined),
     avatar_url: u.user_metadata?.avatar_url as string | undefined,
-    role: 'user',
     created_at: u.created_at ?? new Date().toISOString(),
   };
 }

@@ -1,9 +1,28 @@
-import { View, Text, Pressable } from 'react-native';
+import { View, Text } from 'react-native';
+import { Button } from './Button';
 import { safeGoBack } from '../lib/goBack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 
+/**
+ * The one screen header, and it now looks like the majority did.
+ *
+ * There were two patterns. Nine screens used this component, which rendered a
+ * small text arrow pinned to the left edge with a centred title. Seventeen
+ * hand-rolled `<Button title="← Back" variant="outline">` above the content.
+ * Same behaviour — both call safeGoBack — but visibly different controls in the
+ * same app, which is what got reported.
+ *
+ * Unified by changing the NINE to match the SEVENTEEN rather than the other way
+ * round. Converting seventeen bespoke headers would have meant rewriting the
+ * layout of the most-used screens in the app, several of which carry a
+ * right-hand action this component has no slot for, to fix something purely
+ * visual. One file, no layout risk on the screens that were already right.
+ *
+ * The title moves below the buttons and grows, matching the hand-rolled
+ * headers, which put a large left-aligned title under the controls.
+ */
 interface ScreenHeaderProps {
   title: string;
   showBack?: boolean;
@@ -36,39 +55,25 @@ export function ScreenHeader({
   };
 
   return (
-    <View className="flex-row items-center justify-between px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-      <View style={{ width: 80 }}>
-        {showBack && (
-          <Pressable
-            onPress={handleBack}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={{ minHeight: 44, justifyContent: 'center' }}
-          >
-            <Text className="text-secondary-600 text-sm">{backLabel}</Text>
-          </Pressable>
+    <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
+      <View className="flex-row items-center justify-between">
+        {showBack ? (
+          <Button title={backLabel} onPress={handleBack} variant="outline" />
+        ) : (
+          <View />
+        )}
+        {showHome ? (
+          <Button title="Home" onPress={handleHome} variant="outline" />
+        ) : (
+          <View />
         )}
       </View>
       <Text
         accessibilityRole="header"
-        className="text-lg font-semibold text-brown-800 flex-1 text-center"
+        className="text-2xl font-bold text-brown-800 mt-4"
       >
         {title}
       </Text>
-      <View style={{ width: 80, alignItems: 'flex-end' }}>
-        {showHome && (
-          <Pressable
-            onPress={handleHome}
-            accessibilityRole="button"
-            accessibilityLabel="Go to home"
-            // minWidth as well as minHeight: "Home" is a short word, so the box
-            // was 38px wide and passed a height-only audit.
-            style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' }}
-          >
-            <Text className="text-tan-500 text-sm">Home</Text>
-          </Pressable>
-        )}
-      </View>
     </View>
   );
 }

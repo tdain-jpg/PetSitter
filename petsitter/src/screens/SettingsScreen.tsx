@@ -254,10 +254,6 @@ export function SettingsScreen({ navigation }: Props) {
             <Text className="text-tan-500">Email</Text>
             <Text className="text-brown-800">{user?.email}</Text>
           </View>
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-tan-500">Role</Text>
-            <Text className="text-brown-800 capitalize">{user?.role}</Text>
-          </View>
         </Card>
 
         {/* Crown: hidden from a sitter who has no household to unlock. */}
