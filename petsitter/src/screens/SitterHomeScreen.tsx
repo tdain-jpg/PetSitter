@@ -25,7 +25,8 @@ export function SitterHomeScreen({ navigation }: Props) {
     sitterConnectionsError,
     refreshSitterConnections,
     pendingSitterInvites,
-    respondToSitterInvite
+    respondToSitterInvite,
+    activePets
   } = useData();
   
   const [pendingInvites, setPendingInvites] = useState<PendingSitterInvite[]>([]);
@@ -209,6 +210,7 @@ export function SitterHomeScreen({ navigation }: Props) {
   // A pending invitation is not "no clients" — saying so directly above one is
   // the app arguing with itself.
   const hasAnyClient = sitterConnections.some((c) => c.status === 'active');
+  const ownsPets = activePets.length > 0;
 
   /**
    * Today's numbers, loaded in the background.
@@ -264,6 +266,18 @@ export function SitterHomeScreen({ navigation }: Props) {
               {/* On web the browser back button rescues you; in the installed
                   PWA and on native there is nothing else off this screen. */}
               <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+              {/* Only for someone who is demonstrably BOTH: they keep pets of
+                  their own as well as sitting for other people. For a sitter
+                  with no pets this would point at a dashboard about an empty
+                  household, so it is not shown at all. A control that leads
+                  somewhere pointless is worse than no control. */}
+              {ownsPets ? (
+                <Button
+                  title="🏠 My pets"
+                  onPress={() => navigation.navigate('Home')}
+                  variant="outline"
+                />
+              ) : null}
             </View>
             <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
             <Text className="text-tan-500">{subtitle}</Text>

@@ -144,6 +144,9 @@ export function HomeScreen({ navigation }: Props) {
     [sitterConnections]
   );
 
+  /** Pets of their own AND live clients: the only case where a switch makes sense. */
+  const isBothOwnerAndSitter = hasActiveSitterConnection && activePets.length > 0;
+
   // Runs at most once per session: completes the setup a failed/skipped
   // invite tail left behind, then lets the normal Home render.
   const repairingJoin = useRef(false);
@@ -661,11 +664,26 @@ export function HomeScreen({ navigation }: Props) {
               right-aligned content inside a left-aligned block — the Settings
               button floating loose in the middle of the header. */}
           <View className="items-end shrink ml-auto">
-            <Button
-              title="Settings"
-              onPress={navigateToSettings}
-              variant="secondary"
-            />
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              {/* The other half of the switch. Shown only to someone who is
+                  demonstrably both: pets of their own AND live clients. An
+                  owner who has never sat for anyone sees nothing, and a sitter
+                  with no pets never reaches this screen to begin with.
+                  In the header rather than in Quick Actions because switching
+                  sides is navigation, not a task. */}
+              {isBothOwnerAndSitter ? (
+                <Button
+                  title="🐾 Sitting"
+                  onPress={() => navigation.navigate('SitterHome')}
+                  variant="outline"
+                />
+              ) : null}
+              <Button
+                title="Settings"
+                onPress={navigateToSettings}
+                variant="secondary"
+              />
+            </View>
             {/* Capped and clipped to one line. This is a greeting; a long name
                 is not worth reflowing the header for, and `Welcome, Bartholomew
                 -Christopher!` was doing exactly that. */}
