@@ -298,9 +298,15 @@ export function GuideDetailScreen({ navigation, route }: Props) {
             </SectionHeader>
           )}
 
-          {/* Additional Notes */}
+          {/* Additional Notes, EXPANDED.
+              This section only renders when there is something in it, so
+              collapsing it hid content that was known to exist. It matters
+              because Quick Trip Setup writes the sitter's arrival and departure
+              times in here as a sentence — the guide has no field of its own
+              for them — so an owner finishing the wizard landed on a guide
+              showing no evidence those times had been saved at all. */}
           {guide.additional_notes && (
-            <SectionHeader title="Additional Notes" icon="📝" defaultExpanded={false}>
+            <SectionHeader title="Additional Notes" icon="📝">
               <Text className="text-brown-600">{guide.additional_notes}</Text>
             </SectionHeader>
           )}
