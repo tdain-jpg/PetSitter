@@ -1,4 +1,7 @@
-# Two homes, one account (planned 2026-09-08, NOT built)
+# Two homes, one account — ✅ BUILT 2026-09-08/09/11
+
+> All four steps shipped. Kept for the reasoning, not as a to-do.
+> Commits: 0d384ba (steps 1-2), d1f72b7 (step 3), 0a477d2 (step 4).
 
 Written after QA. Three findings were the same finding:
 
@@ -54,13 +57,16 @@ existed, without a backfill and without asking them anything.
 
 ## Sequence
 
-1. Sitter-role accounts never see the owner onboarding wizard. Smallest change,
-   fixes the worst symptom, ships alone.
-2. Promote Pet Sitters out of Household on the owner home.
-3. Rebuild SitterHome as a real home: Today first, then clients, then invite.
-4. The switch, for people who are genuinely both.
-
-Steps 1 and 2 are worth doing on their own even if 3 and 4 wait.
+1. ✅ Sitter-role accounts never see the owner onboarding wizard. Shipped with a
+   second path: active clients and no pets of their own also counts as a sitter,
+   which covers everyone who predates the role column without a backfill.
+2. ✅ Pet Sitters promoted. It turned out the button was already on the owner
+   home and going to the right screen — it was called "Invite a Sitter", which
+   reads as an action rather than a place. The architecture was right and the
+   label was lying about it.
+3. ✅ SitterHome leads with Today, as a live count rather than a link.
+4. ✅ The switch. "🐾 Sitting" on the owner home, "🏠 My pets" on the sitter
+   home, each shown only to somebody demonstrably both.
 
 ## Deliberately not in scope
 
@@ -70,20 +76,22 @@ PWA-first on phones. The header switch appears only for those people.
 
 ## Also outstanding, unrelated to this
 
-**Back controls are inconsistent.** 17 screens hand-roll
-`<Button title="← Back" variant="outline">`; 9 use the shared `ScreenHeader`,
-which renders a plain arrow at the left edge. Both call `safeGoBack`, so this is
-cosmetic, not behavioural. Unifying means converting 17 screens onto
-`ScreenHeader` — mechanical but touching 17 layouts, so it wants its own pass
-and its own QA, not a corner of someone else's.
+~~**Back controls are inconsistent.**~~ ✅ DONE 2026-09-11 (11695f8). Resolved the
+other way round from the guess here: the NINE ScreenHeader screens were changed
+to match the SEVENTEEN hand-rolled ones. Converting seventeen bespoke headers
+would have rewritten the most-used layouts in the app, several of which carry a
+right-hand action ScreenHeader has no slot for, to fix something purely visual.
+One file instead of seventeen.
 
-**Export / import.** JSON import is a developer's answer to a user's problem.
+~~**Export / import.**~~ ✅ DONE 2026-09-09 (047022a), built as described below.
+Original note follows. JSON import is a developer's answer to a user's problem.
 Nobody moving in with a partner thinks "I will export my pets as JSON". Keep
 export (a real get-my-data-out promise, and cheap to honour); replace import
 with a **merge household** flow: enter the other person's email, they confirm,
 their pets and guides move across. Same underlying operation, described in
 words a person would use.
 
-**Settings shows "Role: User" to everybody.** `User.role` is hardcoded to
+~~**Settings shows "Role: User" to everybody.**~~ ✅ DONE 2026-09-11 (11695f8).
+The field and its UserRole type are both gone. `User.role` is hardcoded to
 'user' in AuthContext and read from nowhere. It is a leftover that displays a
 meaningless word on a screen people read when they are confused. Delete it.

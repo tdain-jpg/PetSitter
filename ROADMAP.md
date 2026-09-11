@@ -143,11 +143,15 @@ component as real sheets so it always previews the true experience.
 Later candidates: `guide-editing` (first GuideForm open — explains autosave + Done),
 `crown-intro` (when Crown ships), a localStorage-only hint on the sitter share view.
 
-### [~] Sitter accounts (second persona) — HALF SHIPPED
+### [x] Sitter accounts (second persona) — SHIPPED IN FULL 2026-09-11
 Migrations 0015-0020, 0023, 0025. Invite/accept/revoke, read-only client views, check-ins,
 task ticking, cheat-sheet read access, and the owner's contact per connection.
 
-⚠️ **This was marked [x] and it should not have been.** The original design below called for
+✅ **Now complete.** The gap described below was closed on 2026-09-08/11: sitters have
+their own sign-up, their own home, and can invite owners. The original warning is kept
+because it is the reason this took a second pass.
+
+⚠️ **This was marked [x] when it was half-built.** The original design below called for
 a role on `profiles` and said the invite "has to work in both directions — owner invites
 sitter, sitter invites owner", calling that the best distribution idea on the list. Only the
 owner→sitter direction was built. There is no role, no sitter sign-up, and no sitter entry
