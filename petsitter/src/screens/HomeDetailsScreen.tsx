@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenContainer, ScreenHeader, SecurityNote } from '../components';
-import { useData } from '../contexts';
+import { useAuth, useData } from '../contexts';
 import { dataService, generateId } from '../services';
-import { showAlert } from '../lib/dialogs';
+import { showAlert, showConfirm } from '../lib/dialogs';
 import { friendlyError } from '../lib/errors';
 import { vetContactsFromPets } from '../lib/homeDetails';
-import { isValidPhoneNumber } from '../utils';
+import { isValidEmail, isValidPhoneNumber } from '../utils';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
@@ -49,7 +49,8 @@ const blankContact = (): EmergencyContact => ({
 });
 
 export function HomeDetailsScreen({ navigation }: Props) {
-  const { primaryHouseholdId, households, pets } = useData();
+  const { primaryHouseholdId, households, pets, inviteToHousehold, getHouseholdInvites } = useData();
+  const { user } = useAuth();
   const householdName = households.find((h) => h.id === primaryHouseholdId)?.name ?? null;
 
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,61 @@ export function HomeDetailsScreen({ navigation }: Props) {
   const [owners, setOwners] = useState<HomeOwner[]>([blankOwner()]);
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [homeInfo, setHomeInfo] = useState<HomeInfo>({});
+  // Lower-cased emails with an invitation to this household still pending, so
+  // the button can say "sent" instead of offering to send it again.
+  const [pendingInviteEmails, setPendingInviteEmails] = useState<Set<string>>(new Set());
+  const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!primaryHouseholdId) return;
+    let cancelled = false;
+    getHouseholdInvites(primaryHouseholdId)
+      .then((rows) => {
+        if (cancelled) return;
+        setPendingInviteEmails(
+          new Set(rows.filter((r) => r.status === 'pending').map((r) => r.email.toLowerCase()))
+        );
+      })
+      // Only affects the label; the server still refuses a duplicate.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [primaryHouseholdId, getHouseholdInvites]);
+
+  /**
+   * Offered, never automatic. Being on "who to call first" is a phone number
+   * for the sitter; joining the household is full, permanent access to every
+   * pet, guide and code. Nobody should get the second because of the first.
+   *
+   * Goes through the ordinary household invite, which behaves the same whether
+   * or not the address already has an account, so this screen never reveals
+   * who uses Pawstructions. If they already keep pets of their own, they move
+   * them across after accepting with Settings, Move my pets.
+   */
+  const inviteOwner = async (owner: HomeOwner) => {
+    const email = (owner.email ?? '').trim();
+    if (!primaryHouseholdId || !isValidEmail(email)) return;
+    const who = owner.name.trim() || email;
+    const ok = await showConfirm({
+      title: `Invite ${who} to ${householdName ?? 'your household'}?`,
+      message:
+        'They will be able to see and edit every pet and guide, and these home details, until you remove them. ' +
+        'If they already use Pawstructions with pets of their own, they can move those pets in after they accept.',
+      confirmLabel: 'Send invite',
+    });
+    if (!ok) return;
+    setInvitingEmail(email.toLowerCase());
+    try {
+      await inviteToHousehold(primaryHouseholdId, email);
+      setPendingInviteEmails((prev) => new Set(prev).add(email.toLowerCase()));
+      showAlert('Invite sent', `We've emailed ${email}. They'll also see it in the app when they sign in.`);
+    } catch (error: any) {
+      showAlert('Could not invite', friendlyError(error?.message, 'Something went wrong. Please try again.'));
+    } finally {
+      setInvitingEmail(null);
+    }
+  };
 
   useEffect(() => {
     if (!primaryHouseholdId) return;
@@ -175,6 +231,28 @@ export function HomeDetailsScreen({ navigation }: Props) {
                       onChangeText={(v) => setOwner(i, { email: v })}
                       keyboardType="email-address"
                     />
+                    {(() => {
+                      const email = (o.email ?? '').trim();
+                      const lower = email.toLowerCase();
+                      if (!isValidEmail(email) || lower === (user?.email ?? '').toLowerCase()) return null;
+                      if (pendingInviteEmails.has(lower)) {
+                        return (
+                          <Text className="text-tan-500 text-sm mb-3">
+                            Invitation sent. It is waiting for them to accept.
+                          </Text>
+                        );
+                      }
+                      return (
+                        <View className="mb-3">
+                          <Button
+                            title={invitingEmail === lower ? 'Sending…' : `Invite ${o.name.trim() || 'them'} to your household`}
+                            onPress={() => inviteOwner(o)}
+                            variant="outline"
+                            disabled={invitingEmail !== null}
+                          />
+                        </View>
+                      );
+                    })()}
                     {owners.length > 1 ? (
                       <Button
                         title="Remove this person"
