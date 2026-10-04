@@ -1,9 +1,10 @@
-import { View, Text } from 'react-native';
-import { Button } from './Button';
-import { safeGoBack } from '../lib/goBack';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../navigation/types';
+import { View, Text } from "react-native";
+import { Button } from "./Button";
+import { ScreenContainer } from "./ScreenContainer";
+import { safeGoBack } from "../lib/goBack";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { MainStackParamList } from "../navigation/types";
 
 /**
  * The one screen header, and it now looks like the majority did.
@@ -29,6 +30,13 @@ interface ScreenHeaderProps {
   showHome?: boolean;
   backLabel?: string;
   onBack?: () => void;
+  /**
+   * Match the ScreenContainer variant of the content below, so the buttons
+   * line up with the page instead of sitting at the far edges of a wide
+   * window. Without it, a desktop browser showed Back and Home pinned to the
+   * corners above a centred 760px column.
+   */
+  width?: "form" | "content" | "wide";
 }
 
 type NavigationProp = NativeStackNavigationProp<MainStackParamList>;
@@ -37,8 +45,9 @@ export function ScreenHeader({
   title,
   showBack = true,
   showHome = true,
-  backLabel = '← Back',
+  backLabel = "← Back",
   onBack,
+  width = "content",
 }: ScreenHeaderProps) {
   const navigation = useNavigation<NavigationProp>();
 
@@ -51,29 +60,31 @@ export function ScreenHeader({
   };
 
   const handleHome = () => {
-    navigation.navigate('Home');
+    navigation.navigate("Home");
   };
 
   return (
     <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
-      <View className="flex-row items-center justify-between">
-        {showBack ? (
-          <Button title={backLabel} onPress={handleBack} variant="outline" />
-        ) : (
-          <View />
-        )}
-        {showHome ? (
-          <Button title="Home" onPress={handleHome} variant="outline" />
-        ) : (
-          <View />
-        )}
-      </View>
-      <Text
-        accessibilityRole="header"
-        className="text-2xl font-bold text-brown-800 mt-4"
-      >
-        {title}
-      </Text>
+      <ScreenContainer variant={width}>
+        <View className="flex-row items-center justify-between">
+          {showBack ? (
+            <Button title={backLabel} onPress={handleBack} variant="outline" />
+          ) : (
+            <View />
+          )}
+          {showHome ? (
+            <Button title="Home" onPress={handleHome} variant="outline" />
+          ) : (
+            <View />
+          )}
+        </View>
+        <Text
+          accessibilityRole="header"
+          className="text-2xl font-bold text-brown-800 mt-4"
+        >
+          {title}
+        </Text>
+      </ScreenContainer>
     </View>
   );
 }

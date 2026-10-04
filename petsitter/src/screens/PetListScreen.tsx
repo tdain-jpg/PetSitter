@@ -31,7 +31,7 @@ export function PetListScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
-      <ScreenHeader
+      <ScreenHeader width="wide"
         title="My Pets"
         backLabel="← Home"
         onBack={() => navigation.navigate('Home')}

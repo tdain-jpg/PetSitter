@@ -548,7 +548,7 @@ export function PetFormScreen({ navigation, route }: Props) {
         <StatusBar style="dark" />
 
         {/* Header */}
-        <ScreenHeader
+        <ScreenHeader width="form"
           title={isEditing ? 'Edit Pet' : 'Add Pet'}
           backLabel={isEditing ? '← Done' : 'Cancel'}
           onBack={handleBack}

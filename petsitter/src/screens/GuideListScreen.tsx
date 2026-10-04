@@ -33,7 +33,7 @@ export function GuideListScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
-      <ScreenHeader
+      <ScreenHeader width="wide"
         title="My Guides"
         backLabel="← Home"
         onBack={() => navigation.navigate('Home')}

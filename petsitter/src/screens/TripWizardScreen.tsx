@@ -639,7 +639,7 @@ export function TripWizardScreen({ navigation }: Props) {
     <View className="flex-1 bg-cream-200">
       <StatusBar style="dark" />
 
-      <ScreenHeader
+      <ScreenHeader width="form"
         title="Quick Trip Setup"
         backLabel="Cancel"
         onBack={handleExit}

@@ -577,7 +577,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
         <StatusBar style="dark" />
 
         {/* Header */}
-        <ScreenHeader
+        <ScreenHeader width="form"
           title={isEditing ? 'Edit Guide' : 'New Guide'}
           backLabel={isEditing ? '← Done' : 'Cancel'}
           onBack={() => safeGoBack(navigation)}
