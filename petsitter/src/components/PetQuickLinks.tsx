@@ -44,9 +44,11 @@ export function PetQuickLinks({ pets }: { pets: Pet[] }) {
         return (
           <Pressable
             key={pet.id}
-            onPress={() => navigation.navigate('PetForm', { mode: 'edit', petId: pet.id })}
+            // The pet's page, same as the pet cards lower on Home. Two taps
+            // on the same pet landing in two different places read as a bug.
+            onPress={() => navigation.navigate('PetDetail', { petId: pet.id })}
             accessibilityRole="button"
-            accessibilityLabel={`Edit ${pet.name}`}
+            accessibilityLabel={`Open ${pet.name}`}
             style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, width: 72 })}
             className="items-center"
           >
