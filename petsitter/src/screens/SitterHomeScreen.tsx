@@ -286,8 +286,26 @@ export function SitterHomeScreen({ navigation }: Props) {
                 />
               ) : null}
             </View>
-            <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
-            <Text className="text-tan-500">{subtitle}</Text>
+            {/* Title left, the two sitter actions right. flex-wrap drops the
+                actions under the title on a phone instead of squeezing them. */}
+            <View className="flex-row flex-wrap items-end justify-between" style={{ gap: 12 }}>
+              <View>
+                <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
+                <Text className="text-tan-500">{subtitle}</Text>
+              </View>
+              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                <Button
+                  title="✉️ Invite a client"
+                  onPress={() => navigation.navigate('InviteClient')}
+                  variant="primary"
+                />
+                <Button
+                  title={subscribed ? 'Your sitter plan' : 'What this will cost'}
+                  onPress={() => navigation.navigate('SitterPlans')}
+                  variant="outline"
+                />
+              </View>
+            </View>
           </View>
         </ScreenContainer>
       </View>
@@ -329,25 +347,6 @@ export function SitterHomeScreen({ navigation }: Props) {
 
           {/* THEN who they are. */}
           {renderContent()}
-          {/* Sitter-only by construction: this screen is only reachable from a
-              sitter connection or invitation, so an owner never lands here and
-              never sees a $9/month plan for a product they are not buying. */}
-          <View className="mb-8 mt-2">
-            {/* The direction that grows the app: a sitter bringing their own
-                clients in. Above the pricing link because it is the thing a
-                sitter with an empty client list actually needs. */}
-            <Button
-              title="✉️ Invite a client"
-              onPress={() => navigation.navigate('InviteClient')}
-              variant="primary"
-            />
-            <View className="h-3" />
-            <Button
-              title={subscribed ? 'Your sitter plan' : 'What this will cost'}
-              onPress={() => navigation.navigate('SitterPlans')}
-              variant="outline"
-            />
-          </View>
 
         </ScreenContainer>
       </ScrollView>

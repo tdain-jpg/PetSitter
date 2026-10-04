@@ -130,6 +130,15 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
     }
   };
 
+  // "8 October", from the period end Stripe reported. A timestamp, not a
+  // calendar date, so it goes through Date rather than formatDate.
+  const endsOn = plan?.currentPeriodEnd
+    ? new Date(plan.currentPeriodEnd).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'long',
+      })
+    : null;
+
   const openFeedback = () => {
     const subject = encodeURIComponent('[Pawstructions] Sitter feedback');
     const body = encodeURIComponent(
@@ -177,9 +186,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                   You have unlimited clients
                 </Text>
                 <Text className="text-brown-700 leading-6">
-                  {plan?.cancelAtPeriodEnd
-                    ? 'Your subscription is set to end at the end of the current period. You keep unlimited clients until then.'
-                    : `You are caring for ${used} ${used === 1 ? 'household' : 'households'}.`}
+                  You are caring for {used} {used === 1 ? 'household' : 'households'}.
                 </Text>
                 {plan?.status === 'past_due' ? (
                   <Text className="text-warm-700 leading-6 mt-2">
@@ -204,6 +211,33 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
             )}
           </Card>
 
+          {/* A plan that is ending gets its own card, with the date and a way
+              back. Amber, not red: red here means a payment failed, and this
+              is a choice the sitter made, not something that went wrong. */}
+          {subscribed && plan?.cancelAtPeriodEnd ? (
+            <Card className="mb-4 bg-warm-50 border border-warm-300">
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                {endsOn ? (
+                  <>
+                    Your plan ends on <Text className="font-bold">{endsOn}</Text>
+                  </>
+                ) : (
+                  'Your plan is ending'
+                )}
+              </Text>
+              <Text className="text-brown-700 leading-6 mb-4">
+                You keep unlimited clients until then. After that you can still look after{' '}
+                {free} households for free. Changed your mind? Keep your plan and nothing
+                changes.
+              </Text>
+              <Button
+                title={busy === 'portal' ? 'Opening…' : 'Keep my plan'}
+                onPress={() => openBilling('portal')}
+                disabled={busy !== null}
+              />
+            </Card>
+          ) : null}
+
           {/* Coming back from the portal having cancelled. Deliberately not a
               survey: people leaving do not want a form, and Stripe already
               collects a cancellation reason at the moment they give it. This is
@@ -215,9 +249,8 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                 Sorry to see you go
               </Text>
               <Text className="text-brown-700 leading-6">
-                You keep unlimited clients until the end of the period you have already paid
-                for, and nothing is removed from your account. You are welcome back any time,
-                and your clients will still be here.
+                Nothing is removed from your account. You are welcome back any time, and your
+                clients will still be here.
               </Text>
             </Card>
           ) : null}
