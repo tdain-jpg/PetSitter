@@ -15,11 +15,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { PetSpecies, OnboardingStep } from '../types';
 import { generateId, getCurrentTimestamp } from '../services/DataService';
+import { dataService } from '../services';
+import { guidePrefillFrom } from '../lib/homeDetails';
 import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
-const STEPS: OnboardingStep[] = ['welcome', 'create_pet', 'create_guide', 'completion'];
+const STEPS: OnboardingStep[] = ['welcome', 'create_pet', 'home', 'create_guide', 'completion'];
 
 const speciesOptions = [
   { label: 'Dog', value: 'dog' },
@@ -41,6 +43,12 @@ interface PetFormData {
 
 interface GuideFormData {
   title: string;
+}
+
+/** The "Your home" step: saved to Home details, not just to the first guide. */
+interface HomeFormData {
+  ownerName: string;
+  ownerPhone: string;
   address: string;
   emergencyName: string;
   emergencyPhone: string;
@@ -55,6 +63,7 @@ export function OnboardingScreen({ navigation }: Props) {
     updateOnboardingState,
     completeOnboarding,
     onboardingState,
+    primaryHouseholdId,
   } = useData();
 
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(
@@ -78,8 +87,10 @@ export function OnboardingScreen({ navigation }: Props) {
   const [petErrors, setPetErrors] = useState<Partial<PetFormData>>({});
 
   // Guide form state
-  const [guideForm, setGuideForm] = useState<GuideFormData>({
-    title: '',
+  const [guideForm, setGuideForm] = useState<GuideFormData>({ title: '' });
+  const [homeForm, setHomeForm] = useState<HomeFormData>({
+    ownerName: '',
+    ownerPhone: '',
     address: '',
     emergencyName: '',
     emergencyPhone: '',
@@ -151,7 +162,7 @@ export function OnboardingScreen({ navigation }: Props) {
         // The pet already exists (Go Back then Continue, or a resumed
         // session): update it instead of creating a duplicate.
         await updatePet(createdPetId, petFields);
-        await goToStep('create_guide', { first_pet_id: createdPetId });
+        await goToStep('home', { first_pet_id: createdPetId });
       } else {
         const pet = await createPet({
           user_id: user.id,
@@ -161,10 +172,55 @@ export function OnboardingScreen({ navigation }: Props) {
           status: 'active',
         });
         setCreatedPetId(pet.id);
-        await goToStep('create_guide', { first_pet_id: pet.id });
+        await goToStep('home', { first_pet_id: pet.id });
       }
     } catch (error: any) {
       showAlert('Error', friendlyError(error, 'Failed to create pet'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Save "Your home" to the household's Home details, so the first guide AND
+   * every one after it start with it. It used to go into the first guide only,
+   * and the second trip started blank.
+   */
+  const handleSaveHome = async () => {
+    const h = {
+      ownerName: homeForm.ownerName.trim(),
+      ownerPhone: homeForm.ownerPhone.trim(),
+      address: homeForm.address.trim(),
+      emergencyName: homeForm.emergencyName.trim(),
+      emergencyPhone: homeForm.emergencyPhone.trim(),
+    };
+    const anything = Object.values(h).some(Boolean);
+    if (!anything || !primaryHouseholdId) {
+      await goToStep('create_guide');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await dataService.saveHomeDetails(primaryHouseholdId, {
+        owners: h.ownerName || h.ownerPhone ? [{ name: h.ownerName, phone: h.ownerPhone }] : [],
+        emergency_contacts:
+          h.emergencyName || h.emergencyPhone
+            ? [
+                {
+                  id: generateId(),
+                  name: h.emergencyName,
+                  phone: h.emergencyPhone,
+                  relationship: 'Emergency Contact',
+                  contact_type: 'personal',
+                  is_primary: false,
+                },
+              ]
+            : [],
+        home_info: h.address ? { address: h.address } : {},
+      });
+      await goToStep('create_guide');
+    } catch (error: any) {
+      showAlert("Couldn't save your home details", friendlyError(error, 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -182,24 +238,17 @@ export function OnboardingScreen({ navigation }: Props) {
 
     setIsSubmitting(true);
     try {
+      // Whatever the home step saved (or nothing, if it was skipped).
+      const homeDetails = primaryHouseholdId
+        ? await dataService.getHomeDetails(primaryHouseholdId).catch(() => null)
+        : null;
+      const prefill = guidePrefillFrom(homeDetails);
       const guide = await createGuide({
         user_id: user.id,
         title: guideForm.title.trim(),
         pet_ids: [createdPetId],
-        emergency_contacts: guideForm.emergencyName
-          ? [
-              {
-                id: generateId(),
-                name: guideForm.emergencyName.trim(),
-                phone: guideForm.emergencyPhone.trim(),
-                relationship: 'Emergency Contact',
-                is_primary: true,
-              },
-            ]
-          : [],
-        home_info: {
-          address: guideForm.address.trim() || undefined,
-        },
+        emergency_contacts: prefill.emergency_contacts,
+        home_info: prefill.home_info,
       });
       setCreatedGuideId(guide.id);
       await goToStep('completion', { first_guide_id: guide.id });
@@ -358,6 +407,95 @@ export function OnboardingScreen({ navigation }: Props) {
           </ScrollView>
         );
 
+      case 'home':
+        return (
+          <ScrollView className="flex-1 p-4" keyboardShouldPersistTaps="handled">
+            <ScreenContainer variant="form">
+            <View className="items-center mb-6">
+              <View className="w-20 h-20 bg-secondary-100 rounded-full items-center justify-center mb-4">
+                <Text className="text-4xl">🏡</Text>
+              </View>
+              <Text className="text-2xl font-bold text-brown-800 text-center">
+                Your Home
+              </Text>
+              <Text className="text-tan-600 text-center mt-2">
+                Fill this in once and every guide you make starts with it.
+              </Text>
+            </View>
+
+            <Card className="mb-4">
+              <Input
+                label="Your Name"
+                placeholder="e.g., Jordan Smith"
+                value={homeForm.ownerName}
+                onChangeText={(v) => setHomeForm((prev) => ({ ...prev, ownerName: v }))}
+                autoCapitalize="words"
+              />
+              <Input
+                label="Your Phone"
+                placeholder="(555) 123-4567"
+                value={homeForm.ownerPhone}
+                onChangeText={(v) => setHomeForm((prev) => ({ ...prev, ownerPhone: v }))}
+                keyboardType="phone-pad"
+                formatAsPhone
+              />
+              <Input
+                label="Home Address"
+                placeholder="123 Main St, City, State"
+                value={homeForm.address}
+                onChangeText={(v) => setHomeForm((prev) => ({ ...prev, address: v }))}
+              />
+            </Card>
+
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-4">
+                Emergency Contact
+              </Text>
+              <Input
+                label="Contact Name"
+                placeholder="e.g., Pat (neighbor)"
+                value={homeForm.emergencyName}
+                onChangeText={(v) => setHomeForm((prev) => ({ ...prev, emergencyName: v }))}
+                autoCapitalize="words"
+              />
+              <Input
+                label="Phone Number"
+                placeholder="(555) 123-4567"
+                value={homeForm.emergencyPhone}
+                onChangeText={(v) => setHomeForm((prev) => ({ ...prev, emergencyPhone: v }))}
+                keyboardType="phone-pad"
+                formatAsPhone
+              />
+            </Card>
+
+            <Text className="text-sm text-tan-500 text-center mb-4">
+              Wi-Fi, door codes and more contacts can go in Settings, Home details, any time.
+            </Text>
+
+            <View className="gap-3 mb-8">
+              <Button
+                title="Continue"
+                onPress={handleSaveHome}
+                loading={isSubmitting}
+                disabled={isSubmitting}
+              />
+              <Button
+                title="Go Back"
+                onPress={() => goToStep('create_pet')}
+                variant="outline"
+                disabled={isSubmitting}
+              />
+              <Button
+                title="Skip this step"
+                onPress={() => goToStep('create_guide')}
+                variant="outline"
+                disabled={isSubmitting}
+              />
+            </View>
+            </ScreenContainer>
+          </ScrollView>
+        );
+
       case 'create_guide':
         return (
           <ScrollView className="flex-1 p-4" keyboardShouldPersistTaps="handled">
@@ -386,37 +524,10 @@ export function OnboardingScreen({ navigation }: Props) {
                 error={guideErrors.title}
               />
 
-              <Input
-                label="Home Address (Optional)"
-                placeholder="123 Main St, City, State"
-                value={guideForm.address}
-                onChangeText={(v) => setGuideForm((prev) => ({ ...prev, address: v }))}
-              />
-            </Card>
-
-            <Card className="mb-4">
-              <Text className="text-lg font-semibold text-brown-800 mb-4">
-                Emergency Contact (Optional)
-              </Text>
-
-              <Input
-                label="Contact Name"
-                placeholder="e.g., Dr. Smith (Vet)"
-                value={guideForm.emergencyName}
-                onChangeText={(v) => setGuideForm((prev) => ({ ...prev, emergencyName: v }))}
-              />
-
-              <Input
-                label="Phone Number"
-                placeholder="(555) 123-4567"
-                value={guideForm.emergencyPhone}
-                onChangeText={(v) => setGuideForm((prev) => ({ ...prev, emergencyPhone: v }))}
-                formatAsPhone
-              />
             </Card>
 
             <Text className="text-sm text-tan-500 text-center mb-4">
-              You can add WiFi passwords, door codes, and detailed schedules later.
+              Your home details are already in it. You can add schedules and more later.
             </Text>
 
             <View className="gap-3 mb-8">
@@ -428,7 +539,7 @@ export function OnboardingScreen({ navigation }: Props) {
               />
               <Button
                 title="Go Back"
-                onPress={() => goToStep('create_pet')}
+                onPress={() => goToStep('home')}
                 variant="outline"
                 disabled={isSubmitting}
               />

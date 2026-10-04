@@ -96,6 +96,7 @@ const linking = {
           Settings: 'Settings',
           Memorial: 'Memorial',
           Household: 'Household',
+          HomeDetails: 'HomeDetails',
           Onboarding: 'Onboarding',
           TripWizard: 'TripWizard',
         },

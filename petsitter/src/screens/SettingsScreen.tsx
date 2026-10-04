@@ -436,6 +436,27 @@ export function SettingsScreen({ navigation }: Props) {
           </Pressable>
         </Card>
 
+        {/* Home details: entered once, copied into every new guide. Not for a
+            sitter with no pets, who has no home of their own to describe here. */}
+        {!isSitterWithNoPets ? (
+          <Card className="mb-4">
+            <Pressable
+              onPress={() => navigation.navigate('HomeDetails')}
+              accessibilityRole="button"
+              accessibilityLabel="Edit your home details"
+              className="flex-row justify-between items-center"
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-brown-800 font-medium">Home details</Text>
+                <Text className="text-tan-500 text-sm">
+                  Address, phone numbers, contacts and codes. Every new guide starts with these.
+                </Text>
+              </View>
+              <Text className="text-tan-400 text-xl">›</Text>
+            </Pressable>
+          </Card>
+        ) : null}
+
         {/* Memorial */}
         {deceasedPets.length > 0 && (
           <Card className="mb-4">

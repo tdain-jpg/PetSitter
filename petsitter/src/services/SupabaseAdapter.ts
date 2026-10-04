@@ -21,6 +21,7 @@ import type {
   SitterPlan,
   SitterTodayGroup,
   PendingOwnerInvite,
+  HomeDetails,
 } from '../types';
 import {
   DataService,
@@ -1218,6 +1219,53 @@ export class SupabaseAdapter implements DataService {
   }
 
   // ============================================
+  // Home details
+  // ============================================
+  /**
+   * The household's saved address, owners, contacts and codes, or null when it
+   * has never been set up. Members only, by RLS: a sitter asking gets null,
+   * the same as a household with nothing saved, and never an error to probe.
+   */
+  async getHomeDetails(householdId: string): Promise<HomeDetails | null> {
+    const { data, error } = await supabase
+      .from('household_home_details')
+      .select('household_id, owners, emergency_contacts, home_info, updated_at')
+      .eq('household_id', householdId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return {
+      household_id: data.household_id,
+      owners: Array.isArray(data.owners) ? data.owners : [],
+      emergency_contacts: Array.isArray(data.emergency_contacts) ? data.emergency_contacts : [],
+      home_info: data.home_info && typeof data.home_info === 'object' ? data.home_info : {},
+      updated_at: data.updated_at,
+    };
+  }
+
+  /** Create or replace the household's home details. Who and when are server-stamped. */
+  async saveHomeDetails(
+    householdId: string,
+    details: Pick<HomeDetails, 'owners' | 'emergency_contacts' | 'home_info'>
+  ): Promise<HomeDetails> {
+    const { data, error } = await supabase
+      .from('household_home_details')
+      .upsert(
+        {
+          household_id: householdId,
+          owners: details.owners,
+          emergency_contacts: details.emergency_contacts,
+          home_info: details.home_info,
+        },
+        { onConflict: 'household_id' }
+      )
+      .select('household_id, owners, emergency_contacts, home_info, updated_at')
+      .single();
+    if (error) throw new Error(error.message);
+    return data as HomeDetails;
+  }
+
+  // ============================================
   // Data Export/Import
   // ============================================
   /**
@@ -1526,6 +1574,13 @@ export class SupabaseAdapter implements DataService {
         .delete()
         .eq('household_id', primaryHouseholdId);
       if (guidesErr) throw new Error(guidesErr.message);
+      // Address, contacts and door codes. "Clear All Data" that left the
+      // codes behind would not be clearing all of it.
+      const { error: homeErr } = await supabase
+        .from('household_home_details')
+        .delete()
+        .eq('household_id', primaryHouseholdId);
+      if (homeErr) throw new Error(homeErr.message);
     }
     const { error: onboardingErr } = await supabase
       .from('onboarding_state')

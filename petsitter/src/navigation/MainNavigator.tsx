@@ -23,6 +23,7 @@ import { VisitHistoryScreen } from '../screens/VisitHistoryScreen';
 import { SitterHomeScreen } from '../screens/SitterHomeScreen';
 import { SitterHouseholdScreen } from '../screens/SitterHouseholdScreen';
 import { SitterPlansScreen } from '../screens/SitterPlansScreen';
+import { HomeDetailsScreen } from '../screens/HomeDetailsScreen';
 import { UnlockCrownScreen } from '../screens/UnlockCrownScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
@@ -63,6 +64,7 @@ const InviteClientH = hosted(InviteClientScreen);
 const VisitHistoryH = hosted(VisitHistoryScreen);
 const SitterHouseholdH = hosted(SitterHouseholdScreen);
 const SitterPlansH = hosted(SitterPlansScreen);
+const HomeDetailsH = hosted(HomeDetailsScreen);
 const UnlockCrownH = hosted(UnlockCrownScreen);
 const OnboardingH = hosted(OnboardingScreen);
 const TripWizardH = hosted(TripWizardScreen);
@@ -101,6 +103,7 @@ export function MainNavigator() {
       <Stack.Screen name="VisitHistory" component={VisitHistoryH} />
       <Stack.Screen name="SitterHousehold" component={SitterHouseholdH} />
       <Stack.Screen name="SitterPlans" component={SitterPlansH} />
+      <Stack.Screen name="HomeDetails" component={HomeDetailsH} />
       <Stack.Screen name="UnlockCrown" component={UnlockCrownH} />
       <Stack.Screen name="Onboarding" component={OnboardingH} />
       <Stack.Screen name="TripWizard" component={TripWizardH} />

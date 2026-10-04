@@ -15,7 +15,8 @@ import { Button, Input, Card, ContactCard, ScreenHeader, ScreenContainer, SaveSt
 import { useAutoSave } from '../hooks';
 import { useData, useAuth } from '../contexts';
 import { useFormDraft } from '../hooks';
-import { generateId } from '../services';
+import { dataService, generateId } from '../services';
+import { guidePrefillFrom, vetContactsFromPets } from '../lib/homeDetails';
 import { COLORS } from '../constants';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { isValidDateString, todayLocal } from '../lib/dates';
@@ -153,6 +154,54 @@ export function GuideFormScreen({ navigation, route }: Props) {
   // Create mode only: guards the one-time pet prefill below.
   const prefilledRef = useRef(false);
   const hydratedGuideIdRef = useRef<string | null>(null);
+
+  /**
+   * A NEW guide also starts with the household's saved home details: the
+   * owners and contacts, the address, Wi-Fi and codes. Typing those again for
+   * every trip was the complaint that created Home details (0032).
+   *
+   * Only fills what is still empty, so it can never overwrite something typed
+   * or a restored draft, and only latches once an answer has arrived.
+   */
+  const homePrefilledRef = useRef(false);
+  const [prefilledFromHome, setPrefilledFromHome] = useState(false);
+  useEffect(() => {
+    if (isEditing || homePrefilledRef.current || !primaryHouseholdId) return;
+    let cancelled = false;
+    dataService
+      .getHomeDetails(primaryHouseholdId)
+      .then((details) => {
+        if (cancelled || homePrefilledRef.current) return;
+        homePrefilledRef.current = true;
+        if (!details) return;
+        const prefill = guidePrefillFrom(details);
+        let used = false;
+        setFormData((prev) => {
+          const contacts =
+            prev.emergency_contacts.length === 0 ? prefill.emergency_contacts : prev.emergency_contacts;
+          const info = Object.keys(prev.home_info).length === 0 ? prefill.home_info : prev.home_info;
+          used = contacts !== prev.emergency_contacts || info !== prev.home_info;
+          return { ...prev, emergency_contacts: contacts, home_info: info };
+        });
+        if (used) setPrefilledFromHome(true);
+      })
+      // Not worth an error: the guide simply starts blank, as it always did.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, primaryHouseholdId]);
+
+  // Vets on the selected pets' records that are not contacts on this guide yet.
+  const vetSuggestions = useMemo(
+    () =>
+      vetContactsFromPets(
+        pets.filter((p) => formData.pet_ids.includes(p.id)),
+        formData.emergency_contacts
+      ),
+    [pets, formData.pet_ids, formData.emergency_contacts]
+  );
+
   useEffect(() => {
     /**
      * A NEW guide starts with every pet in the household already selected.
@@ -729,6 +778,33 @@ export function GuideFormScreen({ navigation, route }: Props) {
                   <Text className="text-secondary-600 text-sm">+ Add Contact</Text>
                 </Pressable>
               </View>
+
+              {prefilledFromHome ? (
+                <Text className="text-tan-600 text-sm mb-3">
+                  Filled in from your Home details. Change anything you like for this trip.
+                </Text>
+              ) : null}
+
+              {vetSuggestions.length > 0 ? (
+                <Pressable
+                  onPress={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      emergency_contacts: [...prev.emergency_contacts, ...vetSuggestions],
+                    }));
+                    markDirty();
+                  }}
+                  className="bg-primary-50 border border-primary-200 rounded px-3 mb-3"
+                  accessibilityRole="button"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                >
+                  <Text className="text-primary-700 text-sm">
+                    {vetSuggestions.length === 1
+                      ? `+ Add ${vetSuggestions[0].name || 'your vet'} from your pet records`
+                      : `+ Add ${vetSuggestions.length} vets from your pet records`}
+                  </Text>
+                </Pressable>
+              ) : null}
 
               {formData.emergency_contacts.length === 0 ? (
                 <Text className="text-tan-500">No emergency contacts added.</Text>

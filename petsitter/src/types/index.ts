@@ -307,6 +307,26 @@ export interface EmergencyContact {
   notes?: string;
 }
 
+/** Someone the sitter calls first: the household's own people. */
+export interface HomeOwner {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
+/**
+ * The facts every guide repeats, saved once per household (migration 0032).
+ * Copied INTO each new guide, where they can still be changed for that trip;
+ * a sitter only ever sees the guide's copy, never this.
+ */
+export interface HomeDetails {
+  household_id: string;
+  owners: HomeOwner[];
+  emergency_contacts: EmergencyContact[];
+  home_info: HomeInfo;
+  updated_at?: string;
+}
+
 export interface HomeInfo {
   address?: string;
   wifi_name?: string;
@@ -582,6 +602,7 @@ export interface OnboardingState {
 export type OnboardingStep =
   | 'welcome'
   | 'create_pet'
+  | 'home'
   | 'create_guide'
   | 'completion';
 

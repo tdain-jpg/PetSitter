@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { safeGoBack } from '../lib/goBack';
 import { formatTaskTime } from '../lib/routineTasks';
+import { guidePrefillFrom, vetContactsFromPets } from '../lib/homeDetails';
+import { dataService } from '../services';
 import {
   View,
   Text,
@@ -302,6 +304,19 @@ export function TripWizardScreen({ navigation }: Props) {
       // Create the guide in the same household as its selected pets; without a
       // lock (legacy pets missing household_id) the server default assigns the
       // user's primary household.
+      // Start from the household's saved home details, as a guide made by
+      // hand does, plus the vets on the chosen pets' records. A failed read
+      // only means the guide starts blank, which is what it always did.
+      const homeHousehold = lockedHouseholdId ?? primaryHouseholdId;
+      const homeDetails = homeHousehold
+        ? await dataService.getHomeDetails(homeHousehold).catch(() => null)
+        : null;
+      const prefill = guidePrefillFrom(homeDetails);
+      const vets = vetContactsFromPets(
+        activePets.filter((p) => selectedPetIds.includes(p.id)),
+        prefill.emergency_contacts
+      );
+
       const newGuide = await createGuide({
         user_id: user.id,
         title,
@@ -309,8 +324,8 @@ export function TripWizardScreen({ navigation }: Props) {
         ...(lockedHouseholdId ? { household_id: lockedHouseholdId } : {}),
         start_date: start,
         end_date: end,
-        emergency_contacts: [],
-        home_info: {},
+        emergency_contacts: [...prefill.emergency_contacts, ...vets],
+        home_info: prefill.home_info,
         additional_notes: additionalNotes || undefined,
       });
 

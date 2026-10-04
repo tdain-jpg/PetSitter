@@ -10,6 +10,7 @@ import type {
   CheatSheet,
   AppSettings,
   OnboardingState,
+  HomeDetails,
 } from '../types';
 
 /**
@@ -140,6 +141,13 @@ export interface DataService {
   renameHousehold(householdId: string, name: string): Promise<void>;
   /** The signed-in user's primary household id, or null if none. */
   getMyPrimaryHousehold(): Promise<string | null>;
+
+  // Home details (one row per household; null when not set up yet)
+  getHomeDetails(householdId: string): Promise<HomeDetails | null>;
+  saveHomeDetails(
+    householdId: string,
+    details: Pick<HomeDetails, 'owners' | 'emergency_contacts' | 'home_info'>
+  ): Promise<HomeDetails>;
 
   // ============================================
   // Data Export/Import

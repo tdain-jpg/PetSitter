@@ -72,6 +72,7 @@ export type MainStackParamList = {
   Settings: undefined;
   Memorial: undefined;
   Household: undefined;
+  HomeDetails: undefined;
 
   // Onboarding
   Onboarding: undefined;
