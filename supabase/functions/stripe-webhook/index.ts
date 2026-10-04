@@ -425,7 +425,10 @@ async function handleSubscription(
     p_status: status,
     p_price: sub.items?.data?.[0]?.price?.id ?? null,
     p_period_end: periodEnd,
-    p_cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    // Newer API versions cancel from the Customer Portal by setting cancel_at
+    // to the period end and leaving cancel_at_period_end false. Either one
+    // means the plan is ending, which is all the app needs to know.
+    p_cancel_at_period_end: sub.cancel_at_period_end === true || sub.cancel_at != null,
     // The EVENT's timestamp, not the subscription's. This is what lets the
     // database drop an event that arrives after a newer one already landed.
     p_event_at: new Date(event.created * 1000).toISOString(),
