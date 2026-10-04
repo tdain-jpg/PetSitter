@@ -231,14 +231,20 @@ export function HomeScreen({ navigation }: Props) {
    * or failed to load, look exactly like "no pets", and bouncing an owner off
    * their own dashboard because a read was slow is far worse than showing a
    * sitter this page for a moment. First run is the routing effect's job, so
-   * this waits for onboarding to be complete.
+   * this waits for onboarding to be complete, and it stands aside while a
+   * household invitation is waiting, because Home is where that is answered.
    */
   const sitterWithoutPets = (isSitter || hasActiveSitterConnection) && activePets.length === 0;
   useEffect(() => {
     if (!isFocused || !settings?.onboarding_completed || !roleResolved) return;
     if (loadingPets || petsError) return;
+    // A household invitation is answered from the cards on THIS page. Sending
+    // the sitter on would hide the only place they can accept it.
+    if (householdsLoading || pendingInvites.length > 0) return;
     if (sitterWithoutPets) navigation.replace('SitterHome');
   }, [
+    householdsLoading,
+    pendingInvites.length,
     isFocused,
     settings?.onboarding_completed,
     roleResolved,
