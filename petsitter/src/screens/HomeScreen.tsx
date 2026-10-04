@@ -20,6 +20,8 @@ import { COLORS } from '../constants';
 import { friendlyError } from '../lib/errors';
 import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
 import { useProfileRole } from '../hooks';
+import { dataService } from '../services';
+import { toLocalDateKey } from '../lib/dates';
 
 // @ts-ignore
 const logo = require('../../assets/logo.png');
@@ -53,6 +55,7 @@ export function HomeScreen({ navigation }: Props) {
     activePets,
     guides,
     loadingPets,
+    petsError,
     loadingGuides,
     settings,
     loadingSettings,
@@ -218,6 +221,60 @@ export function HomeScreen({ navigation }: Props) {
   const isFocused = useIsFocused();
   // Landing preference only — never consulted for what this user may see.
   const { isSitter, resolved: roleResolved } = useProfileRole();
+
+  /**
+   * A sitter with no pets of their own has nothing on this page. My Clients is
+   * their home, so an established one is sent straight there, every time Home
+   * would otherwise show: after sign-in, and after Back from somewhere.
+   *
+   * Only once everything it depends on has a real answer. Pets still loading,
+   * or failed to load, look exactly like "no pets", and bouncing an owner off
+   * their own dashboard because a read was slow is far worse than showing a
+   * sitter this page for a moment. First run is the routing effect's job, so
+   * this waits for onboarding to be complete.
+   */
+  const sitterWithoutPets = (isSitter || hasActiveSitterConnection) && activePets.length === 0;
+  useEffect(() => {
+    if (!isFocused || !settings?.onboarding_completed || !roleResolved) return;
+    if (loadingPets || petsError) return;
+    if (sitterWithoutPets) navigation.replace('SitterHome');
+  }, [
+    isFocused,
+    settings?.onboarding_completed,
+    roleResolved,
+    loadingPets,
+    petsError,
+    sitterWithoutPets,
+    navigation,
+  ]);
+
+  // Someone who both sits and keeps pets gets their clients first on this
+  // page, with the same count My Clients leads with. Fetched only for them,
+  // so an owner who has never sat for anyone never pays for the read.
+  const [sittingToday, setSittingToday] = useState<{ total: number; done: number } | null>(
+    null
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (!isBothOwnerAndSitter) return;
+      let cancelled = false;
+      dataService
+        .getSitterToday(toLocalDateKey(new Date()))
+        .then((groups) => {
+          if (cancelled) return;
+          const rows = groups.flatMap((g) => g.rows);
+          setSittingToday({ total: rows.length, done: rows.filter((r) => r.completed).length });
+        })
+        // A failed count must never read as "nothing to do": the card falls
+        // back to a plain heading and its button still works.
+        .catch(() => {
+          if (!cancelled) setSittingToday(null);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [isBothOwnerAndSitter])
+  );
 
   // First run only: load the sitter invitations the gate needs. Nothing else
   // on Home fetches them, and DataContext does not load them at startup.
@@ -671,13 +728,6 @@ export function HomeScreen({ navigation }: Props) {
                   with no pets never reaches this screen to begin with.
                   In the header rather than in Quick Actions because switching
                   sides is navigation, not a task. */}
-              {isBothOwnerAndSitter ? (
-                <Button
-                  title="🐾 Sitting"
-                  onPress={() => navigation.navigate('SitterHome')}
-                  variant="outline"
-                />
-              ) : null}
               <Button
                 title="Settings"
                 onPress={navigateToSettings}
@@ -790,6 +840,44 @@ export function HomeScreen({ navigation }: Props) {
             never flashes a journey it's about to navigate away from. */}
         {settings?.onboarding_completed && <JourneyCards />}
 
+        {/* Both an owner and a sitter: the page splits in two, clients first.
+            A plain owner sees none of this and no headings, because one
+            section does not need a label. */}
+        {isBothOwnerAndSitter ? (
+          <>
+            <Text className="text-xl font-bold text-brown-800 mb-3">My clients</Text>
+            <Card className="mb-8 bg-primary-50 border border-primary-200">
+              <Text className="text-lg font-semibold text-brown-800 mb-1">
+                {sittingToday === null
+                  ? 'Today'
+                  : sittingToday.total === 0
+                    ? 'Nothing scheduled today'
+                    : sittingToday.done === sittingToday.total
+                      ? 'Everything is done today'
+                      : `${sittingToday.total - sittingToday.done} still to do today`}
+              </Text>
+              <Text className="text-brown-700 leading-6 mb-4">
+                {sittingToday && sittingToday.total > 0
+                  ? `${sittingToday.done} of ${sittingToday.total} done, across every household you look after.`
+                  : 'Every task due today, across all of your clients, in one list.'}
+              </Text>
+              <View className="gap-3">
+                <Button
+                  title="Open today"
+                  onPress={() => navigation.navigate('SitterToday')}
+                  variant="primary"
+                />
+                <Button
+                  title="🐾 My Clients"
+                  onPress={() => navigation.navigate('SitterHome')}
+                  variant="outline"
+                />
+              </View>
+            </Card>
+            <Text className="text-xl font-bold text-brown-800 mb-3">My pets</Text>
+          </>
+        ) : null}
+
         {/* Quick Stats */}
         <View className="flex-row gap-4 mb-6">
           <Card className="flex-1">
@@ -883,7 +971,8 @@ export function HomeScreen({ navigation }: Props) {
                 nothing here pointing at them. Only shown when there is
                 actually something to open, so an owner who has never sat for
                 anyone never sees it. */}
-            {(hasActiveSitterConnection || pendingSitterInvites.length > 0) && (
+            {!isBothOwnerAndSitter &&
+              (hasActiveSitterConnection || pendingSitterInvites.length > 0) && (
               <Button
                 title="🐾 My Clients"
                 onPress={() => navigation.navigate('SitterHome')}

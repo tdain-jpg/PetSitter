@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useData } from '../contexts';
@@ -270,21 +269,24 @@ export function SitterHomeScreen({ navigation }: Props) {
         <ScreenContainer variant="content">
           <View className="mt-4">
             <View className="flex-row items-center justify-between mb-2">
-              {/* On web the browser back button rescues you; in the installed
-                  PWA and on native there is nothing else off this screen. */}
-              <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
-              {/* Only for someone who is demonstrably BOTH: they keep pets of
-                  their own as well as sitting for other people. For a sitter
-                  with no pets this would point at a dashboard about an empty
-                  household, so it is not shown at all. A control that leads
-                  somewhere pointless is worse than no control. */}
+              {/* For a sitter with no pets this IS home, so there is nowhere
+                  to go back to: Home sends them straight here. Someone who also
+                  keeps pets gets a way to their own side instead, named for
+                  where it goes rather than "Back". */}
               {ownsPets ? (
                 <Button
-                  title="🏠 My pets"
+                  title="← My pets"
                   onPress={() => navigation.navigate('Home')}
                   variant="outline"
                 />
-              ) : null}
+              ) : (
+                <View />
+              )}
+              <Button
+                title="Settings"
+                onPress={() => navigation.navigate('Settings')}
+                variant="secondary"
+              />
             </View>
             {/* Title left, the two sitter actions right. flex-wrap drops the
                 actions under the title on a phone instead of squeezing them. */}
@@ -347,6 +349,23 @@ export function SitterHomeScreen({ navigation }: Props) {
 
           {/* THEN who they are. */}
           {renderContent()}
+
+          {/* The rare sitter with animals of their own. Quiet on purpose: most
+              sitters never need it, and adding a first pet is what turns on
+              the owner side and the "My pets" button above. */}
+          {!ownsPets ? (
+            <View className="items-center mt-2 mb-8">
+              <Pressable
+                onPress={() => navigation.navigate('PetForm', { mode: 'create' })}
+                accessibilityRole="button"
+                hitSlop={12}
+              >
+                <Text className="text-primary-600 underline">
+                  Have pets of your own? Add them
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
         </ScreenContainer>
       </ScrollView>
