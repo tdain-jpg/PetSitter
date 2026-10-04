@@ -115,9 +115,35 @@ export function SettingsScreen({ navigation }: Props) {
    * except the one their things are already in. Empty for almost everybody,
    * which is why the button only appears when it is not.
    */
+  // How many people share the household your things are in now. The move
+  // refuses when anyone else is there (it would carry their pets off too), so
+  // the button is only offered when you are alone in it. Read here rather than
+  // from the context's count, which loads only for journeys and fails open as
+  // "solo", the one wrong answer that matters for this. Unknown hides it.
+  const [defaultMembers, setDefaultMembers] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!primaryHouseholdId) return;
+      let cancelled = false;
+      setDefaultMembers(null);
+      dataService
+        .getHouseholdMembers(primaryHouseholdId)
+        .then((members) => {
+          if (!cancelled) setDefaultMembers(members.length);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [primaryHouseholdId, households])
+  );
+
   const mergeTargets = useMemo(
-    () => households.filter((h: { id: string }) => h.id !== primaryHouseholdId),
-    [households, primaryHouseholdId]
+    () =>
+      defaultMembers === 1
+        ? households.filter((h: { id: string }) => h.id !== primaryHouseholdId)
+        : [],
+    [households, primaryHouseholdId, defaultMembers]
   );
 
   const handleMerge = async (targetId: string, targetName: string) => {
