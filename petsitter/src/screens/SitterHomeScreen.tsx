@@ -268,27 +268,20 @@ export function SitterHomeScreen({ navigation }: Props) {
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
           <View className="mt-4">
-            <View className="flex-row items-center justify-between mb-2">
-              {/* For a sitter with no pets this IS home, so there is nowhere
-                  to go back to: Home sends them straight here. Someone who also
-                  keeps pets gets a way to their own side instead, named for
-                  where it goes rather than "Back". */}
-              {ownsPets ? (
+            {/* For a sitter with no pets this IS home, so there is nowhere to
+                go back to: Home sends them straight here, and no row is spent
+                on it. Someone who also keeps pets gets a way to their own side,
+                named for where it goes rather than "Back". */}
+            {ownsPets ? (
+              <View className="flex-row mb-2">
                 <Button
                   title="← My pets"
                   onPress={() => navigation.navigate('Home')}
                   variant="outline"
                 />
-              ) : (
-                <View />
-              )}
-              <Button
-                title="Settings"
-                onPress={() => navigation.navigate('Settings')}
-                variant="secondary"
-              />
-            </View>
-            {/* Title left, the two sitter actions right. flex-wrap drops the
+              </View>
+            ) : null}
+            {/* Title left, the sitter actions and Settings right. flex-wrap drops the
                 actions under the title on a phone instead of squeezing them. */}
             <View className="flex-row flex-wrap items-end justify-between" style={{ gap: 12 }}>
               <View>
@@ -305,6 +298,11 @@ export function SitterHomeScreen({ navigation }: Props) {
                   title={subscribed ? 'Your sitter plan' : 'What this will cost'}
                   onPress={() => navigation.navigate('SitterPlans')}
                   variant="outline"
+                />
+                <Button
+                  title="Settings"
+                  onPress={() => navigation.navigate('Settings')}
+                  variant="secondary"
                 />
               </View>
             </View>
