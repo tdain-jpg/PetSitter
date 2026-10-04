@@ -448,7 +448,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               </Text>
               <Text className="text-tan-500 text-center mb-6">
                 {canEdit
-                  ? 'Use AI to create a quick reference summary of this guide for your pet sitter.'
+                  ? 'One page with the essentials from this guide, written by AI. Print it and leave it on the fridge or counter, so your sitter has what they need even without internet.'
                   : "The owner hasn't made a one-page summary of this guide yet. Everything you need is still in the guide itself."}
               </Text>
 

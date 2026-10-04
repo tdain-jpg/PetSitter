@@ -928,16 +928,12 @@ export function HomeScreen({ navigation }: Props) {
                 PetQuickLinks); a third route to the same pets is gone. */}
             <Button
               title="View Guides"
-              subtitle="What you hand a sitter for a trip"
+              subtitle="Trip instructions for your sitter, each with a printable cheat sheet"
               onPress={navigateToGuides}
               variant="outline"
             />
-            <Button
-              title="🤖 Cheat Sheets"
-              subtitle="One-page summaries, written for your sitter"
-              onPress={() => navigation.navigate('CheatSheets')}
-              variant="outline"
-            />
+            {/* No Cheat Sheets button: a sheet always belongs to one guide, so
+                it is reached from that guide's page (Printable Cheat Sheet). */}
             {/* Discoverable household invite: families who can't find this
                 create a SECOND account and re-type the same pets. Settings →
                 Household still exists for management; this is the front door. */}

@@ -331,8 +331,18 @@ export function GuideDetailScreen({ navigation, route }: Props) {
             {/* Same button, honest label. A sitter can now READ the sheet
                 (migration 0023) but never commissions one, so promising them
                 "Generate" was promising something the screen refuses. */}
+            {/* Where cheat sheets live now that Home has no button for them:
+                a sheet always belongs to one guide, so it is reached from that
+                guide. The subtitle says what it is FOR, which the old
+                "Generate AI Cheat Sheet" did not: paper that works when the
+                sitter's phone has no signal. */}
             <Button
-              title={canEdit ? '🤖 Generate AI Cheat Sheet' : '🤖 AI Cheat Sheet'}
+              title="🖨️ Printable Cheat Sheet"
+              subtitle={
+                canEdit
+                  ? 'One page for the fridge or counter. Works when your sitter has no internet.'
+                  : 'The one-page version of this guide'
+              }
               onPress={handleAICheatSheet}
               variant="primary"
             />
@@ -343,7 +353,12 @@ export function GuideDetailScreen({ navigation, route }: Props) {
                 started writing. Export as PDF stays: it is read-only, and a
                 sitter wanting the guide on paper is the whole point. */}
             {canEdit ? <Button title="🔗 Share Guide" onPress={handleShare} variant="outline" /> : null}
-            <Button title="📄 Export as PDF" onPress={handleExportPDF} variant="outline" />
+            <Button
+              title="📄 Export as PDF"
+              subtitle="The whole guide, every page"
+              onPress={handleExportPDF}
+              variant="outline"
+            />
             {canEdit ? (
               <>
                 <Button title="📋 Duplicate Guide" onPress={handleDuplicate} variant="secondary" />
