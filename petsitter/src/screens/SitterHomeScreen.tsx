@@ -25,7 +25,8 @@ export function SitterHomeScreen({ navigation }: Props) {
     refreshSitterConnections,
     pendingSitterInvites,
     respondToSitterInvite,
-    activePets
+    activePets,
+    pendingInvites: householdInvites,
   } = useData();
   
   const [pendingInvites, setPendingInvites] = useState<PendingSitterInvite[]>([]);
@@ -315,6 +316,27 @@ export function SitterHomeScreen({ navigation }: Props) {
               that one journey — the founder checklist and the joiner tour are
               about a household of your own, which is not what a sitter has. */}
           <JourneyCards surface="sitter" />
+
+          {/* An invitation to JOIN a household (family, not sitting). Home is
+              where these are normally answered, and a sitter can reach this
+              screen without passing Home, so it is surfaced here too. The
+              answer itself happens on Household, which already has the whole
+              accept flow, rather than in a second copy of it. */}
+          {householdInvites.map((invite) => (
+            <Card key={invite.id} className="mb-4 bg-primary-50 border border-primary-200">
+              <Text className="text-brown-800 font-semibold mb-1">Household invitation</Text>
+              <Text className="text-brown-600 mb-3">
+                {`You've been invited to join ${invite.household_name}${
+                  invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                }.`}
+              </Text>
+              <Button
+                title="Review invitation"
+                onPress={() => navigation.navigate('Household')}
+                variant="primary"
+              />
+            </Card>
+          ))}
 
           {/* FIRST, above the clients. */}
           {hasAnyClient ? (
