@@ -32,6 +32,9 @@ export function SitterHomeScreen({ navigation }: Props) {
   const [pendingInvites, setPendingInvites] = useState<PendingSitterInvite[]>([]);
   const [activeClients, setActiveClients] = useState<SitterConnection[]>([]);
   const [loadingResponse, setLoadingResponse] = useState<string | null>(null);
+  // Only for the label on the plans button. A subscriber asking "what will
+  // this cost" has already answered it; they are looking for their plan.
+  const [subscribed, setSubscribed] = useState(false);
 
   // Pending invitations come from a DIFFERENT source than active clients, and
   // this is the whole reason 0016 exists: my_sitter_connections keys on
@@ -46,6 +49,10 @@ export function SitterHomeScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       void refreshSitterConnections();
+      dataService
+        .getMySitterPlan()
+        .then((plan) => setSubscribed(plan.subscribed))
+        .catch(() => {});
     }, [refreshSitterConnections])
   );
 
@@ -336,7 +343,7 @@ export function SitterHomeScreen({ navigation }: Props) {
             />
             <View className="h-3" />
             <Button
-              title="What this will cost"
+              title={subscribed ? 'Your sitter plan' : 'What this will cost'}
               onPress={() => navigation.navigate('SitterPlans')}
               variant="outline"
             />
