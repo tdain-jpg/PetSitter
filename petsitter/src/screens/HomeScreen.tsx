@@ -10,7 +10,6 @@ import {
   Card,
   InviteGate,
   JourneyCards,
-  PetCard,
   ScreenContainer,
   SitterInviteGate,
   SitterRequestCard,
@@ -622,10 +621,6 @@ export function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const navigateToPets = () => {
-    navigation.navigate('Pets');
-  };
-
   const navigateToGuides = () => {
     navigation.navigate('Guides');
   };
@@ -929,12 +924,8 @@ export function HomeScreen({ navigation }: Props) {
             {/* Subtitles, not tooltips: this is a PWA, most taps are from a
                 phone, and hover does not exist there. "View Guides" told you
                 nothing about what a guide IS. */}
-            <Button
-              title="Manage Pets"
-              subtitle="Feeding, medication, vet and health details"
-              onPress={navigateToPets}
-              variant={activePets.length > 0 ? 'outline' : 'primary'}
-            />
+            {/* Manage Pets lives at the end of the pet photo row now (see
+                PetQuickLinks); a third route to the same pets is gone. */}
             <Button
               title="View Guides"
               subtitle="What you hand a sitter for a trip"
@@ -987,29 +978,6 @@ export function HomeScreen({ navigation }: Props) {
             )}
           </View>
         </Card>
-
-        {/* Recent Pets */}
-        {activePets.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-lg font-semibold text-brown-800">
-                Your Pets
-              </Text>
-              <Button
-                title="See All →"
-                onPress={navigateToPets}
-                variant="outline"
-              />
-            </View>
-            {activePets.slice(0, 3).map((pet) => (
-              <PetCard
-                key={pet.id}
-                pet={pet}
-                onPress={() => navigation.navigate('PetDetail', { petId: pet.id })}
-              />
-            ))}
-          </View>
-        )}
 
         {/* Empty State.
             Two of them, because two different people arrive here with no pets.

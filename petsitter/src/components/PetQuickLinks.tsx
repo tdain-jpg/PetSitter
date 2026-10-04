@@ -18,11 +18,16 @@ import type { Pet } from '../types';
  * to discover by swiping is not a shortcut. At the top of the page it is simply
  * there, and big enough to recognise a dog by.
  *
- * IT GOES TO THE EDIT FORM, not the detail screen. That is the deliberate
- * choice: this is a maintenance shortcut for the person who OWNS the pet and
- * keeps its feeding times and medications current, and the detail screen is
- * already one tap from the list below. (Say so if the detail view would be
- * better — it is a one-line change.)
+ * IT GOES TO THE PET'S PAGE. It first went straight to the edit form, which
+ * QA caught: the pet cards then lower on Home opened the pet's page, so the
+ * same dog led two places from one screen.
+ *
+ * IT IS THE ONLY WAY TO THE PETS ON HOME. A "Manage pets" pill closes the row
+ * and opens the full list (adding a pet lives there). It replaced a Manage
+ * Pets button and a "Your Pets" list that both led to the same animals; three
+ * routes to one place became one. The pill grows to fill whatever the faces
+ * leave on their line, and when there is no room left it wraps onto a line of
+ * its own at full width, so it never needs a size worked out per household.
  *
  * IT WRAPS RATHER THAN SCROLLING. With the full page width available there is
  * room for four or five faces per row on a phone, so a household of six wraps
@@ -76,6 +81,20 @@ export function PetQuickLinks({ pets }: { pets: Pet[] }) {
           </Pressable>
         );
       })}
+      <Pressable
+        onPress={() => navigation.navigate('Pets')}
+        accessibilityRole="button"
+        accessibilityLabel="Manage pets: add, edit, or see every pet"
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flexGrow: 1, minWidth: 150 })}
+        className="h-16 rounded-full border-2 border-primary-500 items-center justify-center px-5"
+      >
+        <Text className="text-primary-600 font-semibold" style={{ fontSize: 16 }}>
+          Manage pets
+        </Text>
+        <Text className="text-tan-500" style={{ fontSize: 12 }} numberOfLines={1}>
+          Add a pet, edit details
+        </Text>
+      </Pressable>
     </View>
   );
 }
