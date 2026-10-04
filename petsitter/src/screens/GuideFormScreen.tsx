@@ -23,7 +23,7 @@ import { isValidDateString, todayLocal } from '../lib/dates';
 import { isValidPhoneNumber } from '../utils';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { EmergencyContact, HomeInfo, TravelItinerary, ContactType } from '../types';
+import type { EmergencyContact, HomeInfo, HomeOwner, TravelItinerary, ContactType } from '../types';
 import { friendlyError } from '../lib/errors';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideForm'>;
@@ -191,6 +191,38 @@ export function GuideFormScreen({ navigation, route }: Props) {
       cancelled = true;
     };
   }, [isEditing, primaryHouseholdId]);
+
+  // The household's owners, offered as one-tap "who's on this flight" picks.
+  // Read in edit mode too: flights are usually added to a guide that exists.
+  const [homeOwners, setHomeOwners] = useState<HomeOwner[]>([]);
+  useEffect(() => {
+    const householdId = lockedHouseholdId ?? primaryHouseholdId;
+    if (!householdId) return;
+    let cancelled = false;
+    dataService
+      .getHomeDetails(householdId)
+      .then((d) => {
+        if (!cancelled && d) setHomeOwners(d.owners);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [lockedHouseholdId, primaryHouseholdId]);
+  // Plus anyone this guide lists as an Owner contact, for households that
+  // have not filled in Home details. Deduped by name.
+  const travelerPicks = useMemo(() => {
+    const fromGuide = formData.emergency_contacts
+      .filter((c) => c.relationship?.trim().toLowerCase() === 'owner')
+      .map((c) => ({ name: c.name, phone: c.phone }));
+    const seen = new Set<string>();
+    return [...homeOwners, ...fromGuide].filter((t) => {
+      const k = t.name.trim().toLowerCase();
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [homeOwners, formData.emergency_contacts]);
 
   // Vets on the selected pets' records that are not contacts on this guide yet.
   const vetSuggestions = useMemo(
@@ -997,6 +1029,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
               <TravelItineraryEditor
                 value={formData.travel_itinerary}
                 onChange={(v) => updateField('travel_itinerary', v)}
+                travelers={travelerPicks}
               />
             </Card>
 

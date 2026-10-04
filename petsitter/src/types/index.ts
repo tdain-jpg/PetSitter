@@ -365,6 +365,13 @@ export interface FlightInfo {
   arrival_airport: string;
   departure_time: string;
   arrival_time: string;
+  /**
+   * Who is on this flight, and how to reach them while travelling. Households
+   * split up: one partner flies out in the morning, the other lands that
+   * night, and the sitter needs to know which number belongs to which trip.
+   */
+  traveler?: string;
+  traveler_phone?: string;
 }
 
 export interface HotelInfo {

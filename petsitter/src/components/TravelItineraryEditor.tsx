@@ -5,11 +5,14 @@ import { Input } from './Input';
 import { Select } from './Select';
 import { DateField } from './DateField';
 import { generateId } from '../services';
-import type { TravelItinerary, FlightInfo, HotelInfo } from '../types';
+import { flightContactLine, flightTitle, formatFlightWhen } from '../lib/flights';
+import type { TravelItinerary, FlightInfo, HotelInfo, HomeOwner } from '../types';
 
 interface TravelItineraryEditorProps {
   value: TravelItinerary | undefined;
   onChange: (value: TravelItinerary) => void;
+  /** People to offer as one-tap "who's flying" picks: the household's owners. */
+  travelers?: HomeOwner[];
 }
 
 /**
@@ -37,6 +40,7 @@ const TIMEZONE_OFFSETS: { value: string; label: string }[] = [
 export function TravelItineraryEditor({
   value,
   onChange,
+  travelers = [],
 }: TravelItineraryEditorProps) {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
@@ -110,6 +114,8 @@ export function TravelItineraryEditor({
         arrival_airport: flightForm.arrival_airport || '',
         departure_time: flightForm.departure_time || '',
         arrival_time: flightForm.arrival_time || '',
+        traveler: flightForm.traveler?.trim() || undefined,
+        traveler_phone: flightForm.traveler_phone?.trim() || undefined,
       };
       updateItinerary({
         flights: [...itinerary.flights, newFlight],
@@ -137,9 +143,7 @@ export function TravelItineraryEditor({
     >
       <View className="flex-row justify-between items-start">
         <View className="flex-1">
-          <Text className="font-medium text-brown-800">
-            {flight.airline} {flight.flight_number}
-          </Text>
+          <Text className="font-medium text-brown-800">{flightTitle(flight)}</Text>
           {/* No airports means no route line. Unguarded this rendered " → "
               on its own — no text-node error, because the arrow is a real
               string, which is why the console never caught it. */}
@@ -152,9 +156,10 @@ export function TravelItineraryEditor({
               form is left blank, and `'' && …` renders '' as a bare text node
               inside a View. Same shape already fixed in the share view. */}
           {(flight.departure_time || flight.arrival_time) ? (
-            <Text className="text-tan-500 text-sm">
-              {flight.departure_time} - {flight.arrival_time}
-            </Text>
+            <Text className="text-tan-500 text-sm">{formatFlightWhen(flight)}</Text>
+          ) : null}
+          {flightContactLine(flight) ? (
+            <Text className="text-tan-500 text-sm">{flightContactLine(flight)}</Text>
           ) : null}
         </View>
         <View className="flex-row gap-2">
@@ -289,6 +294,54 @@ export function TravelItineraryEditor({
               }
             }}
             error={flightErrors.flight_number}
+          />
+          {/* Who is flying. Households split up (one partner out in the
+              morning, the other back that night), and a sitter holding two
+              flights and one phone number cannot tell whose is whose. */}
+          <Text className="text-brown-700 font-medium mb-1">Who's on this flight</Text>
+          {travelers.filter((t) => t.name.trim()).length > 0 ? (
+            <View className="flex-row flex-wrap mb-2" style={{ gap: 8 }}>
+              {travelers
+                .filter((t) => t.name.trim())
+                .map((t) => {
+                  const picked = (flightForm.traveler ?? '').trim() === t.name.trim();
+                  return (
+                    <Pressable
+                      key={t.name}
+                      onPress={() =>
+                        setFlightForm((prev) => ({
+                          ...prev,
+                          traveler: t.name.trim(),
+                          traveler_phone: t.phone?.trim() || prev.traveler_phone,
+                        }))
+                      }
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: picked }}
+                      style={{ minHeight: 44, justifyContent: 'center' }}
+                      className={`px-4 rounded-full border ${picked ? 'bg-primary-500 border-primary-500' : 'border-primary-300'}`}
+                    >
+                      <Text className={picked ? 'text-white font-medium' : 'text-primary-700'}>
+                        {t.name.trim()}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+            </View>
+          ) : null}
+          <Input
+            label="Name"
+            placeholder="e.g., Dana"
+            value={flightForm.traveler || ''}
+            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, traveler: v }))}
+            autoCapitalize="words"
+          />
+          <Input
+            label="Phone while traveling"
+            placeholder="(555) 123-4567"
+            value={flightForm.traveler_phone || ''}
+            onChangeText={(v) => setFlightForm((prev) => ({ ...prev, traveler_phone: v }))}
+            keyboardType="phone-pad"
+            formatAsPhone
           />
           <Input
             label="Departure Airport"

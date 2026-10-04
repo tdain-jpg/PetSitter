@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, SensitiveValue, ScreenContainer, Icon, speciesIconName } from '../components';
@@ -20,6 +21,7 @@ import { displayablePhotoUrl } from '../lib/petPhotos';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
+import { flightContactLine, flightTitle, formatFlightWhen } from '../lib/flights';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SharedGuideView'>;
 
@@ -409,12 +411,26 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
                         <Text className="font-semibold text-brown-800">
                           {flight.type === 'departure' ? '✈️ Departure' : '🛬 Return'}
                         </Text>
-                        <Text className="text-tan-600">
-                          {flight.airline} {flight.flight_number}
-                        </Text>
-                        <Text className="text-tan-500 text-sm">
-                          {flight.departure_airport} → {flight.arrival_airport}
-                        </Text>
+                        <Text className="text-tan-600">{flightTitle(flight)}</Text>
+                        {flight.departure_airport || flight.arrival_airport ? (
+                          <Text className="text-tan-500 text-sm">
+                            {flight.departure_airport} → {flight.arrival_airport}
+                          </Text>
+                        ) : null}
+                        {formatFlightWhen(flight) ? (
+                          <Text className="text-tan-500 text-sm">{formatFlightWhen(flight)}</Text>
+                        ) : null}
+                        {flight.traveler_phone?.trim() ? (
+                          <Text
+                            className="text-primary-600 text-sm underline"
+                            accessibilityRole="link"
+                            onPress={() =>
+                              Linking.openURL(`tel:${flight.traveler_phone!.replace(/[^\d+]/g, '')}`).catch(() => {})
+                            }
+                          >
+                            {flightContactLine(flight)}
+                          </Text>
+                        ) : null}
                       </Card>
                     ))}
                   </View>

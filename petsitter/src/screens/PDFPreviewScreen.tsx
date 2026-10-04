@@ -28,6 +28,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 import { friendlyError } from '../lib/errors';
+import { flightContactLine, flightTitle, formatFlightWhen } from '../lib/flights';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
@@ -427,9 +428,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             ${itinerary.flights.map((flight) => `
               <li>
                 <strong>${flight.type === 'departure' ? '✈️ Departure' : '🛬 Return'}</strong>:
-                ${esc(flight.airline)} ${esc(flight.flight_number)},
-                ${esc(flight.departure_airport)} → ${esc(flight.arrival_airport)}
-                (${esc(flight.departure_time)} → ${esc(flight.arrival_time)})
+                ${esc(flightTitle(flight))}${flight.departure_airport || flight.arrival_airport ? `, ${esc(flight.departure_airport)} → ${esc(flight.arrival_airport)}` : ''}
+                ${formatFlightWhen(flight) ? `<br>${esc(formatFlightWhen(flight))}` : ''}
+                ${flightContactLine(flight) ? `<br>${esc(flightContactLine(flight) ?? '')}` : ''}
               </li>
             `).join('')}
           </ul>
