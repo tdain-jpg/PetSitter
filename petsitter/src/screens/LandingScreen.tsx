@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image, Pressable } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, ScreenContainer } from '../components';
 import { COLORS } from '../constants';
@@ -18,45 +18,59 @@ const features = [
   {
     icon: '🐾',
     title: 'Pet Profiles',
-    description: 'Store all your pet information in one place - feeding schedules, medications, vet info, and more.',
+    description: 'Every pet in one place: feeding schedules, medications, vet details, and a photo your sitter will recognize.',
     color: COLORS.primary,
     bgClass: 'bg-primary-50',
   },
   {
     icon: '📋',
     title: 'Care Guides',
-    description: 'Create comprehensive guides with home info, emergency contacts, and daily routines.',
+    description: 'One guide per trip: dates, daily routine, emergency contacts, house details and codes, and who is on which flight.',
     color: COLORS.secondary,
     bgClass: 'bg-secondary-50',
+  },
+  {
+    icon: '🏡',
+    title: 'Type It Once',
+    description: 'Save your address, phone numbers, contacts and codes once. Every new guide starts with them already filled in.',
+    color: COLORS.primary,
+    bgClass: 'bg-primary-50',
   },
   {
     // Sits directly after Care Guides because a cheat sheet is generated from a guide,
     // and because this is the only paid feature — at the end of the list a prospect
     // scrolls past the one thing they would be asked to pay for.
     icon: '👑',
-    title: 'AI Cheat Sheets',
-    description: 'A one-page summary your sitter can stick on the fridge, written from the guide you already filled in. Every guide gets one free with a PREVIEW watermark, and Crown unlocks them for your whole household for $5, once.',
+    title: 'Printable Cheat Sheet',
+    description: 'One page for the fridge or counter, written by AI from your guide, so your sitter has the essentials even with no internet. Every guide gets one free with a PREVIEW watermark. Crown removes it and lets you rewrite sheets any time: $5, once, for your whole household.',
     color: COLORS.warm,
     bgClass: 'bg-warm-50',
   },
   {
     icon: '✅',
     title: 'Daily Checklists',
-    description: 'Generate interactive checklists organized by time of day for your pet sitter.',
+    description: 'Your sitter ticks off each feeding, walk and medication as they go, and you can see what has been done without sending the "everything ok?" text.',
     color: COLORS.success,
     bgClass: 'bg-primary-100',
   },
   {
     icon: '📄',
     title: 'PDF Export',
-    description: 'Export your guides as professional PDFs to print or share digitally.',
+    description: 'The whole guide as a PDF, to print or send.',
     color: COLORS.warm,
     bgClass: 'bg-warm-100',
   },
   {
     icon: '🔗',
     title: 'Easy Sharing',
-    description: 'Share read-only links with your pet sitter - no account required for them to view.',
+    description: 'Send your sitter a read-only link. They do not need an account to open it.',
+    color: COLORS.accent,
+    bgClass: 'bg-accent-50',
+  },
+  {
+    icon: '💌',
+    title: 'Share With Family',
+    description: 'Invite a partner or housemate and you both keep the same pets and guides up to date.',
     color: COLORS.accent,
     bgClass: 'bg-accent-50',
   },
@@ -67,7 +81,7 @@ const features = [
     // audience.
     icon: '🐾',
     title: 'A Home for Sitters Too',
-    description: 'Sitters can have their own account: every client in one list, tasks to tick off as they go, and your phone number on the pet\u2019s page for when something needs asking. Three clients free, permanently.',
+    description: 'Sitters get their own side: every client household in one list, one checklist for today across all of them, and a visit history. Three clients free, permanently.',
     color: COLORS.secondary,
     bgClass: 'bg-secondary-50',
   },
@@ -176,8 +190,13 @@ export function LandingScreen({ navigation }: Props) {
               />
             </View>
             {/* White on primary-500: the only body-size pairing that clears 4.5:1 */}
-            <Text style={{ color: COLORS.white }} className="text-lg text-center mb-6 italic">
+            <Text style={{ color: COLORS.white }} className="text-lg text-center mb-2 italic">
               Where Pets Rule the Kingdom!
+            </Text>
+            {/* Both audiences, in the first screen. Sitters used to meet
+                nothing addressed to them until halfway down the page. */}
+            <Text style={{ color: COLORS.white }} className="text-base text-center mb-6">
+              Care guides for pet owners. Client tools for pet sitters.
             </Text>
             <View className="w-full max-w-sm">
               <Button
@@ -185,6 +204,16 @@ export function LandingScreen({ navigation }: Props) {
                 onPress={navigateToSignUp}
                 variant="secondary"
               />
+              <Pressable
+                onPress={() => navigation.navigate('SignUp', { role: 'sitter' })}
+                accessibilityRole="button"
+                style={{ minHeight: 44 }}
+                className="justify-center items-center mt-2"
+              >
+                <Text style={{ color: COLORS.white }} className="font-semibold underline">
+                  I&apos;m a pet sitter
+                </Text>
+              </Pressable>
             </View>
           </View>
           </ScreenContainer>
@@ -262,7 +291,7 @@ export function LandingScreen({ navigation }: Props) {
               </View>
               <View className="flex-1">
                 <Text className="text-lg font-semibold text-brown-800">Share with Your Sitter</Text>
-                <Text className="text-tan-600">Send a link or PDF - they get everything they need at their fingertips.</Text>
+                <Text className="text-tan-600">Send a link, a PDF or a printed cheat sheet. They get everything they need, even offline.</Text>
               </View>
             </View>
           </View>
@@ -284,8 +313,8 @@ export function LandingScreen({ navigation }: Props) {
                   Everything your sitter needs, in one place they can actually find it.
                 </Text>
                 <Text className="text-tan-600 text-center">
-                  Feeding times, medications, the vet's number, which neighbour has a key -
-                  written down once, instead of remembered in a hurry on the way to the airport.
+                  Feeding times, medications, the vet's number, which neighbor has a key: written
+                  down once, instead of remembered in a hurry on the way to the airport.
                 </Text>
               </View>
             </Card>
@@ -385,10 +414,21 @@ export function LandingScreen({ navigation }: Props) {
                   <Text className="text-primary-600 text-sm font-semibold">{link.label}</Text>
                 </Pressable>
               ))}
+              {/* A person reads this inbox; it forwards to the founder. */}
+              <Pressable
+                onPress={() => Linking.openURL('mailto:support@pawstructions.com?subject=Pawstructions').catch(() => {})}
+                accessibilityRole="link"
+                accessibilityLabel="Contact us at support@pawstructions.com"
+                hitSlop={8}
+                style={{ minHeight: 44 }}
+                className="px-3 justify-center"
+              >
+                <Text className="text-primary-600 text-sm font-semibold">Contact us</Text>
+              </Pressable>
             </View>
             <Text className="text-tan-500 text-sm mt-2">© 2026 Pawstructions</Text>
             <Text className="text-tan-400 text-xs mt-1">
-              Made with love for pet parents everywhere
+              Made with love for pets, their people, and the sitters who care for them
             </Text>
           </ScreenContainer>
         </View>

@@ -8,6 +8,7 @@ import {
   Switch,
   Platform,
   Pressable,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
@@ -508,6 +509,33 @@ export function SettingsScreen({ navigation }: Props) {
             ))}
             <Button title="🗑️ Clear All Data" onPress={handleClearData} variant="outline" />
           </View>
+        </Card>
+
+        {/* Feedback, for everyone. It used to exist only on Sitter plans, so
+            an owner had no way to tell us anything from inside the app.
+            mailto with the address also shown, because plenty of people use
+            webmail and have no mail app for the link to open. */}
+        <Card className="mb-4">
+          <Text className="text-lg font-semibold text-brown-800 mb-1">Send feedback</Text>
+          <Text className="text-tan-500 text-sm mb-3">
+            Something broken, confusing, or missing? A person reads every message.
+          </Text>
+          <Button
+            title="✉️ Email us"
+            onPress={() => {
+              const subject = encodeURIComponent('[Pawstructions] Feedback');
+              const body = encodeURIComponent(
+                `What's working, what isn't, and what would you add?\n\n\n--\nAccount: ${user?.email ?? ''}`
+              );
+              void Linking.openURL(
+                `mailto:support@pawstructions.com?subject=${subject}&body=${body}`
+              ).catch(() => {});
+            }}
+            variant="outline"
+          />
+          <Text className="text-tan-500 text-sm text-center mt-2" selectable>
+            support@pawstructions.com
+          </Text>
         </Card>
 
         {/* About & policies */}
