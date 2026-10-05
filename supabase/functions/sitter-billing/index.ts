@@ -188,9 +188,13 @@ Deno.serve(async (req) => {
         : { customer_email: user.email ?? undefined }),
       success_url: returnUrl('success'),
       cancel_url: returnUrl('cancelled'),
-      allow_promotion_codes: true,
-      // A 100%-off code (free months) brings the first invoice to $0; don't
-      // demand a card for it. When the free months end Stripe bills the
+      // Codes on the MONTHLY plan only. A "3 months free" coupon applied to a
+      // yearly subscription discounts the whole first-year invoice, giving
+      // away a year; Stripe coupons cannot be limited to one price of a
+      // product, so the yearly checkout simply has no code box.
+      allow_promotion_codes: plan !== 'yearly',
+      // A 100%-off code (free months, monthly plan) brings the first invoice
+      // to $0; don't demand a card for it. When the free months end Stripe bills the
       // subscription, and without a card it goes past_due, which the app
       // already reports and the Customer Portal fixes.
       payment_method_collection: 'if_required',

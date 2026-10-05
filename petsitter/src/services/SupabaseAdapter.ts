@@ -1253,6 +1253,40 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as { label: string; count: number }[];
   }
 
+  async adminSetTest(userId: string, isTest: boolean): Promise<void> {
+    const { error } = await supabase.rpc('admin_set_test', { p_user: userId, p_test: isTest });
+    if (error) throw new Error(error.message);
+  }
+
+  async adminPromoRedemptions(): Promise<any[]> {
+    const { data, error } = await supabase.rpc('admin_promo_redemptions');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as any[];
+  }
+
+  /**
+   * Stripe promotion codes, through the admin-promo function (admin only,
+   * checked server-side). Stripe's own error text comes back as the message,
+   * e.g. a code that already exists.
+   */
+  async adminPromo(body: Record<string, unknown>): Promise<any> {
+    const { data, error } = await supabase.functions.invoke('admin-promo', { body });
+    if (error) {
+      let message = error.message;
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const j = await ctx.json();
+          message = j?.message || j?.error || message;
+        }
+      } catch {
+        // keep the generic message
+      }
+      throw new Error(message);
+    }
+    return data;
+  }
+
   /** Record where a brand-new account came from (0040). A no-op for older accounts. */
   async recordSignupSource(source: string | null): Promise<void> {
     const { error } = await supabase.rpc('record_signup_source', { p_source: source });

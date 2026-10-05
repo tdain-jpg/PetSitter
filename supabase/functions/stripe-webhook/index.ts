@@ -130,6 +130,55 @@ function json(status: number, body: unknown): Response {
 // signature check in the handler), has no user JWT to run under, and both
 // granting and revoking an entitlement are by design privileged writes that no
 // API role can make. crown_purchases is likewise readable only from here.
+/**
+ * Record which promotion code a completed checkout used (0042), so the admin
+ * page can say which of OUR users and households redeemed it; Stripe already
+ * counts redemptions but knows nothing of households.
+ *
+ * Best-effort by design: it runs after the entitlement is handled and never
+ * changes the response. A failure here is logged and costs a row in a report,
+ * never a customer's purchase.
+ */
+async function recordPromoRedemption(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  kind: 'crown' | 'sitter'
+): Promise<void> {
+  try {
+    const discounts = (session as unknown as { discounts?: { promotion_code?: unknown }[] }).discounts ?? [];
+    const raw = discounts.find((d) => d?.promotion_code)?.promotion_code;
+    const promoId = typeof raw === 'string' ? raw : (raw as { id?: string } | undefined)?.id;
+    if (!promoId) return;
+    const promo = await stripe.promotionCodes.retrieve(promoId);
+    const userId =
+      typeof session.metadata?.user_id === 'string' && UUID_RE.test(session.metadata.user_id)
+        ? session.metadata.user_id
+        : null;
+    const householdId =
+      kind === 'crown' && session.client_reference_id && UUID_RE.test(session.client_reference_id)
+        ? session.client_reference_id
+        : null;
+    const { error } = await serviceClient()
+      .from('promo_redemptions')
+      .upsert(
+        {
+          checkout_session_id: session.id,
+          code: promo.code,
+          promotion_code_id: promo.id,
+          kind,
+          user_id: userId,
+          household_id: householdId,
+          amount_discount: session.total_details?.amount_discount ?? null,
+          currency: session.currency ?? null,
+        },
+        { onConflict: 'checkout_session_id', ignoreDuplicates: true }
+      );
+    if (error) console.error(`promo redemption for session ${session.id} not recorded: ${error.message}`);
+  } catch (e) {
+    console.error(`promo redemption for session ${session.id} not recorded: ${e}`);
+  }
+}
+
 function serviceClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -549,6 +598,11 @@ Deno.serve(async (req) => {
       event.type === 'checkout.session.async_payment_succeeded') &&
     (event.data.object as Stripe.Checkout.Session).mode === 'subscription'
   ) {
+    // The subscription itself arrives as customer.subscription.created; only
+    // the promotion code, if one was used, is read from the session here.
+    if (event.type === 'checkout.session.completed') {
+      await recordPromoRedemption(stripe, event.data.object as Stripe.Checkout.Session, 'sitter');
+    }
     return json(200, { received: true, ignored: `${event.type} (subscription)` });
   }
 
@@ -652,5 +706,6 @@ Deno.serve(async (req) => {
   }
 
   console.log(`event ${event.id}: crown granted to household ${householdId}`);
+  await recordPromoRedemption(stripe, session, 'crown');
   return json(200, { received: true, granted: true });
 });
