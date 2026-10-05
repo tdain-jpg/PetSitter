@@ -199,7 +199,10 @@ const CHECKOUT_IDEMPOTENCY_WINDOW_MS = 60 * 60 * 1000;
 // addresses out of idempotency keys.
 function checkoutIdempotencyKey(householdId: string, userId: string): string {
   const bucket = Math.floor(Date.now() / CHECKOUT_IDEMPOTENCY_WINDOW_MS);
-  return `crown:${householdId}:${userId}:${bucket}`;
+  // v2: the session parameters changed (allow_promotion_codes). Stripe refuses
+  // an idempotency key reused with different parameters, so a key minted by
+  // the old code in the last hour must not be replayed against the new ones.
+  return `crown:v2:${householdId}:${userId}:${bucket}`;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -483,6 +486,11 @@ Deno.serve(async (req) => {
     // what the key below promises Stripe.
     success_url: returnUrl('success'),
     cancel_url: returnUrl('cancelled'),
+    // Promotion codes are created by Tim in the Stripe dashboard, so every
+    // discount and every free Crown lives in Stripe's own reports. A 100% code
+    // completes with payment_status 'no_payment_required' and no
+    // PaymentIntent; stripe-webhook grants Crown for that status too.
+    allow_promotion_codes: true,
   };
 
   // Layer 2 of the double-charge guard (see header). Every request from this

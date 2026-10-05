@@ -189,6 +189,11 @@ Deno.serve(async (req) => {
       success_url: returnUrl('success'),
       cancel_url: returnUrl('cancelled'),
       allow_promotion_codes: true,
+      // A 100%-off code (free months) brings the first invoice to $0; don't
+      // demand a card for it. When the free months end Stripe bills the
+      // subscription, and without a card it goes past_due, which the app
+      // already reports and the Customer Portal fixes.
+      payment_method_collection: 'if_required',
     });
 
     if (!session.url) {

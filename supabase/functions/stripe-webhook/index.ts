@@ -577,7 +577,11 @@ Deno.serve(async (req) => {
 
   const session = event.data.object as Stripe.Checkout.Session;
 
-  if (session.payment_status !== 'paid') {
+  // 'no_payment_required' is a completed checkout whose total a 100% promotion
+  // code brought to $0 (codes are issued from the Stripe dashboard). It has no
+  // PaymentIntent and nothing will ever "clear", so it is as final as 'paid';
+  // grant_crown records it with amount 0 so the comp shows in the ledger.
+  if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
     // Not a failure: the async_payment_succeeded event will arrive when (and
     // if) the payment clears, and that is when Crown gets granted.
     console.log(
