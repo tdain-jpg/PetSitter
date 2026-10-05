@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Linking, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, DateField, Input, ScreenContainer, ScreenHeader } from '../components';
@@ -50,12 +50,32 @@ const PROMO_KINDS = [
 type PromoKind = (typeof PROMO_KINDS)[number]['key'];
 const kindLabel = (k?: string | null) => PROMO_KINDS.find((x) => x.key === k)?.label ?? 'Made in Stripe';
 
-/** Small grey label for a test account; they are kept out of every count. */
-function TestBadge() {
+/**
+ * Test accounts get their own grey box under the real ones, closed until
+ * asked for, so a glance at any list is a glance at real customers only.
+ */
+function TestSection({ count, what, children }: { count: number; what: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  if (count === 0) return null;
   return (
-    <Text className="text-xs text-white bg-gray-500 rounded px-2 py-0.5 self-start overflow-hidden">TEST</Text>
+    <View className="mt-4 mb-6 rounded-xl border-2 border-dashed border-gray-400 bg-gray-100 p-3">
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={{ minHeight: 40 }}
+        className="flex-row items-center justify-between"
+      >
+        <Text className="text-gray-700 font-semibold">
+          🧪 Test {what} ({count}), not counted
+        </Text>
+        <Text className="text-gray-600">{open ? 'Hide' : 'Show'}</Text>
+      </Pressable>
+      {open ? <View className="mt-2">{children}</View> : null}
+    </View>
   );
 }
+
 const sourceLabel = (s?: string | null) => (s ? SOURCE_LABELS[s] ?? s : 'Not recorded');
 const day = (ts?: string | null) =>
   ts ? new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
@@ -83,7 +103,7 @@ export function AdminScreen(_props: Props) {
   const [feedback, setFeedback] = useState<any[]>([]);
   const [feedbackFilter, setFeedbackFilter] = useState<'new' | 'all'>('new');
   const [usageDays, setUsageDays] = useState(30);
-  const [usage, setUsage] = useState<{ label: string; count: number }[]>([]);
+  const [usage, setUsage] = useState<{ label: string; real: number; test: number }[]>([]);
   const [promos, setPromos] = useState<any[]>([]);
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [promoForm, setPromoForm] = useState<{
@@ -198,6 +218,53 @@ export function AdminScreen(_props: Props) {
     }
   };
 
+  const renderUser = (u: any) => (
+    <Card key={u.user_id} className="mb-2">
+      <Text className="text-brown-800 font-semibold">{u.name || u.email}</Text>
+      {u.name ? <Text className="text-tan-600 text-sm">{u.email}</Text> : null}
+      <Text className="text-tan-600 text-sm">
+        Joined {day(u.created_at)} · {sourceLabel(u.signup_source)}
+        {u.last_sign_in_at ? ` · last in ${day(u.last_sign_in_at)}` : ''}
+      </Text>
+      <Text className="text-brown-700 text-sm mt-1">
+        {u.role === 'sitter' ? 'Sitter' : 'Owner'} · {u.pets} pets · {u.guides} guides
+        {u.sitter_clients > 0 ? ` · ${u.sitter_clients} sitter clients` : ''}
+        {u.crown ? ' · 👑 Crown' : ''}
+        {u.sitter_plan ? ` · Sitter plan: ${u.sitter_plan}` : ''}
+        {u.promo_codes ? ` · Code: ${u.promo_codes}` : ''}
+      </Text>
+      <View className="flex-row mt-2">
+        <Button
+          title={u.is_test ? 'Not a test account' : 'Mark as test account'}
+          onPress={() => setTest(u)}
+          variant="outline"
+        />
+      </View>
+    </Card>
+  );
+
+  const renderSitterSub = (s: any, i: number) => (
+    <View key={i} className="py-2 border-b border-tan-100">
+      <Text className="text-brown-800 font-medium">{s.name || s.email}</Text>
+      <Text className="text-tan-600 text-sm">
+        {s.status}
+        {s.period_end ? ` · ${s.cancel_at_period_end ? 'ends' : 'renews'} ${day(s.period_end)}` : ''}
+        {s.promo_code ? ` · code ${s.promo_code}` : ''}
+      </Text>
+    </View>
+  );
+
+  const renderCrown = (c: any, i: number) => (
+    <View key={i} className="py-2 border-b border-tan-100">
+      <Text className="text-brown-800 font-medium">
+        {c.household} {c.active ? '' : '(not active)'}
+      </Text>
+      <Text className="text-tan-600 text-sm">
+        {[c.buyer, money(c.amount_cents, c.currency), c.promo_code ? `code ${c.promo_code}` : null, c.reason, day(c.at)].filter(Boolean).join(' · ')}
+      </Text>
+    </View>
+  );
+
   const pill = (active: boolean) =>
     `px-4 rounded-full border ${active ? 'bg-primary-500 border-primary-500' : 'border-primary-300 bg-cream-50'}`;
 
@@ -287,32 +354,13 @@ export function AdminScreen(_props: Props) {
                 />
                 <Button title="Search" onPress={() => void load()} variant="outline" />
               </View>
-              <Text className="text-tan-500 text-sm mb-2">{users.length} accounts, newest first</Text>
-              {users.map((u) => (
-                <Card key={u.user_id} className={`mb-2 ${u.is_test ? 'opacity-60' : ''}`}>
-                  {u.is_test ? <TestBadge /> : null}
-                  <Text className="text-brown-800 font-semibold">{u.name || u.email}</Text>
-                  {u.name ? <Text className="text-tan-600 text-sm">{u.email}</Text> : null}
-                  <Text className="text-tan-600 text-sm">
-                    Joined {day(u.created_at)} · {sourceLabel(u.signup_source)}
-                    {u.last_sign_in_at ? ` · last in ${day(u.last_sign_in_at)}` : ''}
-                  </Text>
-                  <Text className="text-brown-700 text-sm mt-1">
-                    {u.role === 'sitter' ? 'Sitter' : 'Owner'} · {u.pets} pets · {u.guides} guides
-                    {u.sitter_clients > 0 ? ` · ${u.sitter_clients} sitter clients` : ''}
-                    {u.crown ? ' · 👑 Crown' : ''}
-                    {u.sitter_plan ? ` · Sitter plan: ${u.sitter_plan}` : ''}
-                    {u.promo_codes ? ` · Code: ${u.promo_codes}` : ''}
-                  </Text>
-                  <View className="flex-row mt-2">
-                    <Button
-                      title={u.is_test ? 'Not a test account' : 'Mark as test account'}
-                      onPress={() => setTest(u)}
-                      variant="outline"
-                    />
-                  </View>
-                </Card>
-              ))}
+              <Text className="text-tan-500 text-sm mb-2">
+                {users.filter((u) => !u.is_test).length} real accounts, newest first
+              </Text>
+              {users.filter((u) => !u.is_test).map(renderUser)}
+              <TestSection count={users.filter((u) => u.is_test).length} what="accounts">
+                {users.filter((u) => u.is_test).map(renderUser)}
+              </TestSection>
             </>
           ) : null}
 
@@ -320,34 +368,21 @@ export function AdminScreen(_props: Props) {
             <>
               <Card className="mb-4">
                 <Text className="text-lg font-semibold text-brown-800 mb-2">Sitter subscriptions</Text>
-                {paid.sitters.length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
-                {paid.sitters.map((s, i) => (
-                  <View key={i} className={`py-2 border-b border-tan-100 ${s.is_test ? 'opacity-60' : ''}`}>
-                    {s.is_test ? <TestBadge /> : null}
-                    <Text className="text-brown-800 font-medium">{s.name || s.email}</Text>
-                    <Text className="text-tan-600 text-sm">
-                      {s.status}
-                      {s.period_end ? ` · ${s.cancel_at_period_end ? 'ends' : 'renews'} ${day(s.period_end)}` : ''}
-                      {s.promo_code ? ` · code ${s.promo_code}` : ''}
-                    </Text>
-                  </View>
-                ))}
+                {paid.sitters.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
+                {paid.sitters.filter((x) => !x.is_test).map(renderSitterSub)}
               </Card>
-              <Card className="mb-10">
+              <Card className="mb-2">
                 <Text className="text-lg font-semibold text-brown-800 mb-2">Crown</Text>
-                {paid.crown.length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
-                {paid.crown.map((c, i) => (
-                  <View key={i} className={`py-2 border-b border-tan-100 ${c.is_test ? 'opacity-60' : ''}`}>
-                    {c.is_test ? <TestBadge /> : null}
-                    <Text className="text-brown-800 font-medium">
-                      {c.household} {c.active ? '' : '(not active)'}
-                    </Text>
-                    <Text className="text-tan-600 text-sm">
-                      {[c.buyer, money(c.amount_cents, c.currency), c.promo_code ? `code ${c.promo_code}` : null, c.reason, day(c.at)].filter(Boolean).join(' · ')}
-                    </Text>
-                  </View>
-                ))}
+                {paid.crown.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
+                {paid.crown.filter((x) => !x.is_test).map(renderCrown)}
               </Card>
+              <TestSection
+                count={paid.sitters.filter((x) => x.is_test).length + paid.crown.filter((x) => x.is_test).length}
+                what="purchases"
+              >
+                {paid.sitters.filter((x) => x.is_test).map(renderSitterSub)}
+                {paid.crown.filter((x) => x.is_test).map(renderCrown)}
+              </TestSection>
             </>
           ) : null}
 
@@ -432,13 +467,17 @@ export function AdminScreen(_props: Props) {
                         {` · used ${p.times_redeemed}${p.max_redemptions ? ` of ${p.max_redemptions}` : ''}`}
                         {p.expires_at ? ` · until ${day(new Date(p.expires_at * 1000).toISOString())}` : ''}
                       </Text>
-                      {users.map((r, i) => (
+                      {users.filter((r) => !r.is_test).map((r, i) => (
                         <Text key={i} className="text-brown-700 text-sm">
-                          {r.is_test ? '[TEST] ' : ''}
                           {r.email || 'unknown'}
                           {r.household ? ` (${r.household})` : ''} · {day(r.at)}
                         </Text>
                       ))}
+                      {users.some((r) => r.is_test) ? (
+                        <Text className="text-gray-500 text-sm">
+                          🧪 Test uses: {users.filter((r) => r.is_test).map((r) => r.email || 'unknown').join(', ')}
+                        </Text>
+                      ) : null}
                       {p.active ? (
                         <View className="flex-row mt-2">
                           <Button title="Switch off" onPress={() => switchOffPromo(p)} variant="outline" />
@@ -521,10 +560,16 @@ export function AdminScreen(_props: Props) {
                 ))}
               </View>
               <Card className="mb-10">
+                <View className="flex-row py-2 border-b-2 border-tan-200">
+                  <Text className="text-tan-600 font-semibold flex-1 mr-3">In the last {usageDays} days</Text>
+                  <Text className="text-brown-800 font-semibold text-right" style={{ width: 64 }}>Real</Text>
+                  <Text className="text-gray-500 font-semibold text-right" style={{ width: 64 }}>🧪 Test</Text>
+                </View>
                 {usage.map((u) => (
-                  <View key={u.label} className="flex-row justify-between py-2 border-b border-tan-100">
+                  <View key={u.label} className="flex-row items-center py-2 border-b border-tan-100">
                     <Text className="text-brown-700 flex-1 mr-3">{u.label}</Text>
-                    <Text className="text-brown-800 font-semibold">{u.count}</Text>
+                    <Text className="text-brown-800 font-semibold text-right" style={{ width: 64 }}>{u.real}</Text>
+                    <Text className="text-gray-500 text-right" style={{ width: 64 }}>{u.test}</Text>
                   </View>
                 ))}
               </Card>

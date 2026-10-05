@@ -1247,10 +1247,10 @@ export class SupabaseAdapter implements DataService {
     if (error) throw new Error(error.message);
   }
 
-  async adminUsage(days: number): Promise<{ label: string; count: number }[]> {
+  async adminUsage(days: number): Promise<{ label: string; real: number; test: number }[]> {
     const { data, error } = await supabase.rpc('admin_usage', { p_days: days });
     if (error) throw new Error(error.message);
-    return (data ?? []) as { label: string; count: number }[];
+    return (data ?? []) as { label: string; real: number; test: number }[];
   }
 
   async adminSetTest(userId: string, isTest: boolean): Promise<void> {
