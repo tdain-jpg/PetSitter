@@ -331,6 +331,7 @@ export function TripWizardScreen({ navigation }: Props) {
 
       // The trip is a guide now; there is nothing left to resume.
       clearDraft();
+      void dataService.logEvent('quick_trip_completed');
 
       // Navigate to the new guide detail
       (navigation as any).reset({

@@ -246,6 +246,24 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
       };
     }
 
+    case 'feedback': {
+      // To support@ (forwarded to Tim). Plain and complete: who, from which
+      // screen, and the words, so it can be answered straight from the inbox.
+      const who = escapeHtml(p.from_name || p.from_email || 'Someone');
+      const email = escapeHtml(p.from_email || '');
+      const screen = p.screen ? escapeHtml(p.screen) : '';
+      const message = escapeHtml(p.message || '').replace(/\n/g, '<br>');
+      return {
+        subject: `Feedback from ${subjectSafe(p.from_name || p.from_email, 'a user')}`,
+        html: emailShell(
+          'New feedback',
+          `<p style="margin: 0 0 8px;"><strong>${who}</strong>${email ? ` (<a href="mailto:${email}" style="color: #3C6779;">${email}</a>)` : ''}${screen ? `, from the ${screen} screen` : ''}:</p>
+          <blockquote style="margin: 0 0 16px; padding: 12px 16px; background: #F5EDD6; border-radius: 8px;">${message}</blockquote>
+          <p style="margin: 0;">It is also in the Admin page under Feedback, where you can mark it done.</p>`
+        ),
+      };
+    }
+
     case 'share_opened': {
       const title = escapeHtml(p.guide_title || 'your guide');
       return {

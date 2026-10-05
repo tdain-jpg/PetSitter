@@ -74,6 +74,8 @@ export type MainStackParamList = {
   Household: undefined;
   HomeDetails: undefined;
   SitterProfile: undefined;
+  Feedback: { from?: string } | undefined;
+  Admin: undefined;
 
   // Onboarding
   Onboarding: undefined;

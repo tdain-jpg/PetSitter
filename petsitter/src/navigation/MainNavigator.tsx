@@ -25,6 +25,8 @@ import { SitterHouseholdScreen } from '../screens/SitterHouseholdScreen';
 import { SitterPlansScreen } from '../screens/SitterPlansScreen';
 import { HomeDetailsScreen } from '../screens/HomeDetailsScreen';
 import { SitterProfileScreen } from '../screens/SitterProfileScreen';
+import { FeedbackScreen } from '../screens/FeedbackScreen';
+import { AdminScreen } from '../screens/AdminScreen';
 import { UnlockCrownScreen } from '../screens/UnlockCrownScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
@@ -67,6 +69,8 @@ const SitterHouseholdH = hosted(SitterHouseholdScreen);
 const SitterPlansH = hosted(SitterPlansScreen);
 const HomeDetailsH = hosted(HomeDetailsScreen);
 const SitterProfileH = hosted(SitterProfileScreen);
+const FeedbackH = hosted(FeedbackScreen);
+const AdminH = hosted(AdminScreen);
 const UnlockCrownH = hosted(UnlockCrownScreen);
 const OnboardingH = hosted(OnboardingScreen);
 const TripWizardH = hosted(TripWizardScreen);
@@ -107,6 +111,8 @@ export function MainNavigator() {
       <Stack.Screen name="SitterPlans" component={SitterPlansH} />
       <Stack.Screen name="HomeDetails" component={HomeDetailsH} />
       <Stack.Screen name="SitterProfile" component={SitterProfileH} />
+      <Stack.Screen name="Feedback" component={FeedbackH} />
+      <Stack.Screen name="Admin" component={AdminH} />
       <Stack.Screen name="UnlockCrown" component={UnlockCrownH} />
       <Stack.Screen name="Onboarding" component={OnboardingH} />
       <Stack.Screen name="TripWizard" component={TripWizardH} />

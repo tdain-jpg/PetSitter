@@ -111,6 +111,19 @@ export function SettingsScreen({ navigation }: Props) {
 
   const [merging, setMerging] = useState<string | null>(null);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void dataService.isAdmin().then((v) => {
+        if (!cancelled) setIsAdmin(v);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
   /**
    * Households this user could move their things into: every one they belong to
    * except the one their things are already in. Empty for almost everybody,
@@ -532,6 +545,27 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
+        {/* Admin: only for accounts in public.admins (0041). The check here
+            just hides the row; every admin report refuses non-admins itself. */}
+        {isAdmin ? (
+          <Card className="mb-4">
+            <Pressable
+              onPress={() => navigation.navigate('Admin')}
+              accessibilityRole="button"
+              accessibilityLabel="Open the admin page"
+              className="flex-row justify-between items-center"
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-brown-800 font-medium">🛠️ Admin</Text>
+                <Text className="text-tan-500 text-sm">
+                  Users, where they came from, feedback, paid accounts, and what gets used.
+                </Text>
+              </View>
+              <Text className="text-tan-400 text-xl">›</Text>
+            </Pressable>
+          </Card>
+        ) : null}
+
         {/* Feedback, for everyone. It used to exist only on Sitter plans, so
             an owner had no way to tell us anything from inside the app.
             mailto with the address also shown, because plenty of people use
@@ -542,16 +576,8 @@ export function SettingsScreen({ navigation }: Props) {
             Something broken, confusing, or missing? A person reads every message.
           </Text>
           <Button
-            title="✉️ Email us"
-            onPress={() => {
-              const subject = encodeURIComponent('[Pawstructions] Feedback');
-              const body = encodeURIComponent(
-                `What's working, what isn't, and what would you add?\n\n\n--\nAccount: ${user?.email ?? ''}`
-              );
-              void Linking.openURL(
-                `mailto:support@pawstructions.com?subject=${subject}&body=${body}`
-              ).catch(() => {});
-            }}
+            title="✉️ Send feedback"
+            onPress={() => navigation.navigate('Feedback', { from: 'Settings' })}
             variant="outline"
           />
           <Text className="text-tan-500 text-sm text-center mt-2" selectable>

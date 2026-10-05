@@ -30,6 +30,7 @@ import type { MainStackParamList } from '../navigation/types';
 import type { Guide, Pet } from '../types';
 import { friendlyError } from '../lib/errors';
 import { flightContactLine, flightTitle, formatFlightWhen } from '../lib/flights';
+import { dataService } from '../services';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PDFPreview'>;
 
@@ -768,6 +769,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const handleExport = async () => {
     if (!guide) return;
     setExporting(true);
+    // Printing leaves no trace in the database otherwise (0041 usage log).
+    void dataService.logEvent('pdf_exported', { cheat_sheet: !!(sections.aiCheatSheet && cheatSheetContent) });
 
     try {
       if (Platform.OS === 'web') {

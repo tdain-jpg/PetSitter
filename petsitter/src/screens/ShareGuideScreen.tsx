@@ -16,6 +16,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import type { Guide, ShareableLink } from '../types';
 import { friendlyError } from '../lib/errors';
+import { dataService } from '../services';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ShareGuide'>;
 
@@ -147,6 +148,7 @@ export function ShareGuideScreen({ navigation, route }: Props) {
 
   const handleCopyLink = async (code: string) => {
     if (await copyToClipboard(shareUrlFor(code))) {
+      void dataService.logEvent('share_link_copied');
       showAlert('Copied', 'Link copied to clipboard!');
       return;
     }

@@ -103,6 +103,8 @@ const linking = {
           Household: 'Household',
           HomeDetails: 'HomeDetails',
           SitterProfile: 'SitterProfile',
+          Feedback: 'Feedback',
+          Admin: 'Admin',
           Onboarding: 'Onboarding',
           TripWizard: 'TripWizard',
         },

@@ -139,15 +139,6 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
       })
     : null;
 
-  const openFeedback = () => {
-    const subject = encodeURIComponent('[Pawstructions] Sitter feedback');
-    const body = encodeURIComponent(
-      'What would make Pawstructions genuinely useful for you?\n\n'
-    );
-    void Linking.openURL(
-      `mailto:${FEEDBACK_EMAIL}?subject=${subject}&body=${body}`
-    ).catch(() => {});
-  };
 
   const subscribed = plan?.subscribed === true;
   const used = plan?.activeClients ?? 0;
@@ -320,7 +311,11 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
               We are building the sitter side right now, so this is the moment your answer
               actually changes it.
             </Text>
-            <Button title="Send feedback" onPress={openFeedback} variant="outline" />
+            <Button
+              title="Send feedback"
+              onPress={() => navigation.navigate('Feedback', { from: 'SitterPlans' })}
+              variant="outline"
+            />
             <Text className="text-tan-500 text-sm mt-3">
               Or email {FEEDBACK_EMAIL}
               {Platform.OS === 'web' ? '' : ' from any mail app'}.

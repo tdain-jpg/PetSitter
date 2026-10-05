@@ -1183,6 +1183,76 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as HouseholdSitter[];
   }
 
+  // ============================================
+  // Feedback, usage log, admin (0041)
+  // ============================================
+  /** Send feedback. Stored for the admin page and emailed to support@. */
+  async sendFeedback(message: string, context: Record<string, string | undefined>): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    const id = userData?.user?.id;
+    if (!id) throw new Error('Not signed in.');
+    // No .select(): users may insert feedback but never read it back.
+    const { error } = await supabase.from('feedback').insert({ user_id: id, message, context });
+    if (error) throw new Error(error.message);
+  }
+
+  /** Log one use of a feature the app does not otherwise record. Never throws. */
+  async logEvent(event: string, props: Record<string, unknown> = {}): Promise<void> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const id = userData?.user?.id;
+      if (!id) return;
+      await supabase.from('app_events').insert({ user_id: id, event, props });
+    } catch {
+      // Usage logging must never get in the way of the thing being used.
+    }
+  }
+
+  async isAdmin(): Promise<boolean> {
+    const { data, error } = await supabase.rpc('is_admin');
+    if (error) return false;
+    return data === true;
+  }
+
+  async adminOverview(): Promise<any> {
+    const { data, error } = await supabase.rpc('admin_overview');
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async adminUsers(search?: string): Promise<any[]> {
+    const { data, error } = await supabase.rpc('admin_users', { p_search: search ?? null, p_limit: 300 });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as any[];
+  }
+
+  async adminPaid(): Promise<{ crown: any[]; sitters: any[] }> {
+    const { data, error } = await supabase.rpc('admin_paid');
+    if (error) throw new Error(error.message);
+    return (data ?? { crown: [], sitters: [] }) as { crown: any[]; sitters: any[] };
+  }
+
+  async adminFeedback(status?: 'new' | 'read' | 'done'): Promise<any[]> {
+    const { data, error } = await supabase.rpc('admin_feedback', { p_status: status ?? null });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as any[];
+  }
+
+  async adminUpdateFeedback(id: string, status: 'new' | 'read' | 'done', note?: string): Promise<void> {
+    const { error } = await supabase.rpc('admin_update_feedback', {
+      p_id: id,
+      p_status: status,
+      p_note: note ?? null,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async adminUsage(days: number): Promise<{ label: string; count: number }[]> {
+    const { data, error } = await supabase.rpc('admin_usage', { p_days: days });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as { label: string; count: number }[];
+  }
+
   /** Record where a brand-new account came from (0040). A no-op for older accounts. */
   async recordSignupSource(source: string | null): Promise<void> {
     const { error } = await supabase.rpc('record_signup_source', { p_source: source });
