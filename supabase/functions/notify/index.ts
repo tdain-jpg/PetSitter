@@ -191,8 +191,8 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
         subject: `${subjectSafe(p.inviter_name, 'A pet owner')} invited you to look after their pets`,
         html: emailShell(
           "You're invited to pet sit",
-          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> (${household}) uses Pawstructions for their pets' care instructions, and has invited you as their pet sitter.</p>
-          <p style="margin: 0 0 16px;">Once you accept you will see their pets, feeding and medication schedules, house details, emergency contacts, and the trips they ask you to cover, all in one place. You can tick off tasks as you go, so they know the dogs were fed without having to text.</p>
+          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> (${household}) invited you to be their pet sitter on Pawstructions, where they keep their pets' care instructions.</p>
+          <p style="margin: 0 0 16px;">Once you accept you will see their pets, feeding and medication schedules, house details, emergency contacts, and the trips they ask you to cover, all in one place. You can tick off tasks as you go, so they know the pets were fed without having to text.</p>
           ${ctaButton(hasAccount ? 'Sign in to accept' : 'Create your free sitter account', href)}
           <p style="margin: 0 0 8px;">${hasAccount ? 'Sign in' : 'Sign up'} with THIS email address (<strong>${recipient}</strong>) and the invitation will be waiting for you to accept.</p>
           <p style="margin: 0;">${hasAccount ? `New here? <a href="${APP_URL}/Auth/SignUp?role=sitter&email=${encodeURIComponent(row.recipient_email)}" style="color: #3C6779;">Create an account instead</a>.` : `Already have an account? <a href="${APP_URL}/Auth/Login" style="color: #3C6779;">Sign in</a>.`} Pawstructions is free for sitters with up to three client households.</p>`
