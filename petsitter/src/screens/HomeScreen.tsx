@@ -55,6 +55,7 @@ export function HomeScreen({ navigation }: Props) {
     guides,
     loadingPets,
     petsError,
+    primaryHouseholdId,
     loadingGuides,
     settings,
     loadingSettings,
@@ -211,8 +212,28 @@ export function HomeScreen({ navigation }: Props) {
 
   // Prefer a real name; otherwise derive something human from the address.
   // The email path is shared with CheckinFeed — see personNameFromEmail.
+  //
+  // Between the two: the household's Home details, where this person is often
+  // listed by name with their email ("Welcome, Dmdoersa…" became "Welcome,
+  // Dana"). Matched on the login email, so it never borrows a partner's name.
+  const [homeDetailsName, setHomeDetailsName] = useState<string | null>(null);
+  useEffect(() => {
+    const email = user?.email?.trim().toLowerCase();
+    if (!primaryHouseholdId || !email || user?.full_name?.trim()) return;
+    let cancelled = false;
+    dataService
+      .getHomeDetails(primaryHouseholdId)
+      .then((d) => {
+        const me = d?.owners.find((o) => o.email?.trim().toLowerCase() === email);
+        if (!cancelled) setHomeDetailsName(me?.name?.trim() || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [primaryHouseholdId, user?.email, user?.full_name]);
   const displayName = (() => {
-    const fullName = user?.full_name?.trim();
+    const fullName = user?.full_name?.trim() || homeDetailsName;
     if (fullName) return fullName.split(' ')[0];
     return personNameFromEmail(user?.email);
   })();

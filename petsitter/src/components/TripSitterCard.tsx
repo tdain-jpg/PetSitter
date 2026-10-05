@@ -31,7 +31,11 @@ const STATUS_TEXT: Record<string, string> = {
 export function TripSitterCard({ guide }: { guide: Guide }) {
   const navigation = useNavigation<any>();
   const { refreshGuides } = useData();
-  const [sitters, setSitters] = useState<SitterInviteRow[] | null>(null);
+  // Every connection row, live or not, so the card can tell "removed" (a
+  // revoked row) from "couldn't read it" (no row at all). Pickable sitters are
+  // the live ones.
+  const [allRows, setAllRows] = useState<SitterInviteRow[] | null>(null);
+  const sitters = allRows?.filter((r) => r.status === 'invited' || r.status === 'active') ?? null;
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [local, setLocal] = useState<{ id: string | null; status: string | null } | null>(null);
@@ -49,10 +53,9 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
   const load = useCallback(async () => {
     if (!guide.household_id) return;
     try {
-      const rows = await dataService.getSitterConnections(guide.household_id);
-      setSitters(rows.filter((r) => r.status === 'invited' || r.status === 'active'));
+      setAllRows(await dataService.getSitterConnections(guide.household_id));
     } catch {
-      setSitters([]);
+      setAllRows([]);
     }
   }, [guide.household_id]);
 
@@ -61,6 +64,7 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
   }, [load]);
 
   const assigned = sitters?.find((s) => s.id === connectionId) ?? null;
+  const removed = !assigned && !!allRows?.some((r) => r.id === connectionId);
 
   const choose = async (row: SitterInviteRow) => {
     setBusy(true);
@@ -111,11 +115,17 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
         </View>
       ) : connectionId && !picking ? (
         <>
-          <Text className="text-brown-800 font-medium">{assigned?.email ?? 'A sitter no longer connected'}</Text>
+          <Text className="text-brown-800 font-medium">
+            {assigned?.email ?? (removed ? 'A sitter no longer connected' : 'Your sitter')}
+          </Text>
           <Text
             className={`text-sm mb-3 ${status === 'accepted' ? 'text-primary-700' : 'text-tan-600'}`}
           >
-            {assigned ? STATUS_TEXT[status ?? 'requested'] : 'They were removed from your household, so this trip needs a new sitter.'}
+            {assigned
+              ? STATUS_TEXT[status ?? 'requested']
+              : removed
+                ? 'They were removed from your household, so this trip needs a new sitter.'
+                : "We couldn't load their details just now. Try again in a moment."}
           </Text>
           <View className="flex-row flex-wrap" style={{ gap: 8 }}>
             <Button title="Choose someone else" onPress={() => setPicking(true)} variant="outline" disabled={busy} />
