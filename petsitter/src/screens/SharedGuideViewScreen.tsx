@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, SectionHeader, ContactCard, SensitiveValue, ScreenContainer, Icon, speciesIconName } from '../components';
@@ -446,14 +448,28 @@ export function SharedGuideViewScreen({ navigation, route }: Props) {
             </SectionHeader>
           ) : null}
 
-          {/* Footer */}
+          {/* Footer, and the quiet invitation. Everyone reading a share link
+              is a sitter or a relative minding someone's pets: exactly the
+              people who might want one of their own. One link, no pressure,
+              at the very end, after the guide has done its job. */}
           <View className="items-center py-8 mb-8">
             <Text className="text-tan-400 text-sm text-center">
               Shared via Pawstructions
             </Text>
-            <Text className="text-tan-300 text-xs mt-1">
-              pawstructions.com
-            </Text>
+            <Pressable
+              onPress={() => {
+                const url = 'https://pawstructions.com/?ref=share';
+                if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.assign(url);
+                else void Linking.openURL(url).catch(() => {});
+              }}
+              accessibilityRole="link"
+              style={{ minHeight: 44 }}
+              className="justify-center mt-1"
+            >
+              <Text className="text-primary-600 text-sm underline text-center">
+                Have pets of your own? Make a guide like this, free.
+              </Text>
+            </Pressable>
           </View>
         </ScreenContainer>
       </ScrollView>

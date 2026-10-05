@@ -1183,6 +1183,12 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as HouseholdSitter[];
   }
 
+  /** Record where a brand-new account came from (0040). A no-op for older accounts. */
+  async recordSignupSource(source: string | null): Promise<void> {
+    const { error } = await supabase.rpc('record_signup_source', { p_source: source });
+    if (error) throw new Error(error.message);
+  }
+
   async getMyRole(): Promise<'owner' | 'sitter' | null> {
     const { data: userData } = await supabase.auth.getUser();
     const id = userData?.user?.id;

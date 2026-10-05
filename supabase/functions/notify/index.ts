@@ -152,9 +152,9 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
       const recipient = escapeHtml(row.recipient_email);
       const hasAccount = p.has_account === true;
       const joinHref =
-        `${APP_URL}/Auth/SignUp?join=household&email=${encodeURIComponent(row.recipient_email)}` +
+        `${APP_URL}/Auth/SignUp?join=household&ref=household_invite&email=${encodeURIComponent(row.recipient_email)}` +
         (p.household_name ? `&household=${encodeURIComponent(String(p.household_name))}` : '');
-      const href = hasAccount ? `${APP_URL}/Auth/Login` : joinHref;
+      const href = hasAccount ? `${APP_URL}/Auth/Login?ref=household_invite` : joinHref;
       return {
         subject: `${subjectSafe(p.inviter_name || p.inviter_email, 'Someone')} invited you to ${subjectSafe(p.household_name, 'their household')} on Pawstructions`,
         html: emailShell(
@@ -179,7 +179,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           'Your sitter would like to connect',
           `<p style="margin: 0 0 16px;"><strong>${sitter}</strong> uses Pawstructions to keep track of the pets they look after, and would like to be connected to yours.</p>
           <p style="margin: 0 0 16px;"><strong>Nothing has been shared yet.</strong> Accepting is what gives them read-only access to your pets and guides, and you can take it back at any time.</p>
-          ${ctaButton('Open Pawstructions')}
+          ${ctaButton('Open Pawstructions', `${APP_URL}/?ref=owner_invite`)}
           <p style="margin: 0;">Sign up or sign in with THIS email address (<strong>${recipient}</strong>) and the request will be waiting on your home screen.</p>`
         ),
       };
@@ -195,8 +195,8 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
       const recipient = escapeHtml(row.recipient_email);
       const hasAccount = p.has_account === true;
       const href = hasAccount
-        ? `${APP_URL}/Auth/Login`
-        : `${APP_URL}/Auth/SignUp?role=sitter&email=${encodeURIComponent(row.recipient_email)}`;
+        ? `${APP_URL}/Auth/Login?ref=sitter_invite`
+        : `${APP_URL}/Auth/SignUp?role=sitter&ref=sitter_invite&email=${encodeURIComponent(row.recipient_email)}`;
       return {
         subject: `${subjectSafe(p.inviter_name, 'A pet owner')} invited you to look after their pets`,
         html: emailShell(
@@ -205,7 +205,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           <p style="margin: 0 0 16px;">Once you accept you will see their pets, feeding and medication schedules, house details, emergency contacts, and the trips they ask you to cover, all in one place. You can tick off tasks as you go, so they know the pets were fed without having to text.</p>
           ${ctaButton(hasAccount ? 'Sign in to accept' : 'Create your free sitter account', href)}
           <p style="margin: 0 0 8px;">${hasAccount ? 'Sign in' : 'Sign up'} with THIS email address (<strong>${recipient}</strong>) and the invitation will be waiting for you to accept.</p>
-          <p style="margin: 0;">${hasAccount ? `New here? <a href="${APP_URL}/Auth/SignUp?role=sitter&email=${encodeURIComponent(row.recipient_email)}" style="color: #3C6779;">Create an account instead</a>.` : `Already have an account? <a href="${APP_URL}/Auth/Login" style="color: #3C6779;">Sign in</a>.`} Pawstructions is free for sitters with up to three client households.</p>`
+          <p style="margin: 0;">${hasAccount ? `New here? <a href="${APP_URL}/Auth/SignUp?role=sitter&amp;ref=sitter_invite&amp;email=${encodeURIComponent(row.recipient_email)}" style="color: #3C6779;">Create an account instead</a>.` : `Already have an account? <a href="${APP_URL}/Auth/Login" style="color: #3C6779;">Sign in</a>.`} Pawstructions is free for sitters with up to three client households.</p>`
         ),
       };
     }
@@ -222,7 +222,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           'Can you take this trip?',
           `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> (${household}) has asked you to look after their pets for <strong>${title}</strong>${dates ? ` (${dates})` : ''}.</p>
           <p style="margin: 0 0 16px;">${pending ? 'First accept their invitation to connect, then this trip will be waiting under My Clients for you to accept or decline.' : 'Open My Clients to accept or decline. The full care guide for the trip is there too.'}</p>
-          ${ctaButton('Open Pawstructions', `${APP_URL}/Main/SitterHome`)}`
+          ${ctaButton('Open Pawstructions', `${APP_URL}/Main/SitterHome?ref=trip_request`)}`
         ),
       };
     }

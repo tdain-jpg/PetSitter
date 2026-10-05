@@ -4,6 +4,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, DataProvider } from './src/contexts';
 import { RootNavigator } from './src/navigation';
 import { ModalHost } from './src/components/AppModal';
+import { captureReferral } from './src/lib/growth';
+
+// Before anything can rewrite the address bar: keep the ?ref= this visit
+// arrived with, so a new account can say where it came from (0040).
+captureReferral();
 
 const linking = {
   // Native deep links (pawstructions://) + web origin (https://your-domain)

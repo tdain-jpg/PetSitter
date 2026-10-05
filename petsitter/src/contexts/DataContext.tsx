@@ -12,6 +12,7 @@ import { AppState } from 'react-native';
 import { dataService } from '../services/SupabaseAdapter';
 import { useAuth } from './AuthContext';
 import { confirmSessionLost } from '../lib/sessionExpired';
+import { recordSignupSourceOnce } from '../lib/growth';
 import { SessionExpiredNotice } from '../components/SessionExpiredNotice';
 import type {
   Pet,
@@ -368,6 +369,9 @@ export function DataProvider({ children }: DataProviderProps) {
       // have already reached the screen it links to. QA found the whole sitter
       // side unreachable for a real user because of it.
       refreshSitterConnections();
+      // Where a brand-new account came from (sheet QR, share link, invites).
+      // The server ignores it for any account older than a day.
+      void recordSignupSourceOnce();
       loadSettings();
       loadOnboardingState();
     } else {
