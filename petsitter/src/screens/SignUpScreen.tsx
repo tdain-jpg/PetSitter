@@ -30,7 +30,18 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
    * not engage with the question, and is preselected to 'sitter' when the
    * landing page's sitter section sent them.
    */
-  const [role, setRole] = useState<ProfileRole>(route.params?.role ?? 'owner');
+  // Arriving from a household invitation email (?join=household): they are
+  // joining a family, which means pets of their own, so the role question is
+  // skipped and the page says what they are joining. Only "Start fresh
+  // instead" on the invitation later asks what brings them here.
+  const joiningHousehold = route.params?.join === 'household';
+  const joiningName =
+    typeof route.params?.household === 'string' && route.params.household.trim()
+      ? route.params.household.trim().slice(0, 80)
+      : null;
+  const [role, setRole] = useState<ProfileRole>(
+    joiningHousehold ? 'owner' : route.params?.role ?? 'owner'
+  );
   // Prefilled from an invitation email's link (?email=), so the sitter signs up
   // with the exact address the invitation was sent to and finds it waiting.
   const [email, setEmail] = useState(
@@ -151,7 +162,9 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
                 Where Pets Rule the Kingdom!
               </Text>
               <Text style={{ fontSize: 14, color: COLORS.tan, marginTop: 16, textAlign: 'center' }}>
-                Create an account to get started
+                {joiningHousehold
+                  ? `Create your account to join ${joiningName ?? 'the household'}`
+                  : 'Create an account to get started'}
               </Text>
             </View>
 
@@ -160,6 +173,7 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
             {/* Who is signing up. Two large targets rather than a segmented
                 control: this is the first question on the screen and it decides
                 where they end up. */}
+            {!joiningHousehold ? (
             <View className="mb-6">
               <Text className="text-brown-800 font-semibold mb-2 text-center">
                 What brings you here?
@@ -197,6 +211,7 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
                 You can change this later, and do both.
               </Text>
             </View>
+            ) : null}
 
               <Input
                 label="Email"

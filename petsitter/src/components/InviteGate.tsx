@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { Card } from './Card';
 import { Button } from './Button';
 import type { PendingInvite } from '../types';
@@ -11,7 +12,8 @@ interface InviteGateProps {
   /** True while the accept flow runs — shows the spinner, disables both actions. */
   accepting: boolean;
   onAccept: () => void;
-  onStartFresh: () => void;
+  /** Declined for now: set up their own space, as an owner or as a sitter. */
+  onStartFresh: (role: 'owner' | 'sitter') => void;
 }
 
 /**
@@ -32,6 +34,45 @@ export function InviteGate({
   onAccept,
   onStartFresh,
 }: InviteGateProps) {
+  // "Start fresh" is the one place an invitee is asked what brings them here.
+  // Someone who came to join a family does not need the question; someone
+  // turning the invitation down does, because they might be a sitter.
+  const [choosing, setChoosing] = useState(false);
+
+  if (choosing) {
+    return (
+      <Card className="mb-4">
+        <View className="py-4 px-2">
+          <Text className="text-xl font-semibold text-brown-800 mb-1 text-center">
+            What brings you here?
+          </Text>
+          <Text className="text-tan-500 text-center mb-4">
+            Your invitation to {invite.household_name} stays waiting if you change your mind.
+          </Text>
+          <View className="gap-3">
+            {([
+              { key: 'owner' as const, title: 'My own pets', sub: 'Build guides for sitters' },
+              { key: 'sitter' as const, title: 'I sit for others', sub: 'Look after clients\u2019 pets' },
+            ]).map((o) => (
+              <Pressable
+                key={o.key}
+                onPress={() => onStartFresh(o.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`${o.title}. ${o.sub}`}
+                style={{ minHeight: 56 }}
+                className="rounded-xl border-2 border-primary-300 bg-cream-50 px-4 py-3 justify-center"
+              >
+                <Text className="font-semibold text-brown-800">{o.title}</Text>
+                <Text className="text-tan-500 text-sm">{o.sub}</Text>
+              </Pressable>
+            ))}
+            <Button title="Back to the invitation" variant="outline" onPress={() => setChoosing(false)} />
+          </View>
+        </View>
+      </Card>
+    );
+  }
+
   return (
     <Card className="mb-4 bg-primary-50 border-primary-200">
       <View className="items-center py-6 px-2">
@@ -42,9 +83,9 @@ export function InviteGate({
         <Text className="text-brown-600 text-center mb-1 font-semibold">
           {invite.household_name}
         </Text>
-        {invite.invited_by_email ? (
+        {invite.invited_by_name || invite.invited_by_email ? (
           <Text className="text-tan-500 text-center mb-3">
-            {`Invited by ${invite.invited_by_email}`}
+            {`Invited by ${invite.invited_by_name || invite.invited_by_email}`}
           </Text>
         ) : (
           <View className="mb-3" />
@@ -67,7 +108,7 @@ export function InviteGate({
           <Button
             title="Start fresh instead"
             variant="outline"
-            onPress={onStartFresh}
+            onPress={() => setChoosing(true)}
             disabled={accepting}
           />
         </View>

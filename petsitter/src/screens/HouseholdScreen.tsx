@@ -682,7 +682,7 @@ export function HouseholdScreen() {
                     </Text>
                     <Text className="text-brown-600 mb-3">
                       {`Invited${
-                        invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                        invite.invited_by_name || invite.invited_by_email ? ` by ${invite.invited_by_name || invite.invited_by_email}` : ''
                       }${invited ? ` · ${invited}` : ''}.`}
                     </Text>
                     <View className="flex-row gap-3">

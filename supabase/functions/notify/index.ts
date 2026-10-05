@@ -143,16 +143,26 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
 
   switch (row.kind) {
     case 'invite': {
-      const inviter = escapeHtml(p.inviter_email || 'A Pawstructions user');
+      // Joining a household. Someone with no account goes to a sign-up page
+      // made for joining (no "what brings you here" question: joining a family
+      // means pets of your own); someone with one goes to sign in. Either way
+      // the invitation is the first thing they see once inside.
+      const inviter = escapeHtml(p.inviter_name || p.inviter_email || 'A Pawstructions user');
       const household = escapeHtml(p.household_name || 'their household');
       const recipient = escapeHtml(row.recipient_email);
+      const hasAccount = p.has_account === true;
+      const joinHref =
+        `${APP_URL}/Auth/SignUp?join=household&email=${encodeURIComponent(row.recipient_email)}` +
+        (p.household_name ? `&household=${encodeURIComponent(String(p.household_name))}` : '');
+      const href = hasAccount ? `${APP_URL}/Auth/Login` : joinHref;
       return {
-        subject: "You're invited to share pet care on Pawstructions",
+        subject: `${subjectSafe(p.inviter_name || p.inviter_email, 'Someone')} invited you to ${subjectSafe(p.household_name, 'their household')} on Pawstructions`,
         html: emailShell(
           "You're invited to share pet care",
-          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> invited you to <strong>${household}</strong> on Pawstructions, shared pets, guides, and care instructions in one place.</p>
-          ${ctaButton('Open Pawstructions')}
-          <p style="margin: 0;">Sign up or sign in with THIS email address (<strong>${recipient}</strong>) and the invitation will be waiting on your home screen.</p>`
+          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> invited you to <strong>${household}</strong> on Pawstructions. You'll find shared pets, guides and care instructions there, all in one place.</p>
+          ${ctaButton(hasAccount ? 'Sign in to join' : `Join ${p.household_name ? String(p.household_name) : 'the household'}`, href)}
+          <p style="margin: 0 0 8px;">${hasAccount ? 'Sign in' : 'Create your account'} with THIS email address (<strong>${recipient}</strong>) and the invitation will be the first thing you see.</p>
+          <p style="margin: 0;">${hasAccount ? `New here? <a href="${escapeHtml(joinHref)}" style="color: #3C6779;">Create an account instead</a>.` : `Already have an account? <a href="${APP_URL}/Auth/Login" style="color: #3C6779;">Sign in</a>.`}</p>`
         ),
       };
     }

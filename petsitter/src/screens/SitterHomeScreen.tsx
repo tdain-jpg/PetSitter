@@ -377,7 +377,7 @@ export function SitterHomeScreen({ navigation }: Props) {
               <Text className="text-brown-800 font-semibold mb-1">Household invitation</Text>
               <Text className="text-brown-600 mb-3">
                 {`You've been invited to join ${invite.household_name}${
-                  invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                  invite.invited_by_name || invite.invited_by_email ? ` by ${invite.invited_by_name || invite.invited_by_email}` : ''
                 }.`}
               </Text>
               <Button

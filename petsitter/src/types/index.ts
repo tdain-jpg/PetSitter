@@ -42,6 +42,8 @@ export interface PendingInvite {
   household_id: string;
   household_name: string;
   invited_by_email: string | null;
+  /** The inviter's name when known (0037); show this, fall back to the email. */
+  invited_by_name?: string | null;
   created_at: string;
 }
 

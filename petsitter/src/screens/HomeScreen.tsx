@@ -219,7 +219,7 @@ export function HomeScreen({ navigation }: Props) {
 
   const isFocused = useIsFocused();
   // Landing preference only — never consulted for what this user may see.
-  const { isSitter, resolved: roleResolved } = useProfileRole();
+  const { isSitter, resolved: roleResolved, choose: chooseRole } = useProfileRole();
 
   /**
    * A sitter with no pets of their own has nothing on this page. My Clients is
@@ -543,10 +543,20 @@ export function HomeScreen({ navigation }: Props) {
     }
   };
 
-  const handleGateStartFresh = () => {
+  const handleGateStartFresh = async (role: 'owner' | 'sitter') => {
     // NEVER auto-decline — the invite stays pending, and after the founder
     // wizard the standard Home invite banner offers it again.
-    navigation.replace('Onboarding');
+    //
+    // The role question lives here, not on the join sign-up page: only
+    // someone turning the invitation down might be a sitter. Saved before
+    // routing so the sitter side, not the pet wizard, is where they land, now
+    // and on every later sign-in.
+    try {
+      await chooseRole(role);
+    } catch {
+      // Landing preference only; routing below still sends them the right way.
+    }
+    navigation.replace(role === 'sitter' ? 'SitterHome' : 'Onboarding');
   };
 
   const handleSitterGateAccept = async () => {
@@ -810,7 +820,7 @@ export function HomeScreen({ navigation }: Props) {
               </Text>
               <Text className="text-brown-600 mb-3">
                 {`You've been invited to ${invite.household_name}${
-                  invite.invited_by_email ? ` by ${invite.invited_by_email}` : ''
+                  invite.invited_by_name || invite.invited_by_email ? ` by ${invite.invited_by_name || invite.invited_by_email}` : ''
                 }.`}
               </Text>
               <View className="flex-row gap-3">
