@@ -107,8 +107,8 @@ export const JOURNEYS: Record<string, JourneyDef> = {
       },
       {
         id: 'sitter-links',
-        title: 'Invite your sitter',
-        body: 'Add your sitter under Pet Sitters, then choose them on a trip. They get an email with everything they need.',
+        title: 'Share guides with your sitter',
+        body: 'When your guide is ready, send the link to your pet sitter. They can view it without creating an account.',
       },
     ],
   },
