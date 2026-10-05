@@ -103,7 +103,7 @@ export const JOURNEYS: Record<string, JourneyDef> = {
       {
         id: 'live-edits',
         title: 'Changes save for everyone',
-        body: 'Edits save as you type, and everyone in your household sees them right away.',
+        body: 'Your changes save automatically as you type. Everyone in your household can see them right away.',
       },
       {
         id: 'sitter-links',
