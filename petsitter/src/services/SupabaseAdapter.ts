@@ -22,6 +22,7 @@ import type {
   SitterTodayGroup,
   PendingOwnerInvite,
   HomeDetails,
+  SitterTrip,
 } from '../types';
 import {
   DataService,
@@ -992,6 +993,35 @@ export class SupabaseAdapter implements DataService {
    * moment it is not actually today's work. Those guides stay reachable from
    * the client list exactly as before.
    */
+  // ============================================
+  // A sitter for a trip (0034)
+  // ============================================
+  /** Owner: ask this household sitter to cover the trip, or clear it with null. */
+  async setTripSitter(guideId: string, connectionId: string | null): Promise<void> {
+    const { error } = await supabase.rpc('set_trip_sitter', {
+      p_guide: guideId,
+      p_connection: connectionId,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  /** Sitter: accept or decline a trip you were asked to cover. */
+  async respondToTrip(guideId: string, accept: boolean): Promise<'accepted' | 'declined'> {
+    const { data, error } = await supabase.rpc('respond_to_trip', {
+      p_guide: guideId,
+      p_accept: accept,
+    });
+    if (error) throw new Error(error.message);
+    return data as 'accepted' | 'declined';
+  }
+
+  /** Sitter: trips waiting for an answer, and accepted trips not yet over. */
+  async getMySitterTrips(): Promise<SitterTrip[]> {
+    const { data, error } = await supabase.rpc('my_sitter_trips');
+    if (error) throw new Error(error.message);
+    return (data ?? []) as SitterTrip[];
+  }
+
   async getSitterToday(date: string): Promise<SitterTodayGroup[]> {
     const connections = await this.getMySitterConnections();
     const active = connections.filter((c) => c.status === 'active');

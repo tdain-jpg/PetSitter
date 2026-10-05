@@ -289,8 +289,26 @@ export interface Guide {
   daily_routine?: DailyRoutine;
   home_care?: HomeCare;
   additional_notes?: string;
+  /**
+   * The sitter asked to cover this trip (0034). Written only through
+   * set_trip_sitter / respond_to_trip; a direct update is ignored server-side.
+   */
+  sitter_connection_id?: string | null;
+  sitter_status?: 'requested' | 'accepted' | 'declined' | null;
+  sitter_responded_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A trip as the sitter sees it on their home: asked, or accepted and ahead. */
+export interface SitterTrip {
+  guide_id: string;
+  household_id: string;
+  household_name: string;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
+  sitter_status: 'requested' | 'accepted';
 }
 
 export type ContactType = 'personal' | 'neighbor' | 'vet_primary' | 'vet_emergency' | 'vet_specialty' | 'other';

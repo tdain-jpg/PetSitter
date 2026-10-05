@@ -8,7 +8,7 @@ export type AuthStackParamList = {
   Login: undefined;
   // Preselects the role chooser. The landing page's sitter section sends
   // 'sitter'; everything else leaves it unset and the chooser asks.
-  SignUp: { role?: 'owner' | 'sitter' } | undefined;
+  SignUp: { role?: 'owner' | 'sitter'; email?: string } | undefined;
   ForgotPassword: undefined;
 };
 

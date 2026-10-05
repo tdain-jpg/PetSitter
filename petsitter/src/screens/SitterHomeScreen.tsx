@@ -11,7 +11,7 @@ import { Icon } from '../components/Icon';
 import { COLORS } from '../constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import type { PendingSitterInvite, SitterConnection } from '../types';
+import type { PendingSitterInvite, SitterConnection, SitterTrip } from '../types';
 import { friendlyError } from '../lib/errors';
 import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
 
@@ -234,6 +234,56 @@ export function SitterHomeScreen({ navigation }: Props) {
    */
   const [today, setToday] = useState<{ total: number; done: number } | null>(null);
 
+  /**
+   * Trips owners have asked this sitter to cover (0034): requests to answer,
+   * and accepted trips that are still ahead or under way. Reloaded on focus,
+   * like the Today count, so an answer given elsewhere shows on return.
+   */
+  const [trips, setTrips] = useState<SitterTrip[]>([]);
+  const [answeringTrip, setAnsweringTrip] = useState<string | null>(null);
+  const loadTrips = useCallback(async () => {
+    try {
+      setTrips(await dataService.getMySitterTrips());
+    } catch {
+      // Keep whatever was showing; a failed read must not empty the list.
+    }
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      void loadTrips();
+    }, [loadTrips, sitterConnections])
+  );
+
+  const answerTrip = async (trip: SitterTrip, accept: boolean) => {
+    if (!accept) {
+      const ok = await showConfirm({
+        title: `Decline ${trip.title}?`,
+        message: `${trip.household_name} will be told you can't take this trip.`,
+        confirmLabel: 'Decline',
+      });
+      if (!ok) return;
+    }
+    setAnsweringTrip(trip.guide_id);
+    try {
+      await dataService.respondToTrip(trip.guide_id, accept);
+      await loadTrips();
+    } catch (error: any) {
+      showAlert("Couldn't answer", friendlyError(error, 'Please try again.'));
+    } finally {
+      setAnsweringTrip(null);
+    }
+  };
+
+  const tripDates = (t: SitterTrip) => {
+    const fmt = (d: string | null) => (d ? formatDate(d, { weekday: 'short', month: 'short', day: 'numeric' }) : '');
+    const a = fmt(t.start_date);
+    const b = fmt(t.end_date);
+    if (a && b) return a === b ? a : `${a} to ${b}`;
+    return a || b || 'Dates not set yet';
+  };
+  const tripRequests = trips.filter((t) => t.sitter_status === 'requested');
+  const upcomingTrips = trips.filter((t) => t.sitter_status === 'accepted');
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -364,6 +414,62 @@ export function SitterHomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate('SitterToday')}
                 variant="primary"
               />
+            </Card>
+          ) : null}
+
+          {/* Trips an owner asked this sitter to take: answer first. */}
+          {tripRequests.map((t) => (
+            <Card key={t.guide_id} className="mb-4 bg-warm-50 border border-warm-300">
+              <Text className="text-brown-800 font-semibold">Can you take this trip?</Text>
+              <Text className="text-brown-700 mt-1">
+                {t.household_name}: {t.title}
+              </Text>
+              <Text className="text-tan-600 text-sm mb-3">{tripDates(t)}</Text>
+              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                <Button
+                  title="Accept"
+                  onPress={() => answerTrip(t, true)}
+                  variant="primary"
+                  disabled={answeringTrip !== null}
+                  loading={answeringTrip === t.guide_id}
+                />
+                <Button
+                  title="Decline"
+                  onPress={() => answerTrip(t, false)}
+                  variant="outline"
+                  disabled={answeringTrip !== null}
+                />
+                <Button
+                  title="See the guide"
+                  onPress={() => navigation.navigate('GuideDetail', { guideId: t.guide_id })}
+                  variant="outline"
+                />
+              </View>
+            </Card>
+          ))}
+
+          {/* Trips they said yes to, soonest first. */}
+          {upcomingTrips.length > 0 ? (
+            <Card className="mb-4">
+              <Text className="text-lg font-semibold text-brown-800 mb-2">Upcoming trips</Text>
+              {upcomingTrips.map((t, i) => (
+                <Pressable
+                  key={t.guide_id}
+                  onPress={() => navigation.navigate('GuideDetail', { guideId: t.guide_id })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${t.title} for ${t.household_name}`}
+                  style={{ minHeight: 48 }}
+                  className={`flex-row items-center justify-between py-2 ${i > 0 ? 'border-t border-tan-100' : ''}`}
+                >
+                  <View className="flex-1 mr-3">
+                    <Text className="text-brown-800 font-medium">{t.title}</Text>
+                    <Text className="text-tan-600 text-sm">
+                      {t.household_name} · {tripDates(t)}
+                    </Text>
+                  </View>
+                  <Text className="text-tan-400 text-xl">›</Text>
+                </Pressable>
+              ))}
             </Card>
           ) : null}
 

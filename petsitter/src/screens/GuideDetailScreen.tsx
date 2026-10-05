@@ -17,6 +17,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import { friendlyError } from '../lib/errors';
 import { flightContactLine, flightTitle, formatFlightWhen } from '../lib/flights';
+import { TripSitterCard } from '../components/TripSitterCard';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'GuideDetail'>;
 
@@ -138,6 +139,9 @@ export function GuideDetailScreen({ navigation, route }: Props) {
               so rather than fixing it silently: a trip can legitimately cover
               some animals and not others. */}
           <MissingPetsNotice guide={guide} canEdit={canEdit} />
+
+          {/* Owner only: who is covering this trip (0034). */}
+          {canEdit ? <TripSitterCard guide={guide} /> : null}
 
           {/* Pets Section */}
           <SectionHeader

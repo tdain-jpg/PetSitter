@@ -31,7 +31,11 @@ export function SignUpScreen({ navigation, route }: SignUpScreenProps) {
    * landing page's sitter section sent them.
    */
   const [role, setRole] = useState<ProfileRole>(route.params?.role ?? 'owner');
-  const [email, setEmail] = useState('');
+  // Prefilled from an invitation email's link (?email=), so the sitter signs up
+  // with the exact address the invitation was sent to and finds it waiting.
+  const [email, setEmail] = useState(
+    typeof route.params?.email === 'string' ? route.params.email.trim() : ''
+  );
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{

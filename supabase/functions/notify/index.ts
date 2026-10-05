@@ -71,9 +71,9 @@ function escapeHtml(value: unknown): string {
     .replaceAll("'", '&#39;');
 }
 
-function ctaButton(label: string): string {
+function ctaButton(label: string, href: string = APP_URL): string {
   return `<p style="margin: 24px 0;">
-    <a href="${APP_URL}" style="display: inline-block; background-color: #3C6779; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: bold; padding: 12px 28px; border-radius: 8px;">${escapeHtml(label)}</a>
+    <a href="${escapeHtml(href)}" style="display: inline-block; background-color: #3C6779; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: bold; padding: 12px 28px; border-radius: 8px;">${escapeHtml(label)}</a>
   </p>`;
 }
 
@@ -120,6 +120,22 @@ function subjectSafe(value: unknown, fallback: string): string {
     .slice(0, 120);
 }
 
+// "Sat, Oct 10" from a 'YYYY-MM-DD' date, read as a calendar date (no time
+// zone shift), or '' when there is none.
+function fmtDay(value: unknown): string {
+  const m = typeof value === 'string' ? value.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
+  if (!m) return '';
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+function fmtTripDates(start: unknown, end: unknown): string {
+  const a = fmtDay(start);
+  const b = fmtDay(end);
+  if (a && b) return a === b ? a : `${a} to ${b}`;
+  return a || b;
+}
+
 // Returns the subject + HTML for an outbox row, or null for an unknown kind
 // (which is recorded as a failure so the row doesn't retry forever).
 function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
@@ -155,6 +171,67 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
           <p style="margin: 0 0 16px;"><strong>Nothing has been shared yet.</strong> Accepting is what gives them read-only access to your pets and guides, and you can take it back at any time.</p>
           ${ctaButton('Open Pawstructions')}
           <p style="margin: 0;">Sign up or sign in with THIS email address (<strong>${recipient}</strong>) and the request will be waiting on your home screen.</p>`
+        ),
+      };
+    }
+
+    case 'sitter_invite': {
+      // An owner asking a sitter to look after their pets. Usually the sitter
+      // has no account yet, so the button goes straight to sitter sign-up with
+      // their address filled in; someone who already has one is sent to sign
+      // in. Either way the invitation is waiting when they arrive.
+      const inviter = escapeHtml(p.inviter_name || 'A pet owner');
+      const household = escapeHtml(p.household_name || 'their household');
+      const recipient = escapeHtml(row.recipient_email);
+      const hasAccount = p.has_account === true;
+      const href = hasAccount
+        ? `${APP_URL}/Auth/Login`
+        : `${APP_URL}/Auth/SignUp?role=sitter&email=${encodeURIComponent(row.recipient_email)}`;
+      return {
+        subject: `${subjectSafe(p.inviter_name, 'A pet owner')} invited you to look after their pets`,
+        html: emailShell(
+          "You're invited to pet sit",
+          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> (${household}) uses Pawstructions for their pets' care instructions, and has invited you as their pet sitter.</p>
+          <p style="margin: 0 0 16px;">Once you accept you will see their pets, feeding and medication schedules, house details, emergency contacts, and the trips they ask you to cover, all in one place. You can tick off tasks as you go, so they know the dogs were fed without having to text.</p>
+          ${ctaButton(hasAccount ? 'Sign in to accept' : 'Create your free sitter account', href)}
+          <p style="margin: 0 0 8px;">${hasAccount ? 'Sign in' : 'Sign up'} with THIS email address (<strong>${recipient}</strong>) and the invitation will be waiting for you to accept.</p>
+          <p style="margin: 0;">${hasAccount ? `New here? <a href="${APP_URL}/Auth/SignUp?role=sitter&email=${encodeURIComponent(row.recipient_email)}" style="color: #3C6779;">Create an account instead</a>.` : `Already have an account? <a href="${APP_URL}/Auth/Login" style="color: #3C6779;">Sign in</a>.`} Pawstructions is free for sitters with up to three client households.</p>`
+        ),
+      };
+    }
+
+    case 'trip_request': {
+      const inviter = escapeHtml(p.inviter_name || 'A pet owner');
+      const household = escapeHtml(p.household_name || 'their household');
+      const title = escapeHtml(p.guide_title || 'a trip');
+      const dates = escapeHtml(fmtTripDates(p.start_date, p.end_date));
+      const pending = p.pending_household === true;
+      return {
+        subject: `Can you pet sit for ${subjectSafe(p.inviter_name, 'a client')}${fmtTripDates(p.start_date, p.end_date) ? `, ${fmtTripDates(p.start_date, p.end_date)}` : ''}?`,
+        html: emailShell(
+          'Can you take this trip?',
+          `<p style="margin: 0 0 16px;"><strong>${inviter}</strong> (${household}) has asked you to look after their pets for <strong>${title}</strong>${dates ? ` (${dates})` : ''}.</p>
+          <p style="margin: 0 0 16px;">${pending ? 'First accept their invitation to connect, then this trip will be waiting under My Clients for you to accept or decline.' : 'Open My Clients to accept or decline. The full care guide for the trip is there too.'}</p>
+          ${ctaButton('Open Pawstructions', `${APP_URL}/Main/SitterHome`)}`
+        ),
+      };
+    }
+
+    case 'trip_response': {
+      const sitter = escapeHtml(p.sitter_name || 'Your sitter');
+      const title = escapeHtml(p.guide_title || 'your trip');
+      const accepted = p.accepted === true;
+      return {
+        subject: accepted
+          ? `${subjectSafe(p.sitter_name, 'Your sitter')} will look after your pets for ${subjectSafe(p.guide_title, 'your trip')}`
+          : `${subjectSafe(p.sitter_name, 'Your sitter')} can't take ${subjectSafe(p.guide_title, 'your trip')}`,
+        html: emailShell(
+          accepted ? 'Your sitter said yes' : 'Your sitter is not available',
+          accepted
+            ? `<p style="margin: 0 0 16px;"><strong>${sitter}</strong> accepted <strong>${title}</strong>. They can see the guide now, and you will see each task as they tick it off.</p>
+               ${ctaButton('Open the guide', APP_URL)}`
+            : `<p style="margin: 0 0 16px;"><strong>${sitter}</strong> can't take <strong>${title}</strong>. You can ask another sitter from the guide.</p>
+               ${ctaButton('Open Pawstructions', APP_URL)}`
         ),
       };
     }
@@ -226,7 +303,7 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
         )
         .join('');
       return {
-        subject: `Your trip starts tomorrow — ${subjectSafe(p.guide_title, 'your guide')} is missing something`,
+        subject: `Your trip starts tomorrow: ${subjectSafe(p.guide_title, 'your guide')} is missing something`,
         html: emailShell(
           'Your trip starts tomorrow',
           `<p style="margin: 0 0 16px;"><strong>${title}</strong> is almost ready, but your sitter will be missing:</p>
