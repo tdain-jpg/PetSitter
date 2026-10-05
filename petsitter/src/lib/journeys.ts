@@ -97,18 +97,18 @@ export const JOURNEYS: Record<string, JourneyDef> = {
         // you own, so a joiner's personal (empty) household still wins and
         // silently receives anything they create. Tracked in ROADMAP as the
         // joiner-primary-household fix.
-        title: 'The household’s pets are all here',
-        body: 'You can open and edit every pet and guide your household has already set up. Nothing to re-create.',
+        title: 'Your household pets are here',
+        body: 'You can edit or add pets, trips, or guides.',
       },
       {
         id: 'live-edits',
-        title: 'Edits update for everyone',
-        body: 'Changes autosave as you type and go live for every household member right away.',
+        title: 'Changes save for everyone',
+        body: 'Edits save as you type, and everyone in your household sees them right away.',
       },
       {
         id: 'sitter-links',
-        title: "Sitters don't need accounts",
-        body: "When a guide is ready, send its share link. That's how guides go out to sitters.",
+        title: 'Invite your sitter',
+        body: 'Add your sitter under Pet Sitters, then choose them on a trip. They get an email with everything they need.',
       },
     ],
   },
