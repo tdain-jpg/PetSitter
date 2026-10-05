@@ -437,6 +437,27 @@ export function SettingsScreen({ navigation }: Props) {
           </Pressable>
         </Card>
 
+        {/* The sitter's own profile: what their clients see (0039). For
+            anyone who sits for someone, including owners who also sit. */}
+        {sitterConnections.some((c) => c.status === 'active' || c.status === 'invited') ? (
+          <Card className="mb-4">
+            <Pressable
+              onPress={() => navigation.navigate('SitterProfile')}
+              accessibilityRole="button"
+              accessibilityLabel="Edit your sitter profile"
+              className="flex-row justify-between items-center"
+            >
+              <View className="flex-1 mr-3">
+                <Text className="text-brown-800 font-medium">Your sitter profile</Text>
+                <Text className="text-tan-500 text-sm">
+                  Your name, phone and photo, as the households you look after see them.
+                </Text>
+              </View>
+              <Text className="text-tan-400 text-xl">›</Text>
+            </Pressable>
+          </Card>
+        ) : null}
+
         {/* Home details: entered once, copied into every new guide. Not for a
             sitter with no pets, who has no home of their own to describe here. */}
         {!isSitterWithNoPets ? (

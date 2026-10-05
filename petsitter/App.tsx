@@ -97,6 +97,7 @@ const linking = {
           Memorial: 'Memorial',
           Household: 'Household',
           HomeDetails: 'HomeDetails',
+          SitterProfile: 'SitterProfile',
           Onboarding: 'Onboarding',
           TripWizard: 'TripWizard',
         },

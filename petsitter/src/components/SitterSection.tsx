@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Image, Linking } from 'react-native';
 import { friendlyError } from '../lib/errors';
 // Imported from the individual modules rather than the barrel: this file lives
 // in components/, and going through ./index would close an import cycle.
@@ -11,7 +11,8 @@ import { showConfirm } from '../lib/dialogs';
 import { formatDate } from '../lib/dates';
 import { useData } from '../contexts';
 import { isValidEmail } from '../utils';
-import type { SitterInviteRow } from '../types';
+import { dataService } from '../services';
+import type { HouseholdSitter, SitterInviteRow } from '../types';
 
 interface SitterSectionProps {
   householdId: string;
@@ -20,6 +21,22 @@ interface SitterSectionProps {
 
 export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
   const [sitters, setSitters] = useState<SitterInviteRow[]>([]);
+  // Each accepted sitter's own name, phone, business and photo (0039), keyed
+  // by connection id. Read alongside the list rather than instead of it, so
+  // every existing reload path keeps working and this simply follows it.
+  const [profiles, setProfiles] = useState<Record<string, HouseholdSitter>>({});
+  useEffect(() => {
+    let cancelled = false;
+    dataService
+      .getHouseholdSitters(householdId)
+      .then((rows) => {
+        if (!cancelled) setProfiles(Object.fromEntries(rows.map((r) => [r.connection_id, r])));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [householdId, sitters]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -148,8 +165,33 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
         <View className="space-y-2">
           {sitters.map(sitter => (
             <View key={sitter.id} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <View>
-                <Text className="font-medium">{sitter.email}</Text>
+              {profiles[sitter.id]?.photo_url ? (
+                <Image
+                  source={{ uri: profiles[sitter.id].photo_url! }}
+                  className="w-12 h-12 rounded-full mr-3"
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : null}
+              <View className="flex-1 mr-3">
+                <Text className="font-medium">{profiles[sitter.id]?.sitter_name ?? sitter.email}</Text>
+                {profiles[sitter.id]?.business_name ? (
+                  <Text className="text-sm text-tan-600">{profiles[sitter.id].business_name}</Text>
+                ) : null}
+                {profiles[sitter.id]?.sitter_name ? (
+                  <Text className="text-xs text-tan-500">{sitter.email}</Text>
+                ) : null}
+                {profiles[sitter.id]?.sitter_phone ? (
+                  <Text
+                    className="text-sm text-primary-600 underline"
+                    accessibilityRole="link"
+                    onPress={() =>
+                      Linking.openURL(`tel:${profiles[sitter.id].sitter_phone!.replace(/[^\d+]/g, '')}`).catch(() => {})
+                    }
+                  >
+                    {profiles[sitter.id].sitter_phone}
+                  </Text>
+                ) : null}
                 <View className="flex-row items-center mt-1">
                   {sitter.status === 'active' ? (
                     <>
@@ -172,7 +214,7 @@ export function SitterSection({ householdId, isOwner }: SitterSectionProps) {
           ))}
         </View>
       ) : (
-        <p className="text-center py-4 text-gray-500">No sitters connected yet.</p>
+        <Text className="text-center py-4 text-gray-500">No sitters connected yet.</Text>
       )}
 
       <View className="mt-4">

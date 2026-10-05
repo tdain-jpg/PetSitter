@@ -302,6 +302,32 @@ export interface Guide {
   updated_at: string;
 }
 
+/**
+ * A household's sitter as its members see them (household_sitters, 0039). The
+ * name, phone, business and photo are the sitter's own, and arrive only once
+ * they have accepted; before that they are null and the email stands in.
+ */
+export interface HouseholdSitter {
+  connection_id: string;
+  email: string;
+  status: 'invited' | 'active' | 'revoked' | 'declined';
+  starts_on: string | null;
+  ends_on: string | null;
+  created_at: string;
+  sitter_name: string | null;
+  sitter_phone: string | null;
+  business_name: string | null;
+  photo_url: string | null;
+}
+
+/** The signed-in user's own profile details (the sitter profile, 0039). */
+export interface MyProfile {
+  full_name: string | null;
+  phone: string | null;
+  business_name: string | null;
+  photo_url: string | null;
+}
+
 /** A trip as the sitter sees it on their home: asked, or accepted and ahead. */
 export interface SitterTrip {
   guide_id: string;

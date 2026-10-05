@@ -240,6 +240,25 @@ export function SitterHomeScreen({ navigation }: Props) {
    * like the Today count, so an answer given elsewhere shows on return.
    */
   const [trips, setTrips] = useState<SitterTrip[]>([]);
+
+  // Whether the sitter has told their clients who they are (0039). Until they
+  // do, clients see an email address and have no number to call, so My
+  // Clients asks, once per visit, until a name is saved.
+  const [profileMissing, setProfileMissing] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      dataService
+        .getMyProfile()
+        .then((p) => {
+          if (!cancelled) setProfileMissing(!p.full_name?.trim() || !p.phone?.trim());
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
   const [answeringTrip, setAnsweringTrip] = useState<string | null>(null);
   const loadTrips = useCallback(async () => {
     try {
@@ -412,6 +431,21 @@ export function SitterHomeScreen({ navigation }: Props) {
               <Button
                 title="Open today"
                 onPress={() => navigation.navigate('SitterToday')}
+                variant="primary"
+              />
+            </Card>
+          ) : null}
+
+          {profileMissing ? (
+            <Card className="mb-4 bg-primary-50 border border-primary-200">
+              <Text className="text-brown-800 font-semibold">Tell your clients who you are</Text>
+              <Text className="text-brown-700 mt-1 mb-3">
+                Add your name, phone and a photo. The households you look after see them instead of
+                your email address, and can call you from the app.
+              </Text>
+              <Button
+                title="Set up your profile"
+                onPress={() => navigation.navigate('SitterProfile')}
                 variant="primary"
               />
             </Card>

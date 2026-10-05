@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, Image, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -8,7 +8,7 @@ import { dataService } from '../services';
 import { showAlert, showConfirm } from '../lib/dialogs';
 import { friendlyError } from '../lib/errors';
 import { COLORS } from '../constants';
-import type { Guide, SitterInviteRow } from '../types';
+import type { Guide, HouseholdSitter } from '../types';
 
 /**
  * "Pet sitter for this trip", on the owner's view of a guide.
@@ -34,7 +34,7 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
   // Every connection row, live or not, so the card can tell "removed" (a
   // revoked row) from "couldn't read it" (no row at all). Pickable sitters are
   // the live ones.
-  const [allRows, setAllRows] = useState<SitterInviteRow[] | null>(null);
+  const [allRows, setAllRows] = useState<HouseholdSitter[] | null>(null);
   const sitters = allRows?.filter((r) => r.status === 'invited' || r.status === 'active') ?? null;
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -53,7 +53,7 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
   const load = useCallback(async () => {
     if (!guide.household_id) return;
     try {
-      setAllRows(await dataService.getSitterConnections(guide.household_id));
+      setAllRows(await dataService.getHouseholdSitters(guide.household_id));
     } catch {
       setAllRows([]);
     }
@@ -63,14 +63,14 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
     void load();
   }, [load]);
 
-  const assigned = sitters?.find((s) => s.id === connectionId) ?? null;
-  const removed = !assigned && !!allRows?.some((r) => r.id === connectionId);
+  const assigned = sitters?.find((s) => s.connection_id === connectionId) ?? null;
+  const removed = !assigned && !!allRows?.some((r) => r.connection_id === connectionId);
 
-  const choose = async (row: SitterInviteRow) => {
+  const choose = async (row: HouseholdSitter) => {
     setBusy(true);
     try {
-      await dataService.setTripSitter(guide.id, row.id);
-      setLocal({ id: row.id, status: 'requested' });
+      await dataService.setTripSitter(guide.id, row.connection_id);
+      setLocal({ id: row.connection_id, status: 'requested' });
       setPicking(false);
       void refreshGuides();
       showAlert(
@@ -115,9 +115,30 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
         </View>
       ) : connectionId && !picking ? (
         <>
-          <Text className="text-brown-800 font-medium">
-            {assigned?.email ?? (removed ? 'A sitter no longer connected' : 'Your sitter')}
-          </Text>
+          <View className="flex-row items-center mb-1">
+            {assigned?.photo_url ? (
+              <Image source={{ uri: assigned.photo_url }} className="w-12 h-12 rounded-full mr-3" resizeMode="cover" />
+            ) : null}
+            <View className="flex-1">
+              <Text className="text-brown-800 font-medium">
+                {assigned?.sitter_name ?? assigned?.email ?? (removed ? 'A sitter no longer connected' : 'Your sitter')}
+              </Text>
+              {assigned?.business_name ? (
+                <Text className="text-tan-600 text-sm">{assigned.business_name}</Text>
+              ) : null}
+              {assigned?.sitter_phone ? (
+                <Text
+                  className="text-primary-600 text-sm underline"
+                  accessibilityRole="link"
+                  onPress={() =>
+                    Linking.openURL(`tel:${assigned.sitter_phone!.replace(/[^\d+]/g, '')}`).catch(() => {})
+                  }
+                >
+                  {assigned.sitter_phone}
+                </Text>
+              ) : null}
+            </View>
+          </View>
           <Text
             className={`text-sm mb-3 ${status === 'accepted' ? 'text-primary-700' : 'text-tan-600'}`}
           >
@@ -146,7 +167,7 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
           </Text>
           {sitters.map((s) => (
             <Pressable
-              key={s.id}
+              key={s.connection_id}
               onPress={() => choose(s)}
               disabled={busy}
               accessibilityRole="button"
@@ -154,7 +175,7 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
               style={{ minHeight: 48, opacity: busy ? 0.6 : 1 }}
               className="border border-primary-300 rounded-lg px-3 py-2 mb-2 justify-center"
             >
-              <Text className="text-primary-700 font-medium">{s.email}</Text>
+              <Text className="text-primary-700 font-medium">{s.sitter_name ?? s.email}</Text>
               {s.status === 'invited' ? (
                 <Text className="text-tan-500 text-xs">Hasn't accepted your sitter invitation yet</Text>
               ) : null}

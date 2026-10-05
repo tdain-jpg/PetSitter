@@ -108,6 +108,7 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
   Settings: noParams,
   Household: noParams,
   HomeDetails: noParams,
+  SitterProfile: noParams,
   PetDetail: (query) => {
     const petId = query.get('petId');
     return petId ? { params: { petId } } : null;

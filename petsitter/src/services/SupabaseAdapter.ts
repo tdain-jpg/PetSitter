@@ -23,6 +23,8 @@ import type {
   PendingOwnerInvite,
   HomeDetails,
   SitterTrip,
+  HouseholdSitter,
+  MyProfile,
 } from '../types';
 import {
   DataService,
@@ -1134,6 +1136,53 @@ export class SupabaseAdapter implements DataService {
    * decides what anyone can see, and this only chooses which home to open on.
    * Null is a real answer, and the historical default (owner dashboard).
    */
+  // ============================================
+  // Sitter profile (0039)
+  // ============================================
+  /** The caller's own name, phone, business and photo. */
+  async getMyProfile(): Promise<MyProfile> {
+    const { data: userData } = await supabase.auth.getUser();
+    const id = userData?.user?.id;
+    if (!id) throw new Error('Not signed in.');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('full_name, phone, business_name, photo_url')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return {
+      full_name: data?.full_name ?? null,
+      phone: data?.phone ?? null,
+      business_name: data?.business_name ?? null,
+      photo_url: data?.photo_url ?? null,
+    };
+  }
+
+  /** Update the caller's own profile. Blank strings are stored as null. */
+  async saveMyProfile(profile: MyProfile): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    const id = userData?.user?.id;
+    if (!id) throw new Error('Not signed in.');
+    const clean = (v: string | null) => (v && v.trim() ? v.trim() : null);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: clean(profile.full_name),
+        phone: clean(profile.phone),
+        business_name: clean(profile.business_name),
+        photo_url: clean(profile.photo_url),
+      })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  /** A household's sitters with their profiles (accepted ones only), for its members. */
+  async getHouseholdSitters(householdId: string): Promise<HouseholdSitter[]> {
+    const { data, error } = await supabase.rpc('household_sitters', { h: householdId });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as HouseholdSitter[];
+  }
+
   async getMyRole(): Promise<'owner' | 'sitter' | null> {
     const { data: userData } = await supabase.auth.getUser();
     const id = userData?.user?.id;
