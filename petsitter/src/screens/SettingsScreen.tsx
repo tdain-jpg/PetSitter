@@ -14,13 +14,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, ScreenContainer , SwitchRow } from '../components';
 import { formatDate } from '../lib/dates';
-import type { CrownReceipt, OwnerPlan } from '../types';
+import type { OwnerPlan } from '../types';
 import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
 import { useProfileRole } from '../hooks';
 import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
-import { hasPendingCrownCheckout } from './UnlockCrownScreen';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
 import { friendlyError } from '../lib/errors';
@@ -52,62 +51,11 @@ export function SettingsScreen({ navigation }: Props) {
     refreshHouseholds,
     primaryHouseholdId,
     sitterConnections,
-    getCrownReceipt,
     pendingSitterInvites,
   } = useData();
   // Landing preference only; RLS decides access.
   const { isSitter } = useProfileRole();
 
-
-  // Crown is bought per HOUSEHOLD, so this card is about the default household
-  // — the same one Data Management targets. null = no answer yet (still
-  // reading, no household, or the read failed) and is deliberately distinct
-  // from false: offering "Unlock — $5" to someone who has already paid is the
-  // one mistake worth designing around, so an unknown answer keeps the neutral
-  // wording. Read only through has_crown(h), the membership-gated RPC, never a
-  // households column.
-  const [crownReceipt, setCrownReceipt] = useState<CrownReceipt | null>(null);
-  const [hasCrown, setHasCrown] = useState<boolean | null>(null);
-
-  // UnlockCrown puts its $5 button away for a couple of minutes after a
-  // checkout is started, so a button here reading "Unlock Crown — $5" during
-  // that window sends the user to a screen with nothing to buy on it. Read the
-  // same record it reads, and offer the same thing it will.
-  const [checkoutPending, setCheckoutPending] = useState(false);
-
-  // On focus, not on mount: returning from UnlockCrown after a purchase (native
-  // goes back to this screen) changes nothing this component renders from, so
-  // without this the card would keep offering Crown to a household that now
-  // owns it. Also picks up a purchase made by another household member — and,
-  // for the pending record, a checkout just started or just abandoned.
-  const userId = user?.id ?? null;
-  useFocusEffect(
-    useCallback(() => {
-      if (!primaryHouseholdId) return;
-      let cancelled = false;
-      (async () => {
-        const { data, error } = await supabase.rpc('has_crown', { h: primaryHouseholdId });
-        if (cancelled || error) return;
-        setHasCrown(data === true);
-        // Best-effort: a failed receipt read just hides the date, it must never
-        // change whether Crown reads as active.
-        try {
-          const receipt = await getCrownReceipt(primaryHouseholdId);
-          if (!cancelled) setCrownReceipt(receipt);
-        } catch {
-          /* leave the date off */
-        }
-      })();
-      (async () => {
-        const pending =
-          userId != null ? await hasPendingCrownCheckout(userId, primaryHouseholdId) : false;
-        if (!cancelled) setCheckoutPending(pending);
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [primaryHouseholdId, userId])
-  );
 
   const [merging, setMerging] = useState<string | null>(null);
 

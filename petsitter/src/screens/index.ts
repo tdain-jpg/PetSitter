@@ -34,7 +34,6 @@ export { AICheatSheetScreen } from './AICheatSheetScreen';
 export { SampleCheatSheetScreen } from './SampleCheatSheetScreen';
 
 // Crown purchase
-export { UnlockCrownScreen } from './UnlockCrownScreen';
 
 // Onboarding
 export { OnboardingScreen } from './OnboardingScreen';

@@ -116,7 +116,6 @@ interface DataContextType {
   /** Owner revokes a sitter's access. Takes effect immediately. */
   revokeSitter: (connectionId: string) => Promise<void>;
   /** Crown status for a household: active, and when it was granted. */
-  getCrownReceipt: (householdId: string) => Promise<CrownReceipt | null>;
   /** One household's pets — for the sitter view, which cannot filter its own lists. */
   getHouseholdPets: (householdId: string) => Promise<Pet[]>;
   /** One household's guides, same reason. */
@@ -638,10 +637,6 @@ export function DataProvider({ children }: DataProviderProps) {
     await dataService.revokeSitter(connectionId);
   }, []);
 
-  const getCrownReceipt = useCallback(
-    (householdId: string) => dataService.getCrownReceipt(householdId),
-    []
-  );
 
   const getHouseholdPets = useCallback(
     (householdId: string) => dataService.getHouseholdPets(householdId),
@@ -1248,7 +1243,6 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
-      getCrownReceipt,
       getHouseholdPets,
       getHouseholdGuides,
       getCheckins,
@@ -1343,7 +1337,6 @@ export function DataProvider({ children }: DataProviderProps) {
       inviteSitter,
       getSitterConnections,
       revokeSitter,
-      getCrownReceipt,
       getHouseholdPets,
       getHouseholdGuides,
       getCheckins,

@@ -37,9 +37,21 @@ const APP_URL = 'https://pawstructions.com';
 const MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
 
+/**
+ * Where a reply should go. A trial check-in is from Tim, so replies reach him;
+ * a feedback email's reply should reach the person who sent the feedback.
+ * Everything else is a notice with nobody behind the noreply address.
+ */
+function replyToFor(row: OutboxRow): { replyTo?: { email: string; name?: string } } {
+  if (row.kind === 'sitter_trial_checkin') return { replyTo: { email: 'tcdain@gmail.com', name: 'Tim Dain' } };
+  const from = (row.payload ?? {}).from_email;
+  if (row.kind === 'feedback' && typeof from === 'string' && from.includes('@')) return { replyTo: { email: from } };
+  return {};
+}
+
 // Emails a person can switch off in Settings ("Email updates", 0049). Every
 // other kind (invitations, trip requests and replies, feedback) always sends.
-const OPTIONAL_KINDS = new Set(['share_opened', 'sitter_checkin', 'trip_incomplete']);
+const OPTIONAL_KINDS = new Set(['share_opened', 'sitter_checkin', 'trip_incomplete', 'sitter_trial_checkin']);
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -250,6 +262,23 @@ function buildEmail(row: OutboxRow): { subject: string; html: string } | null {
       };
     }
 
+    case 'sitter_trial_checkin': {
+      // A week into a sitter's free month, from Tim, in his own words. Plain
+      // on purpose: no button to push, just a question, and replies go
+      // straight to his inbox (reply-to set in the send loop).
+      const first = typeof p.first_name === 'string' && p.first_name.trim() ? escapeHtml(p.first_name.trim()) : '';
+      return {
+        subject: 'How is your first week going?',
+        html: emailShell(
+          first ? `Hi ${first},` : 'Hi there,',
+          `<p style="margin: 0 0 16px;">I'm Tim. My wife Dana and I built Pawstructions, and you're about a week into your free month of Pro.</p>
+          <p style="margin: 0 0 16px;">The sitter side is brand new, and I'd love to make it fit the way you actually work. What's one thing that would make it more useful, or one thing that got in your way?</p>
+          <p style="margin: 0 0 16px;">Just hit reply. It comes straight to me, and I read every one.</p>
+          <p style="margin: 0;">Thank you for trying it,<br>Tim</p>`
+        ),
+      };
+    }
+
     case 'feedback': {
       // To support@ (forwarded to Tim). Plain and complete: who, from which
       // screen, and the words, so it can be answered straight from the inbox.
@@ -425,10 +454,11 @@ async function drainPass(
             accept: 'application/json',
           },
           body: JSON.stringify({
-            sender: SENDER,
+            sender: row.kind === 'sitter_trial_checkin' ? { ...SENDER, name: 'Tim at Pawstructions' } : SENDER,
             to: [{ email: row.recipient_email }],
             subject: email.subject,
             htmlContent: email.html,
+            ...replyToFor(row as OutboxRow),
           }),
         });
         if (!res.ok) {
@@ -631,8 +661,11 @@ Deno.serve(async (req) => {
     // daily: queue reminders, then drain what we just queued (plus anything
     // else already pending).
     const { queued } = await dailyScan(supabase);
+    // A week into a sitter's free month: Tim's personal check-in (0050).
+    const { data: trialCheckins, error: trialError } = await supabase.rpc('queue_sitter_trial_checkins');
+    if (trialError) console.error(`trial check-ins not queued: ${trialError.message}`);
     const counts = await drainPass(supabase, brevoKey);
-    return json(200, { queued, ...counts });
+    return json(200, { queued, trial_checkins: trialCheckins ?? 0, ...counts });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`notify ${mode} failed: ${message}`);

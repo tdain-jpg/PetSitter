@@ -525,83 +525,6 @@ export class SupabaseAdapter implements DataService {
   // ============================================
   // Crown Purchase
   // ============================================
-  /**
-   * Open a Stripe Checkout session for the one-time Crown purchase and return
-   * the hosted URL to send the buyer to.
-   *
-   * The client never sees a price, a Stripe key, or an entitlement write:
-   * amount and product live in the Edge Function, and `crown_until` is written
-   * only by the webhook. This call just says "this household wants to buy" —
-   * the function re-checks membership itself before creating the session, so a
-   * guessed household id gets an error, never a checkout page.
-   *
-   * Contract (create-checkout-session):
-   *   POST { householdId?: string, guideId?: string }  with the caller's JWT
-   *   200 { url: string }                    hosted Checkout URL
-   *   400 { error: 'bad_request' }
-   *   400 { error: 'no_household' }          caller has no household to buy for
-   *   401 { error: 'unauthorized' }
-   *   404 { error: 'household_not_found' }   missing OR caller is not a member
-   *   409 { error: 'already_crowned' }
-   *   502 { error: 'stripe_failed' }
-   *   503 { error: 'billing_not_configured' }
-   *
-   * @param householdId The household to crown. Optional in the contract (the
-   * function falls back to my_primary_household), but the UI resolves and
-   * NAMES the household before the buyer commits, so it always sends the one
-   * it showed them.
-   * @param guideId Optional: the sheet the buyer was trying to unlock. It only
-   * rides along in Stripe's return URLs.
-   */
-  async createCrownCheckoutSession(householdId: string, guideId?: string): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-      body: { householdId, guideId },
-    });
-
-    if (error) {
-      // Non-2xx responses surface as a FunctionsHttpError whose `context` is
-      // the raw Response; the JSON body carries the contract error code.
-      let code: string | undefined;
-      if (error instanceof FunctionsHttpError) {
-        try {
-          const body = await error.context.json();
-          code = body?.error;
-        } catch {
-          // Body wasn't JSON — fall through to the generic message.
-        }
-      }
-      // Unknown codes deliberately fall through to the generic message rather
-      // than a guess: this contract is owned by the Edge Function, and
-      // inventing copy for a code we don't recognise risks describing the
-      // wrong failure to someone who is trying to pay us.
-      switch (code) {
-        case 'already_crowned':
-          throw new Error('This household already has Crown. There is nothing to pay.');
-        case 'household_not_found':
-          // The function answers "no such household" and "not your household"
-          // identically on purpose; this copy must not tell them apart either.
-          throw new Error(
-            "We couldn't find that household. You may no longer be a member of it."
-          );
-        case 'no_household':
-          throw new Error(
-            "We couldn't work out which household to unlock. Open Household from Settings, then try again."
-          );
-        case 'unauthorized':
-          throw new Error('Please sign in again, then try once more.');
-        case 'billing_not_configured':
-          throw new Error("Checkout isn't open yet. Please try again soon.");
-        default:
-          throw new Error('Something went wrong starting checkout. Please try again.');
-      }
-    }
-
-    const url = (data as { url?: string } | null)?.url;
-    // A 200 with no URL is a broken session, not a silent no-op: returning
-    // normally here would leave the buyer staring at a button that did nothing.
-    if (!url) throw new Error('Checkout did not open. Please try again.');
-    return url;
-  }
 
   // ============================================
   // Settings Operations
@@ -800,16 +723,6 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as SitterInviteRow[];
   }
 
-  /**
-   * Crown status for a household: active, and when. Membership-gated server
-   * side, so a non-member gets no row rather than a false negative.
-   */
-  async getCrownReceipt(householdId: string): Promise<CrownReceipt | null> {
-    const { data, error } = await supabase.rpc('my_crown_receipt', { h: householdId });
-    if (error) throw new Error(error.message);
-    const rows = (data ?? []) as CrownReceipt[];
-    return rows[0] ?? null;
-  }
 
   /**
    * Pets and guides belonging to ONE household, fetched explicitly rather than
@@ -933,7 +846,7 @@ export class SupabaseAdapter implements DataService {
   /**
    * Start a sitter subscription. Returns the Stripe Checkout URL to open.
    *
-   * Same error-code discipline as createCrownCheckoutSession: codes we know
+   * Same error-code discipline as the other billing calls: codes we know
    * become sentences, and anything unrecognised falls through to the generic
    * message rather than a guess, because inventing copy for an unknown failure
    * risks describing the wrong problem to somebody trying to pay us.

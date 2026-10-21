@@ -195,7 +195,28 @@ What it *does* demand today: build **households first**, and make sure the owner
 attach to households later with no second migration. Getting that seam right now is cheap;
 retrofitting it after real data exists is not.
 
-### [ ] Crown (Pro tier) + system-wide AI — DECIDED
+### [x] Pricing model — SHIPPED 2026-10-21 (replaces Crown)
+Tim's goal: monthly recurring revenue. Owners grow the app for free; owners who travel often
+pay; independent sitters pay as a business; friends and family never pay.
+
+- **Owners:** free, including live-sitter features on 2 trips a calendar year. **Plus**
+  ($3/month or $24/year, per household, no trial) removes the limit and includes unlimited AI
+  cheat sheets with no watermark. 0045, owner-billing.
+- **Pro sitters** (clients they bring in themselves): 30-day free trial with the card up front,
+  then $9/month or $79/year. 0045, sitter-billing. A personal note from Tim a week in (0050).
+- **Friends and family sitters** (invited by an owner): always free.
+- **Live sitter features follow the trip** (0048): ticking tasks and posting check-ins need the
+  owner to have asked the sitter to take that trip, or Plus. Reading and share links are free.
+- **Crown is gone.** No real customer ever bought it. The mechanism (crown_until) survives as
+  "complimentary Plus", which Tim's household has. The Crown checkout function was deleted.
+- **Discounts are Stripe promotion codes**, created from Admin, monthly plans only (a
+  months-free coupon on a yearly price would give away a year). Stripe is the record for money.
+- **Pet bios** (0047, generate-pet-bio): free for every owner, 10 a day.
+- **Admin page** (0041 to 0043): users and signup sources, feedback inbox (emailed to Tim),
+  paid accounts, monthly recurring revenue, usage, and test accounts kept out of every count.
+- **Email updates switch** (0049): turns off the optional emails only.
+
+### [x] ~~Crown (Pro tier) + system-wide AI~~ — SUPERSEDED by the pricing model above
 Paid tier is named **Crown**; members are "Crown members". Annual fee, disclosed as covering
 the cost of the AI features.
 

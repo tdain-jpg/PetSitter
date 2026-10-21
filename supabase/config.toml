@@ -16,11 +16,11 @@
 #   generate-cheat-sheet verify_jwt = true  Browser-invoked with the user's
 #                                           JWT; caller-facing queries run
 #                                           under the caller's RLS.
-#   create-checkout-session
-#                        verify_jwt = true  Browser-invoked. The JWT is what
-#                                           identifies the buyer, and household
-#                                           membership is checked on top of it
-#                                           before any Stripe call.
+#   owner-billing, sitter-billing, admin-promo, generate-pet-bio
+#                        verify_jwt = true  Browser-invoked with the user's JWT
+#                                           (the default). create-checkout-
+#                                           session, the old Crown checkout,
+#                                           was deleted 2026-10-21 (0045).
 #
 # Any deploy path (CLI, MCP deploy_edge_function, dashboard) must honor these.
 
@@ -28,9 +28,6 @@
 verify_jwt = false
 
 [functions.generate-cheat-sheet]
-verify_jwt = true
-
-[functions.create-checkout-session]
 verify_jwt = true
 
 [functions.stripe-webhook]
