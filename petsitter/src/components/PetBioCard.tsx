@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { Button } from './Button';
 import { useData } from '../contexts';
@@ -12,9 +12,9 @@ import type { Pet } from '../types';
  * A short, shareable bio of a pet (0047), written with AI from what the
  * profile already says and edited by the owner before saving.
  *
- * Testing on Clark and Lillee first: writing a bio is admin-only (checked by
- * the generate-pet-bio function, and the button is hidden for everyone
- * else). A bio that has been saved is shown to the whole household.
+ * Open to every owner since 2026-10-21, after testing on Clark and Lillee.
+ * Sitters see a saved bio but do not write them. generate-pet-bio allows
+ * 10 bios per account per day.
  */
 type Tone = 'warm' | 'funny' | 'pet_voice';
 const TONES: { key: Tone; label: string }[] = [
@@ -43,22 +43,11 @@ async function copyText(text: string): Promise<boolean> {
 
 export function PetBioCard({ pet, canEdit }: { pet: Pet; canEdit: boolean }) {
   const { updatePet } = useData();
-  const [canWrite, setCanWrite] = useState(false);
+  const canWrite = canEdit;
   const [tone, setTone] = useState<Tone>('warm');
   const [draft, setDraft] = useState<string | null>(null);
   const [writing, setWriting] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!canEdit) return;
-    void dataService.isAdmin().then((v) => {
-      if (!cancelled) setCanWrite(v);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [canEdit]);
 
   const saved = pet.bio?.trim() || '';
   if (!saved && !canWrite) return null;

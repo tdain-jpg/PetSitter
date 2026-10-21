@@ -1351,7 +1351,7 @@ export class SupabaseAdapter implements DataService {
           // fall through
         }
       }
-      if (code === 'not_available') throw new Error('Pet bios are not available yet.');
+      if (code === 'daily_limit') throw new Error("That's today's 10 bios. Try again tomorrow.");
       if (code === 'ai_not_configured') throw new Error('Bios are not available right now.');
       throw new Error("Couldn't write a bio just now. Please try again.");
     }

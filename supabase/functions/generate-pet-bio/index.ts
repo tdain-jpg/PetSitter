@@ -5,8 +5,9 @@
 // owner reads it, edits it if they like, and saves it to pets.bio through the
 // ordinary pet update.
 //
-// ADMIN ONLY while it is tested on Clark and Lillee. Remove the is_admin()
-// check below to open it to everyone.
+// Open to every owner since 2026-10-21 (tested on Clark and Lillee first).
+// Each account may write BIOS_PER_DAY bios in a rolling day: plenty for
+// anyone trying styles, and a ceiling on what one account can cost.
 //
 //   POST { pet_id: uuid, tone: 'warm' | 'funny' | 'pet_voice' }  -> { bio }
 //
@@ -21,6 +22,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 
 const CLAUDE_MODEL = 'claude-opus-5';
+const BIOS_PER_DAY = 10;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const corsHeaders = {
@@ -116,11 +118,22 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData?.user) return json(401, { error: 'unauthorized' });
+  const user = userData?.user;
+  if (userError || !user) return json(401, { error: 'unauthorized' });
 
-  // Testing gate: admin only until Tim opens it to everyone.
-  const { data: isAdmin } = await supabase.rpc('is_admin');
-  if (isAdmin !== true) return json(403, { error: 'not_available' });
+  // The daily ceiling, counted from the usage log (0041), which users can
+  // write their own rows to but never read; so the count and the record are
+  // both made here with the service role.
+  const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { count } = await service
+    .from('app_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('event', 'pet_bio_generated')
+    .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+  if ((count ?? 0) >= BIOS_PER_DAY) return json(429, { error: 'daily_limit' });
 
   // Read through the caller's own session, so household RLS decides whether
   // they may see this pet at all. A pet they cannot see is simply not found.
@@ -161,5 +174,7 @@ Deno.serve(async (req) => {
       .trim()
   ).replace(/^["“]|["”]$/g, '');
   if (!bio) return json(502, { error: 'ai_failed' });
+  // Counts toward the daily ceiling and shows in the admin Usage tab.
+  await service.from('app_events').insert({ user_id: user.id, event: 'pet_bio_generated', props: { tone } });
   return json(200, { bio: bio.slice(0, 2000) });
 });
