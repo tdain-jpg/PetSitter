@@ -83,10 +83,6 @@ export function FAQScreen(_props: FAQScreenProps) {
           continues to the end of the period you have paid for, then the household returns to the
           free tier. Nothing is deleted.
         </QA>
-        <QA q="I bought Crown. What happens now?">
-          Crown is no longer sold, but you keep it, forever, and it includes everything in Plus.
-          There is nothing for you to do.
-        </QA>
         <QA q="Do friends and family who sit for me pay anything?">
           No. A sitter you invite is always free, with no limit, and is never asked to pay.
         </QA>

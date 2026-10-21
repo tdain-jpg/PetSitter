@@ -119,10 +119,6 @@ export function TermsScreen(_props: TermsScreenProps) {
           Sitters invited by a pet owner are always free.
         </TrustText>
         <TrustText>
-          Crown is no longer sold. If your household bought Crown before, you keep it, forever,
-          and it includes everything in Plus.
-        </TrustText>
-        <TrustText>
           Promotion codes can be entered at checkout on the monthly plans. Payments are processed
           by Stripe, and your card details never touch Pawstructions.
         </TrustText>

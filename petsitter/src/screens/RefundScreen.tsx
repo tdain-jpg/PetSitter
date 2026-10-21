@@ -42,11 +42,6 @@ export function RefundScreen(_props: RefundScreenProps) {
           and no further charge is made. You keep what you have paid for until the end of that
           period.
         </TrustText>
-        <TrustText>
-          Bought Crown before? You keep it, forever, and it includes everything in Plus. Crown
-          purchases keep the promise they were sold with: if it was not what you wanted, email us
-          within 14 days of the purchase and we will refund it in full.
-        </TrustText>
       </TrustSection>
 
       <TrustSection heading="How to ask for one">
@@ -68,10 +63,10 @@ export function RefundScreen(_props: RefundScreenProps) {
       <TrustSection heading="What happens to your pets and guides">
         <TrustText>
           Nothing is deleted. Your pets, guides, share links and any cheat sheets already
-          generated stay exactly where they are. A refund of Plus or Crown simply returns the
+          generated stay exactly where they are. A refund of Plus simply returns the
           household to the free tier: sheets already written stay readable, shown with the
           PREVIEW watermark again, and every guide still has its one free cheat sheet unless it
-          had already used it. Sheets written while the household had Plus or Crown do not use it
+          had already used it. Sheets written while the household had Plus do not use it
           up, so those guides can each be rewritten once more, free and watermarked; after that,
           rewriting a sheet needs Plus.
         </TrustText>

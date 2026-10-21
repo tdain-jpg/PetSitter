@@ -127,9 +127,9 @@ export function PlusScreen({ route }: Props) {
             </View>
           ) : plan?.via === 'crown' ? (
             <Card className="mb-4 bg-warm-50 border border-warm-300">
-              <Text className="text-lg font-semibold text-brown-800 mb-1">👑 Your household has Crown</Text>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Plus is included for your household</Text>
               <Text className="text-brown-700 leading-6">
-                Crown includes everything in Plus, forever. There is nothing to pay.
+                Complimentary, with no end date. There is nothing to pay.
               </Text>
               <Ticks items={PLUS} />
             </Card>

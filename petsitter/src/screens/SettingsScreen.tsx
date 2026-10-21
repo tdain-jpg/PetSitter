@@ -327,9 +327,9 @@ export function SettingsScreen({ navigation }: Props) {
             </>
           ) : ownerPlan?.via === 'crown' ? (
             <>
-              <Text className="text-lg font-semibold text-brown-800 mb-1">👑 Crown</Text>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Plus, complimentary</Text>
               <Text className="text-brown-600 text-sm mb-3">
-                {`${targetHousehold} has Crown, which includes everything in Plus, forever: unlimited sitter trips and AI cheat sheets. Nothing to pay.`}
+                {`${targetHousehold} has Plus included at no charge, with no end date: unlimited sitter trips and AI cheat sheets.`}
               </Text>
             </>
           ) : ownerPlan?.has_plus ? (

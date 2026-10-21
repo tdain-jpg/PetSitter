@@ -230,7 +230,7 @@ export function AdminScreen(_props: Props) {
       <Text className="text-brown-700 text-sm mt-1">
         {u.role === 'sitter' ? 'Sitter' : 'Owner'} · {u.pets} pets · {u.guides} guides
         {u.sitter_clients > 0 ? ` · ${u.sitter_clients} sitter clients` : ''}
-        {u.crown ? ' · 👑 Crown' : ''}
+        {u.crown ? ' · ✨ Plus' : ''}
         {u.sitter_plan ? ` · Sitter plan: ${u.sitter_plan}` : ''}
         {u.promo_codes ? ` · Code: ${u.promo_codes}` : ''}
       </Text>
@@ -326,7 +326,7 @@ export function AdminScreen(_props: Props) {
                 <Stat label="Plus households (paying)" value={overview.plus_households ?? 0} />
                 <Stat label="Pro sitters (paying)" value={overview.sitter_subscribers} />
                 <Stat label="Pro sitters on free month" value={overview.sitter_trialing ?? 0} />
-                <Stat label="Crown households (kept)" value={overview.crown_households} />
+                <Stat label="Complimentary Plus households" value={overview.crown_households} />
                 <Stat label="New feedback" value={overview.feedback_new} />
               </View>
               <Text className="text-tan-500 text-sm mb-3">
@@ -396,11 +396,14 @@ export function AdminScreen(_props: Props) {
                 {paid.sitters.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
                 {paid.sitters.filter((x) => !x.is_test).map(renderSitterSub)}
               </Card>
-              <Card className="mb-2">
-                <Text className="text-lg font-semibold text-brown-800 mb-2">Crown (no longer sold, kept forever)</Text>
-                {paid.crown.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
-                {paid.crown.filter((x) => !x.is_test).map(renderCrown)}
-              </Card>
+              {/* Old one-time Crown purchases. No real customer ever bought one,
+                  so this only appears if that ever stops being true. */}
+              {paid.crown.filter((x) => !x.is_test).length > 0 ? (
+                <Card className="mb-2">
+                  <Text className="text-lg font-semibold text-brown-800 mb-2">Crown (old one-time purchases)</Text>
+                  {paid.crown.filter((x) => !x.is_test).map(renderCrown)}
+                </Card>
+              ) : null}
               <TestSection
                 count={(paid.plus ?? []).filter((x: any) => x.is_test).length + paid.sitters.filter((x) => x.is_test).length + paid.crown.filter((x) => x.is_test).length}
                 what="purchases"
