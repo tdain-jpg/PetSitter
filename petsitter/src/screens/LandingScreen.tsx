@@ -196,7 +196,7 @@ export function LandingScreen({ navigation }: Props) {
             {/* Both audiences, in the first screen. Sitters used to meet
                 nothing addressed to them until halfway down the page. */}
             <Text style={{ color: COLORS.white }} className="text-base text-center mb-6">
-              Care guides for pet owners. Client tools for pet sitters.
+              Care instructions for the sitter you already trust.
             </Text>
             <View className="w-full max-w-sm">
               <Button
@@ -226,8 +226,10 @@ export function LandingScreen({ navigation }: Props) {
               Stop worrying about your pets when you travel
             </Text>
             <Text className="text-tan-600 text-center leading-6">
-              No more scattered notes, forgotten instructions, or anxious phone calls.
-              Create one comprehensive guide that answers every question your pet sitter might have.
+              Pawstructions isn&apos;t a marketplace for hiring strangers. It&apos;s for the family
+              member, neighbor or sitter you already rely on. Write it all down once, from feeding
+              and medications to door codes and the vet&apos;s number, and they have every answer
+              without an anxious phone call.
             </Text>
           </ScreenContainer>
         </View>
@@ -328,7 +330,10 @@ export function LandingScreen({ navigation }: Props) {
         <View className="px-6 py-8 bg-cream-50 border-y border-tan-200">
           <ScreenContainer variant="content">
             <Text className="text-2xl font-bold text-brown-800 text-center mb-4">
-              Looking after someone else&apos;s pets?
+              Run your own pet-sitting business
+            </Text>
+            <Text className="text-brown-700 text-center font-semibold mb-3">
+              No marketplace in the middle. You keep 100% of what you charge.
             </Text>
             <Text className="text-tan-600 text-center leading-6 mb-4">
               Pawstructions has a side built for you. Every client household in one list, with
