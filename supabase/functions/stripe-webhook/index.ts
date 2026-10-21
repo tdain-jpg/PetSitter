@@ -142,7 +142,7 @@ function json(status: number, body: unknown): Response {
 async function recordPromoRedemption(
   stripe: Stripe,
   session: Stripe.Checkout.Session,
-  kind: 'crown' | 'sitter'
+  kind: 'crown' | 'sitter' | 'plus'
 ): Promise<void> {
   try {
     const discounts = (session as unknown as { discounts?: { promotion_code?: unknown }[] }).discounts ?? [];
@@ -155,7 +155,7 @@ async function recordPromoRedemption(
         ? session.metadata.user_id
         : null;
     const householdId =
-      kind === 'crown' && session.client_reference_id && UUID_RE.test(session.client_reference_id)
+      (kind === 'crown' || kind === 'plus') && session.client_reference_id && UUID_RE.test(session.client_reference_id)
         ? session.client_reference_id
         : null;
     const { error } = await serviceClient()
@@ -434,10 +434,70 @@ function invoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
  * created by hand in the dashboard, say) we fall back to matching the Stripe
  * customer we already stored, and give up rather than guess.
  */
+/** Monthly or yearly price, and what it is worth, for the MRR figures (0045). */
+function subscriptionValue(sub: Stripe.Subscription): { amount: number | null; interval: string | null } {
+  const price = sub.items?.data?.[0]?.price;
+  return { amount: price?.unit_amount ?? null, interval: price?.recurring?.interval ?? null };
+}
+
+/** Is this a Pawstructions Plus (owner household) subscription rather than a sitter's? */
+function isPlusSubscription(sub: Stripe.Subscription): boolean {
+  if (sub.metadata?.kind === 'plus') return true;
+  const priceId = sub.items?.data?.[0]?.price?.id;
+  const plusPrices = [Deno.env.get('STRIPE_PLUS_PRICE_MONTHLY'), Deno.env.get('STRIPE_PLUS_PRICE_YEARLY')];
+  return !!priceId && plusPrices.includes(priceId);
+}
+
+/**
+ * Pawstructions Plus: the household subscription that replaced Crown (0045).
+ * Keyed by the household id the checkout put in the subscription's metadata,
+ * or, failing that, by the Stripe subscription id already on record.
+ */
+async function handlePlusSubscription(sub: Stripe.Subscription, event: Stripe.Event): Promise<Response> {
+  const supabase = serviceClient();
+  let householdId = typeof sub.metadata?.household_id === 'string' ? sub.metadata.household_id : null;
+  if (!householdId || !UUID_RE.test(householdId)) {
+    const { data } = await supabase
+      .from('household_subscriptions')
+      .select('household_id')
+      .eq('stripe_subscription_id', sub.id)
+      .maybeSingle();
+    householdId = data?.household_id ?? null;
+  }
+  if (!householdId) {
+    console.error(`event ${event.id}: plus subscription ${sub.id} has no household`);
+    return json(200, { received: true, ignored: 'no_household' });
+  }
+  const userId =
+    typeof sub.metadata?.user_id === 'string' && UUID_RE.test(sub.metadata.user_id) ? sub.metadata.user_id : null;
+  const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
+  const value = subscriptionValue(sub);
+  const { error } = await supabase.rpc('apply_household_subscription', {
+    p_household: householdId,
+    p_user: userId,
+    p_customer: typeof sub.customer === 'string' ? sub.customer : sub.customer?.id ?? null,
+    p_subscription: sub.id,
+    p_status: status,
+    p_price: sub.items?.data?.[0]?.price?.id ?? null,
+    p_amount: value.amount,
+    p_interval: value.interval,
+    p_period_end: subscriptionPeriodEnd(sub),
+    p_cancel_at_period_end: sub.cancel_at_period_end === true || sub.cancel_at != null,
+    p_event_at: new Date(event.created * 1000).toISOString(),
+  });
+  if (error) {
+    console.error(`event ${event.id}: apply_household_subscription failed for ${householdId}: ${error.message}`);
+    return json(500, { error: 'apply_failed' });
+  }
+  return json(200, { received: true, household: householdId, status });
+}
+
 async function handleSubscription(
   sub: Stripe.Subscription,
   event: Stripe.Event
 ): Promise<Response> {
+  if (isPlusSubscription(sub)) return await handlePlusSubscription(sub, event);
+
   const supabase = serviceClient();
 
   let userId = (sub.metadata?.user_id as string | undefined) ?? undefined;
@@ -489,6 +549,19 @@ async function handleSubscription(
     );
     // 500 so Stripe retries — this one IS worth retrying.
     return json(500, { error: 'apply_failed' });
+  }
+
+  // What the plan is worth, for the admin page's recurring revenue (0045).
+  // Separate from the guarded apply above on purpose: the price of a plan
+  // does not depend on event order. Best-effort; a miss costs a report figure.
+  const value = subscriptionValue(sub);
+  if (value.amount != null) {
+    const { error: valueError } = await supabase
+      .from('sitter_subscriptions')
+      .update({ amount_cents: value.amount, billing_interval: value.interval })
+      .eq('user_id', userId)
+      .eq('stripe_subscription_id', sub.id);
+    if (valueError) console.error(`event ${event.id}: subscription value not recorded: ${valueError.message}`);
   }
 
   return json(200, { received: true, user: userId, status });
@@ -601,7 +674,8 @@ Deno.serve(async (req) => {
     // The subscription itself arrives as customer.subscription.created; only
     // the promotion code, if one was used, is read from the session here.
     if (event.type === 'checkout.session.completed') {
-      await recordPromoRedemption(stripe, event.data.object as Stripe.Checkout.Session, 'sitter');
+      const completed = event.data.object as Stripe.Checkout.Session;
+      await recordPromoRedemption(stripe, completed, completed.metadata?.kind === 'plus' ? 'plus' : 'sitter');
     }
     return json(200, { received: true, ignored: `${event.type} (subscription)` });
   }

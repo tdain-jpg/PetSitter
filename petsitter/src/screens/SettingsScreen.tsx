@@ -14,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, ScreenContainer , SwitchRow } from '../components';
 import { formatDate } from '../lib/dates';
-import type { CrownReceipt } from '../types';
+import type { CrownReceipt, OwnerPlan } from '../types';
 import { useAuth, useData } from '../contexts';
 import { supabase } from '../lib/supabase';
 import { useProfileRole } from '../hooks';
@@ -112,6 +112,23 @@ export function SettingsScreen({ navigation }: Props) {
   const [merging, setMerging] = useState<string | null>(null);
 
   const [isAdmin, setIsAdmin] = useState(false);
+
+  const [ownerPlan, setOwnerPlan] = useState<OwnerPlan | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!primaryHouseholdId) return;
+      let cancelled = false;
+      dataService
+        .getOwnerPlan(primaryHouseholdId)
+        .then((p) => {
+          if (!cancelled) setOwnerPlan(p);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [primaryHouseholdId])
+  );
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -296,74 +313,47 @@ export function SettingsScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* Crown: hidden from a sitter who has no household to unlock. */}
+        {/* The household's plan (0045): Plus, or Crown bought before Plus
+            existed (which includes Plus forever), or free with its count of
+            sitter trips. Crown is no longer sold. */}
         <Card className="mb-4 bg-warm-50 border-warm-300">
           {isSitterWithNoPets ? (
             <>
-              <Text className="text-lg font-semibold text-brown-800 mb-1">
-                👑 Pawstructions Crown
-              </Text>
-              <Text className="text-brown-600 text-sm">
-                Crown unlocks AI cheat sheets for a household&apos;s own pets, so
-                it is bought by the owners you sit for: not by you. The guides
-                they share with you are already yours to read.
+              <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Pawstructions Plus</Text>
+              <Text className="text-brown-600 text-sm mb-3">
+                Plus is for a household&apos;s own pets, so it is chosen by the owners you sit for:
+                not by you. Their guides are already yours to read, free.
               </Text>
             </>
-          ) : (
-          <>
-          {hasCrown === true ? (
+          ) : ownerPlan?.via === 'crown' ? (
             <>
-              <Text className="text-lg font-semibold text-brown-800 mb-1">
-                👑 Crown is active
-              </Text>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">👑 Crown</Text>
               <Text className="text-brown-600 text-sm mb-3">
-                {`Every AI cheat sheet in ${targetHousehold} is unlocked: no PREVIEW watermark on screen, and none in the PDF you hand your sitter. Nothing else to pay.`}
+                {`${targetHousehold} has Crown, which includes everything in Plus, forever: unlimited sitter trips and AI cheat sheets. Nothing to pay.`}
               </Text>
-              {/* Answers "did I already pay for this?", the only spend question
-                  a one-time purchase raises. The date is OMITTED rather than
-                  guessed when granted_at is null: grants predating migration
-                  0012 have no timestamp, and inventing one would be worse than
-                  saying nothing. */}
-              {crownReceipt?.granted_at ? (
-                <Text className="text-tan-600 text-sm mb-3">
-                  {`Purchased ${formatDate(crownReceipt.granted_at.slice(0, 10), { dateStyle: 'medium' })}.`}
-                </Text>
-              ) : null}
             </>
-          ) : (
+          ) : ownerPlan?.has_plus ? (
             <>
-              <Text className="text-lg font-semibold text-brown-800 mb-1">
-                👑 Pawstructions Crown
-              </Text>
-              {/* Stated the same way everywhere Crown is sold: one payment, per
-                  household, no watermark. */}
+              <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Plus is active</Text>
               <Text className="text-brown-600 text-sm mb-3">
-                AI-written cheat sheets for your sitter, with no PREVIEW
-                watermark. $5 once for a whole household, not a subscription.
+                Unlimited sitter trips and AI cheat sheets for your whole household.
               </Text>
               <View className="mb-3">
-                <Button
-                  // No guideId: this purchase isn't tied to a sheet, and
-                  // UnlockCrown falls back to the default household.
-                  //
-                  // Three labels for the three things that screen will
-                  // actually show: a checkout of ours is still settling
-                  // (Refresh and a way to start over), a household that has
-                  // certainly not paid (the $5 button), or an answer we don't
-                  // have yet (the offer, read-only until it does).
-                  title={
-                    checkoutPending
-                      ? '👑 Finish unlocking Crown'
-                      : hasCrown === false
-                        ? '👑 Unlock Crown. $5'
-                        : '👑 About Crown'
-                  }
-                  onPress={() => navigation.navigate('UnlockCrown')}
-                />
+                <Button title="Manage your plan" onPress={() => navigation.navigate('UnlockCrown')} variant="outline" />
               </View>
             </>
-          )}
-          </>
+          ) : (
+            <>
+              <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Pawstructions Plus</Text>
+              <Text className="text-brown-600 text-sm mb-3">
+                {`Unlimited sitter trips and AI cheat sheets with no watermark, for your whole household. $3 a month or $24 a year.${
+                  ownerPlan ? ` You have used ${Math.min(ownerPlan.trips_used_this_year, ownerPlan.free_trips)} of ${ownerPlan.free_trips} free sitter trips this year.` : ''
+                }`}
+              </Text>
+              <View className="mb-3">
+                <Button title="✨ See Plus" onPress={() => navigation.navigate('UnlockCrown')} />
+              </View>
+            </>
           )}
           <Button
             title="👀 See a Sample Cheat Sheet"

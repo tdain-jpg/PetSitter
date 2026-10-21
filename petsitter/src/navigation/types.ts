@@ -51,7 +51,7 @@ export type MainStackParamList = {
 
   // Crown purchase. guideId is optional so the screen can send the user back
   // to the sheet they were trying to unlock; entering from Settings has none.
-  UnlockCrown: { guideId?: string } | undefined;
+  UnlockCrown: { guideId?: string; checkout?: 'success' | 'cancelled' | 'done' } | undefined;
 
   // Sitter side (0015). A connected sitter is not a household member: these
   // screens are their own view of the households they help care for.

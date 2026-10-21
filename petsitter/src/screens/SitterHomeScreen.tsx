@@ -510,6 +510,22 @@ export function SitterHomeScreen({ navigation }: Props) {
           {/* THEN who they are. */}
           {renderContent()}
 
+          {/* Feedback, in front of every sitter (Tim, 2026-10-21): the sitter
+              side is new, and it gets better from what sitters tell us. It
+              goes to the Admin inbox and to Tim's email. */}
+          <Card className="mb-4 mt-2">
+            <Text className="text-brown-800 font-semibold">Help shape Pawstructions</Text>
+            <Text className="text-brown-700 mt-1 mb-3">
+              The sitter side is brand new. What would make your work easier? A person reads every
+              message.
+            </Text>
+            <Button
+              title="Send feedback"
+              onPress={() => navigation.navigate('Feedback', { from: 'SitterHome' })}
+              variant="outline"
+            />
+          </Card>
+
           {/* The rare sitter with animals of their own. Quiet on purpose: most
               sitters never need it, and adding a first pet is what turns on
               the owner side and the "My pets" button above. */}

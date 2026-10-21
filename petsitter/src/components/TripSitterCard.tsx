@@ -80,6 +80,19 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
           : `We're emailing ${row.email}. You'll see their answer here, and we'll email you too.`
       );
     } catch (error: any) {
+      // Free households get live-sitter trips for 2 trips a year (0045). The
+      // limit is the server's; this only turns its refusal into an offer.
+      if (String(error?.message ?? '').includes('owner_plan_required')) {
+        const seePlus = await showConfirm({
+          title: "You've used this year's 2 free sitter trips",
+          message:
+            'Plus gives your household a sitter on every trip, plus unlimited AI cheat sheets: $3 a month or $24 a year. Share links and PDFs stay free either way.',
+          confirmLabel: 'See Plus',
+          cancelLabel: 'Not now',
+        });
+        if (seePlus) navigation.navigate('UnlockCrown');
+        return;
+      }
       showAlert("Couldn't ask that sitter", friendlyError(error?.message, 'Please try again.'));
     } finally {
       setBusy(false);

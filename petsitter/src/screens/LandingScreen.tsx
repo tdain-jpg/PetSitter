@@ -42,7 +42,7 @@ const features = [
     // scrolls past the one thing they would be asked to pay for.
     icon: '👑',
     title: 'Printable Cheat Sheet',
-    description: 'One page for the fridge or counter, written by AI from your guide, so your sitter has the essentials even with no internet. Every guide gets one free with a PREVIEW watermark. Crown removes it and lets you rewrite sheets any time: $5, once, for your whole household.',
+    description: 'One page for the fridge or counter, written by AI from your guide, so your sitter has the essentials even with no internet. Every guide gets one free with a PREVIEW watermark; Plus removes it and lets you rewrite sheets any time.',
     color: COLORS.warm,
     bgClass: 'bg-warm-50',
   },
@@ -81,7 +81,7 @@ const features = [
     // audience.
     icon: '🐾',
     title: 'A Home for Sitters Too',
-    description: 'Sitters get their own side: every client household in one list, one checklist for today across all of them, and a visit history. Three clients free, permanently.',
+    description: 'Sitters get their own side: every client household in one list, one checklist for today across all of them, and a visit history. Free when a family invites you.',
     color: COLORS.secondary,
     bgClass: 'bg-secondary-50',
   },
@@ -241,7 +241,7 @@ export function LandingScreen({ navigation }: Props) {
               Everything You Need
             </Text>
             <Text className="text-tan-500 text-center mb-6">
-              Free unless it says otherwise
+              Free for pet owners. Travel more than twice a year? Plus is $3 a month.
             </Text>
 
             {features.map((feature) => (
@@ -342,8 +342,8 @@ export function LandingScreen({ navigation }: Props) {
               without either of you sending the "everything ok?" text.
             </Text>
             <Text className="text-tan-600 text-center leading-6">
-              Three client households free, permanently. Beyond that it is $9 a month or $60 a
-              year, and it only lifts the client limit. Every feature is included either way.
+              Sitting for families who invite you is always free. To bring in your own clients,
+              Pro starts with a free month, then $9 a month or $79 a year. Cancel anytime.
             </Text>
             {/* This section spoke to sitters and its only button created an
                 OWNER account, which dropped a professional sitter on a

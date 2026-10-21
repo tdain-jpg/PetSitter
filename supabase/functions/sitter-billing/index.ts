@@ -171,6 +171,11 @@ Deno.serve(async (req) => {
     return json(503, { error: 'billing_not_configured' });
   }
 
+  // The free month (0045, Tim 2026-10-21): a sitter's FIRST subscription
+  // starts with 30 days free, card taken up front, cancel anytime. Anyone who
+  // has had a sitter subscription before, in any state, has had their trial.
+  const firstTime = !existing;
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -182,7 +187,10 @@ Deno.serve(async (req) => {
       // onto later invoice.* and customer.subscription.* events.
       client_reference_id: user.id,
       metadata: { user_id: user.id },
-      subscription_data: { metadata: { user_id: user.id } },
+      subscription_data: {
+        metadata: { user_id: user.id, kind: 'sitter' },
+        ...(firstTime ? { trial_period_days: 30 } : {}),
+      },
       ...(customerId
         ? { customer: customerId }
         : { customer_email: user.email ?? undefined }),
@@ -193,11 +201,12 @@ Deno.serve(async (req) => {
       // away a year; Stripe coupons cannot be limited to one price of a
       // product, so the yearly checkout simply has no code box.
       allow_promotion_codes: plan !== 'yearly',
-      // A 100%-off code (free months, monthly plan) brings the first invoice
-      // to $0; don't demand a card for it. When the free months end Stripe bills the
-      // subscription, and without a card it goes past_due, which the app
-      // already reports and the Customer Portal fixes.
-      payment_method_collection: 'if_required',
+      // The trial takes the card up front: that commitment is the point of
+      // it. Otherwise only when something is due, so a 100%-off code (free
+      // months, monthly plan) needs no card; when those months end the
+      // subscription bills, goes past_due without a card, and the app's
+      // past_due notice and the Customer Portal take it from there.
+      payment_method_collection: firstTime ? 'always' : 'if_required',
     });
 
     if (!session.url) {

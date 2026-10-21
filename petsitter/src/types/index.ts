@@ -320,6 +320,18 @@ export interface HouseholdSitter {
   photo_url: string | null;
 }
 
+/** A household's plan (owner_plan_status, 0045). Crown bought earlier counts as Plus. */
+export interface OwnerPlan {
+  has_plus: boolean;
+  via: 'crown' | 'subscription' | null;
+  status: string | null;
+  interval: 'month' | 'year' | null;
+  period_end: string | null;
+  cancel_at_period_end: boolean;
+  free_trips: number;
+  trips_used_this_year: number;
+}
+
 /** The signed-in user's own profile details (the sitter profile, 0039). */
 export interface MyProfile {
   full_name: string | null;

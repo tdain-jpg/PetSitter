@@ -25,6 +25,7 @@ import type {
   SitterTrip,
   HouseholdSitter,
   MyProfile,
+  OwnerPlan,
 } from '../types';
 import {
   DataService,
@@ -946,6 +947,55 @@ export class SupabaseAdapter implements DataService {
     return await this.invokeSitterBilling({ action: 'portal' });
   }
 
+  // ============================================
+  // Pawstructions Plus, the owner plan (0045)
+  // ============================================
+  /** The household's plan: Plus or not, how, and free sitter trips used this year. */
+  async getOwnerPlan(householdId: string): Promise<OwnerPlan> {
+    const { data, error } = await supabase.rpc('owner_plan_status', { h: householdId });
+    if (error) throw new Error(error.message);
+    return data as OwnerPlan;
+  }
+
+  /** Stripe Checkout for Plus, for the caller's default household. */
+  async createPlusCheckoutSession(plan: 'monthly' | 'yearly'): Promise<string> {
+    return await this.invokeOwnerBilling({ action: 'checkout', plan });
+  }
+
+  /** Stripe's billing page for the household's Plus subscription. */
+  async createPlusPortalSession(): Promise<string> {
+    return await this.invokeOwnerBilling({ action: 'portal' });
+  }
+
+  private async invokeOwnerBilling(body: Record<string, string>): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('owner-billing', { body });
+    if (error) {
+      let code: string | undefined;
+      if (error instanceof FunctionsHttpError) {
+        try {
+          code = (await error.context.json())?.error;
+        } catch {
+          // Not JSON: fall through to the generic message.
+        }
+      }
+      switch (code) {
+        case 'already_subscribed':
+          throw new Error('Your household already has Plus. Use Manage subscription to change or cancel it.');
+        case 'no_customer':
+          throw new Error('There is no subscription to manage yet.');
+        case 'no_household':
+          throw new Error('Set up your household first, then try again.');
+        case 'billing_not_configured':
+          throw new Error('Subscriptions are not available right now. Please try again later.');
+        default:
+          throw new Error(error.message || 'Could not reach billing. Please try again.');
+      }
+    }
+    const url = (data as { url?: string } | null)?.url;
+    if (!url) throw new Error('Billing did not return a link. Please try again.');
+    return url;
+  }
+
   private async invokeSitterBilling(body: Record<string, string>): Promise<string> {
     const { data, error } = await supabase.functions.invoke('sitter-billing', { body });
 
@@ -1116,7 +1166,7 @@ export class SupabaseAdapter implements DataService {
       // problem to fix.
       if (String(error.message).includes('sitter_at_capacity')) {
         throw new Error(
-          "This sitter has reached the number of clients their plan allows. Ask them to upgrade, then accept again."
+          "Your sitter's plan doesn't cover new clients right now. Ask them to check their plan in Pawstructions, then accept again. Or invite them yourself from Pet Sitters, which is always free for them."
         );
       }
       throw new Error(error.message);
@@ -1226,10 +1276,10 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as any[];
   }
 
-  async adminPaid(): Promise<{ crown: any[]; sitters: any[] }> {
+  async adminPaid(): Promise<{ plus: any[]; crown: any[]; sitters: any[] }> {
     const { data, error } = await supabase.rpc('admin_paid');
     if (error) throw new Error(error.message);
-    return (data ?? { crown: [], sitters: [] }) as { crown: any[]; sitters: any[] };
+    return (data ?? { plus: [], crown: [], sitters: [] }) as { plus: any[]; crown: any[]; sitters: any[] };
   }
 
   async adminFeedback(status?: 'new' | 'read' | 'done'): Promise<any[]> {

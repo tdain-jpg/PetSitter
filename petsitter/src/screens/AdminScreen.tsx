@@ -42,8 +42,8 @@ const SOURCE_LABELS: Record<string, string> = {
   'before tracking': 'Before tracking',
 };
 const PROMO_KINDS = [
-  { key: 'crown_free', label: 'Free Crown' },
-  { key: 'crown_percent', label: '% off Crown' },
+  { key: 'plus_free_months', label: 'Free Plus months' },
+  { key: 'plus_percent', label: '% off Plus' },
   { key: 'sitter_free_months', label: 'Free sitter months' },
   { key: 'sitter_percent', label: '% off sitter plan' },
 ] as const;
@@ -99,7 +99,7 @@ export function AdminScreen(_props: Props) {
   const [overview, setOverview] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [paid, setPaid] = useState<{ crown: any[]; sitters: any[] } | null>(null);
+  const [paid, setPaid] = useState<{ plus: any[]; crown: any[]; sitters: any[] } | null>(null);
   const [feedback, setFeedback] = useState<any[]>([]);
   const [feedbackFilter, setFeedbackFilter] = useState<'new' | 'all'>('new');
   const [usageDays, setUsageDays] = useState(30);
@@ -113,7 +113,7 @@ export function AdminScreen(_props: Props) {
     months: string;
     max: string;
     expires: string;
-  }>({ kind: 'crown_free', code: '', percent: '50', months: '3', max: '', expires: '' });
+  }>({ kind: 'plus_free_months', code: '', percent: '50', months: '3', max: '', expires: '' });
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
@@ -156,16 +156,17 @@ export function AdminScreen(_props: Props) {
 
   const createPromo = async () => {
     const f = promoForm;
-    const isCrown = f.kind.startsWith('crown');
-    const isFree = f.kind === 'crown_free' || f.kind === 'sitter_free_months';
+    const isPlus = f.kind.startsWith('plus');
+    const isFree = f.kind === 'plus_free_months' || f.kind === 'sitter_free_months';
     const code = f.code.trim().toUpperCase();
     if (!/^[A-Z0-9-]{3,40}$/.test(code)) {
       showAlert('Check the code', 'Use 3 to 40 letters, numbers or dashes, like FRIENDS-2026.');
       return;
     }
-    const what = isCrown
-      ? isFree ? 'a free Crown' : `${f.percent}% off Crown`
-      : isFree ? `${f.months} free sitter months (monthly plan)` : `${f.percent}% off the sitter plan for ${f.months} months (monthly plan)`;
+    const planName = isPlus ? 'Plus' : 'the sitter plan';
+    const what = isFree
+      ? `${f.months} free months of ${planName} (monthly plan)`
+      : `${f.percent}% off ${planName} for ${f.months} months (monthly plan)`;
     const ok = await showConfirm({
       title: `Create ${code}?`,
       message: `This creates a live code in Stripe for ${what}${f.max ? `, usable ${f.max} times` : ''}${f.expires ? `, until ${f.expires}` : ''}. Anyone with the code can use it. You can switch it off later, but not edit it.`,
@@ -179,7 +180,7 @@ export function AdminScreen(_props: Props) {
         kind: f.kind,
         code,
         ...(isFree ? {} : { percent: Number(f.percent) }),
-        ...(isCrown ? {} : { months: Number(f.months) }),
+        months: Number(f.months),
         ...(f.max ? { max_redemptions: Number(f.max) } : {}),
         ...(f.expires ? { expires_on: f.expires } : {}),
       });
@@ -254,6 +255,22 @@ export function AdminScreen(_props: Props) {
     </View>
   );
 
+  const renderPlus = (p: any, i: number) => (
+    <View key={i} className="py-2 border-b border-tan-100">
+      <Text className="text-brown-800 font-medium">{p.household}</Text>
+      <Text className="text-tan-600 text-sm">
+        {[
+          p.email,
+          p.status,
+          p.amount_cents != null ? `${money(p.amount_cents, 'usd')} / ${p.interval === 'year' ? 'year' : 'month'}` : null,
+          p.period_end ? `${p.cancel_at_period_end ? 'ends' : 'renews'} ${day(p.period_end)}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </Text>
+    </View>
+  );
+
   const renderCrown = (c: any, i: number) => (
     <View key={i} className="py-2 border-b border-tan-100">
       <Text className="text-brown-800 font-medium">
@@ -305,8 +322,11 @@ export function AdminScreen(_props: Props) {
                 <Stat label="Households" value={overview.households} />
                 <Stat label="Pets" value={overview.pets} />
                 <Stat label="Guides" value={overview.guides} />
-                <Stat label="Crown households" value={overview.crown_households} />
-                <Stat label="Sitter subscribers" value={overview.sitter_subscribers} />
+                <Stat label="Monthly recurring revenue" value={money(overview.mrr_cents ?? 0, 'usd')} />
+                <Stat label="Plus households (paying)" value={overview.plus_households ?? 0} />
+                <Stat label="Pro sitters (paying)" value={overview.sitter_subscribers} />
+                <Stat label="Pro sitters on free month" value={overview.sitter_trialing ?? 0} />
+                <Stat label="Crown households (kept)" value={overview.crown_households} />
                 <Stat label="New feedback" value={overview.feedback_new} />
               </View>
               <Text className="text-tan-500 text-sm mb-3">
@@ -367,19 +387,25 @@ export function AdminScreen(_props: Props) {
           {!loading && tab === 'paid' && paid ? (
             <>
               <Card className="mb-4">
-                <Text className="text-lg font-semibold text-brown-800 mb-2">Sitter subscriptions</Text>
+                <Text className="text-lg font-semibold text-brown-800 mb-2">Plus (owners)</Text>
+                {(paid.plus ?? []).filter((x: any) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
+                {(paid.plus ?? []).filter((x: any) => !x.is_test).map(renderPlus)}
+              </Card>
+              <Card className="mb-4">
+                <Text className="text-lg font-semibold text-brown-800 mb-2">Pro (sitters)</Text>
                 {paid.sitters.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
                 {paid.sitters.filter((x) => !x.is_test).map(renderSitterSub)}
               </Card>
               <Card className="mb-2">
-                <Text className="text-lg font-semibold text-brown-800 mb-2">Crown</Text>
+                <Text className="text-lg font-semibold text-brown-800 mb-2">Crown (no longer sold, kept forever)</Text>
                 {paid.crown.filter((x) => !x.is_test).length === 0 ? <Text className="text-tan-500">None yet.</Text> : null}
                 {paid.crown.filter((x) => !x.is_test).map(renderCrown)}
               </Card>
               <TestSection
-                count={paid.sitters.filter((x) => x.is_test).length + paid.crown.filter((x) => x.is_test).length}
+                count={(paid.plus ?? []).filter((x: any) => x.is_test).length + paid.sitters.filter((x) => x.is_test).length + paid.crown.filter((x) => x.is_test).length}
                 what="purchases"
               >
+                {(paid.plus ?? []).filter((x: any) => x.is_test).map(renderPlus)}
                 {paid.sitters.filter((x) => x.is_test).map(renderSitterSub)}
                 {paid.crown.filter((x) => x.is_test).map(renderCrown)}
               </TestSection>
@@ -415,7 +441,7 @@ export function AdminScreen(_props: Props) {
                   onChangeText={(v) => setPromoForm((prev) => ({ ...prev, code: v.toUpperCase() }))}
                   autoCapitalize="characters"
                 />
-                {promoForm.kind === 'crown_percent' || promoForm.kind === 'sitter_percent' ? (
+                {promoForm.kind === 'plus_percent' || promoForm.kind === 'sitter_percent' ? (
                   <Input
                     label="Percent off"
                     placeholder="50"
@@ -424,15 +450,13 @@ export function AdminScreen(_props: Props) {
                     keyboardType="numeric"
                   />
                 ) : null}
-                {promoForm.kind.startsWith('sitter') ? (
-                  <Input
-                    label="For how many months"
-                    placeholder="3"
-                    value={promoForm.months}
-                    onChangeText={(v) => setPromoForm((prev) => ({ ...prev, months: v.replace(/[^0-9]/g, '') }))}
-                    keyboardType="numeric"
-                  />
-                ) : null}
+                <Input
+                  label="For how many months"
+                  placeholder="3"
+                  value={promoForm.months}
+                  onChangeText={(v) => setPromoForm((prev) => ({ ...prev, months: v.replace(/[^0-9]/g, '') }))}
+                  keyboardType="numeric"
+                />
                 <Input
                   label="How many times it can be used (optional)"
                   placeholder="No limit"

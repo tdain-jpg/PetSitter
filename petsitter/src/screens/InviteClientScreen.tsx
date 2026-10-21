@@ -62,9 +62,9 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
     } catch (error: any) {
       if (isSitterClientLimitError(error)) {
         const seePlans = await showConfirm({
-          title: 'Your plan is full',
+          title: 'Start your free month',
           message: sitterLimitMessage(error),
-          confirmLabel: 'See plans',
+          confirmLabel: 'Start free month',
           cancelLabel: 'Not now',
         });
         if (seePlans) navigation.navigate('SitterPlans');
@@ -86,8 +86,9 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
     }
   };
 
-  const remaining =
-    plan && !plan.subscribed ? Math.max(0, plan.freeLimit - plan.activeClients) : null;
+  // Since 0045 every client a sitter brings in needs Pro, which starts with a
+  // free month. Said before they type, not only after the server refuses.
+  const needsPro = plan !== null && !plan.subscribed;
 
   return (
     <View className="flex-1 bg-cream-200">
@@ -105,6 +106,16 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
 
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
+          {needsPro ? (
+            <Card className="mb-4 bg-warm-50 border border-warm-300">
+              <Text className="text-brown-800 font-semibold">Inviting your own clients is part of Pro</Text>
+              <Text className="text-brown-700 leading-6 mt-1 mb-3">
+                Your first month is free: you enter a card, cancel anytime in the month, and are not
+                charged until it ends. Families who invite you themselves are always free.
+              </Text>
+              <Button title="Start free month" onPress={() => navigation.navigate('SitterPlans')} />
+            </Card>
+          ) : null}
           <Card className="mb-4">
             <Text className="text-brown-700 leading-6 mb-4">
               We&apos;ll email them an invitation. They can sign up for free, and their pets,
@@ -128,27 +139,6 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
               disabled={sending || email.trim().length === 0}
             />
           </Card>
-
-          {remaining !== null ? (
-            <Card className="mb-4">
-              <Text className="text-brown-700 leading-6">
-                {remaining > 0
-                  ? `You can take on ${remaining} more ${
-                      remaining === 1 ? 'client' : 'clients'
-                    } on the free plan.`
-                  : 'You are at the free plan limit, so new invitations need a subscription. Everyone you already look after is unaffected.'}
-              </Text>
-              {remaining === 0 ? (
-                <View className="mt-3">
-                  <Button
-                    title="See plans"
-                    onPress={() => navigation.navigate('SitterPlans')}
-                    variant="outline"
-                  />
-                </View>
-              ) : null}
-            </Card>
-          ) : null}
 
           {sent.length > 0 ? (
             <Card className="mb-4">

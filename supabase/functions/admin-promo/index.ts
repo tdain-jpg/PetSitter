@@ -19,10 +19,11 @@
 //           POST { action: 'create', kind, code, percent?, months?,
 //                  max_redemptions?, expires_on? ('YYYY-MM-DD') }
 //           POST { action: 'deactivate', id }
-// kinds: crown_free (100% off Crown, once) | crown_percent (percent% off Crown)
-//        sitter_free_months (100% off sitter, months) | sitter_percent
-//        (percent% off sitter, months). Sitter codes work on the MONTHLY plan;
-//        sitter-billing gives the yearly checkout no code box.
+// kinds: plus_free_months / plus_percent (Pawstructions Plus, the owner plan)
+//        sitter_free_months / sitter_percent (the Pro sitter plan), each for N
+//        months. Codes work on the MONTHLY plans; both billing functions give
+//        the yearly checkout no code box. Crown kinds are gone with Crown
+//        (no longer sold, 0045).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Stripe from 'npm:stripe';
@@ -39,7 +40,7 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-const KINDS = ['crown_free', 'crown_percent', 'sitter_free_months', 'sitter_percent'] as const;
+const KINDS = ['plus_free_months', 'plus_percent', 'sitter_free_months', 'sitter_percent'] as const;
 type Kind = (typeof KINDS)[number];
 // Stripe allows letters, digits and dashes in a code (no underscores).
 const CODE_RE = /^[A-Z0-9-]{3,40}$/;
@@ -119,12 +120,12 @@ Deno.serve(async (req) => {
       const code = String(body.code ?? '').trim().toUpperCase();
       if (!CODE_RE.test(code)) return json(400, { error: 'bad_code' });
 
-      const isCrown = kind.startsWith('crown');
-      const isFree = kind === 'crown_free' || kind === 'sitter_free_months';
+      const isPlus = kind.startsWith('plus');
+      const isFree = kind === 'plus_free_months' || kind === 'sitter_free_months';
       const percent = isFree ? 100 : Math.round(Number(body.percent));
       if (!Number.isFinite(percent) || percent < 1 || percent > 100) return json(400, { error: 'bad_percent' });
-      const months = isCrown ? null : Math.round(Number(body.months));
-      if (!isCrown && (!Number.isFinite(months) || months! < 1 || months! > 24)) {
+      const months = Math.round(Number(body.months));
+      if (!Number.isFinite(months) || months < 1 || months > 24) {
         return json(400, { error: 'bad_months' });
       }
       const maxRedemptions =
@@ -141,20 +142,21 @@ Deno.serve(async (req) => {
         if (expiresAt <= Math.floor(Date.now() / 1000)) return json(400, { error: 'bad_expiry' });
       }
 
-      const product = isCrown
-        ? Deno.env.get('STRIPE_PRODUCT_ID') ?? (await productOfPrice(stripe, Deno.env.get('STRIPE_PRICE_ID')))
-        : await productOfPrice(stripe, Deno.env.get('STRIPE_SITTER_PRICE_MONTHLY'));
+      const product = await productOfPrice(
+        stripe,
+        Deno.env.get(isPlus ? 'STRIPE_PLUS_PRICE_MONTHLY' : 'STRIPE_SITTER_PRICE_MONTHLY')
+      );
       if (!product) return json(503, { error: 'billing_not_configured' });
 
-      const name = isCrown
-        ? isFree ? 'Free Crown' : `${percent}% off Crown`
-        : isFree ? `${months} sitter month${months === 1 ? '' : 's'} free` : `${percent}% off sitter plan for ${months} month${months === 1 ? '' : 's'}`;
+      const plan = isPlus ? 'Plus' : 'sitter plan';
+      const span = `${months} month${months === 1 ? '' : 's'}`;
+      const name = isFree ? `${plan}: ${span} free` : `${percent}% off ${plan} for ${span}`;
 
       const coupon = await stripe.coupons.create(
         {
           percent_off: percent,
-          duration: isCrown ? 'once' : 'repeating',
-          ...(isCrown ? {} : { duration_in_months: months! }),
+          duration: 'repeating',
+          duration_in_months: months,
           applies_to: { products: [product] },
           name: name.slice(0, 40),
           metadata: { kind, created_by: user.id, created_via: 'pawstructions-admin' },

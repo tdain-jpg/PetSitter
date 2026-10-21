@@ -4,7 +4,7 @@ import { TrustPage, TrustSection, TrustText, TrustBullet } from '../components/T
 import type { PrivacyScreenProps } from '../navigation/types';
 
 // Bump when the wording below changes.
-const LAST_UPDATED = '2026-08-15';
+const LAST_UPDATED = '2026-10-21';
 
 export function PrivacyScreen(_props: PrivacyScreenProps) {
   return (
@@ -45,7 +45,7 @@ export function PrivacyScreen(_props: PrivacyScreenProps) {
           </Text>
         </View>
         <Text className="text-brown-700 leading-6 mb-3">
-          Crown cheat sheets are written by an AI model run by Anthropic. Before any of your
+          AI cheat sheets are written by an AI model run by Anthropic. Before any of your
           guide is sent there, our server rewrites it: every sensitive home value is swapped for
           a placeholder. Your wifi password becomes{' '}
           <Text className="font-semibold">[[WIFI_PASSWORD]]</Text>, your door code becomes{' '}
@@ -91,7 +91,7 @@ export function PrivacyScreen(_props: PrivacyScreenProps) {
         </TrustBullet>
         <TrustBullet>
           <Text className="font-semibold">Settings and generated sheets.</Text> Your preferences,
-          and the cheat sheets Crown has written for you.
+          and the AI cheat sheets written for you.
         </TrustBullet>
         <TrustText>
           We do not ask for your address for our own purposes, and we never see or store card
@@ -112,12 +112,12 @@ export function PrivacyScreen(_props: PrivacyScreenProps) {
           Brevo receives the recipient address and the contents of that message.
         </TrustBullet>
         <TrustBullet>
-          <Text className="font-semibold">Anthropic</Text> runs the AI model behind Crown cheat
+          <Text className="font-semibold">Anthropic</Text> runs the AI model behind AI cheat
           sheets, and receives your guide text with sensitive values replaced by placeholders, as
           described above.
         </TrustBullet>
         <TrustBullet>
-          <Text className="font-semibold">Stripe</Text> handles the Crown payment. Your card
+          <Text className="font-semibold">Stripe</Text> handles payments for Plus and Pro. Your card
           details go directly to Stripe; they never pass through our servers and we never store
           them.
         </TrustBullet>

@@ -27,7 +27,9 @@ import { HomeDetailsScreen } from '../screens/HomeDetailsScreen';
 import { SitterProfileScreen } from '../screens/SitterProfileScreen';
 import { FeedbackScreen } from '../screens/FeedbackScreen';
 import { AdminScreen } from '../screens/AdminScreen';
-import { UnlockCrownScreen } from '../screens/UnlockCrownScreen';
+// Crown is no longer sold (0045); its route now shows Plus, so Stripe return
+// links and old buttons pointing at UnlockCrown still land somewhere right.
+import { PlusScreen } from '../screens/PlusScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { TripWizardScreen } from '../screens/TripWizardScreen';
 import type { MainStackParamList } from './types';
@@ -71,7 +73,7 @@ const HomeDetailsH = hosted(HomeDetailsScreen);
 const SitterProfileH = hosted(SitterProfileScreen);
 const FeedbackH = hosted(FeedbackScreen);
 const AdminH = hosted(AdminScreen);
-const UnlockCrownH = hosted(UnlockCrownScreen);
+const UnlockCrownH = hosted(PlusScreen);
 const OnboardingH = hosted(OnboardingScreen);
 const TripWizardH = hosted(TripWizardScreen);
 

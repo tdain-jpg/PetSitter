@@ -48,7 +48,7 @@ import type { SitterPlansScreenProps } from '../navigation/types';
 const FEEDBACK_EMAIL = 'support@pawstructions.com';
 
 const MONTHLY_LABEL = '$9 / month';
-const YEARLY_LABEL = '$60 / year';
+const YEARLY_LABEL = '$79 / year';
 
 export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps) {
   const checkout = route.params?.checkout;
@@ -141,6 +141,9 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
 
 
   const subscribed = plan?.subscribed === true;
+  // A sitter who has never had a subscription gets the free month (0045);
+  // 'inactive' is what my_sitter_plan reports when there is no row at all.
+  const trialEligible = !plan || plan.status === 'inactive';
   const used = plan?.activeClients ?? 0;
   const free = plan?.freeLimit ?? 3;
   const atLimit = !subscribed && used >= free;
@@ -156,7 +159,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Sitter plans</Text>
-            <Text className="text-tan-500">Three clients free. More when you need them.</Text>
+            <Text className="text-tan-500">Families who invite you are always free. Pro starts with a free month.</Text>
           </View>
         </ScreenContainer>
       </View>
@@ -174,10 +177,12 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
             ) : subscribed ? (
               <>
                 <Text className="text-lg font-semibold text-brown-800 mb-1">
-                  You have unlimited clients
+                  {plan?.status === 'trialing' ? 'Your free month of Pro' : 'You have Pro'}
                 </Text>
                 <Text className="text-brown-700 leading-6">
-                  You are caring for {used} {used === 1 ? 'household' : 'households'}.
+                  {plan?.status === 'trialing' && endsOn
+                    ? `Free until ${endsOn}. You will not be charged before then, and you can cancel anytime in Manage subscription.`
+                    : `You are caring for ${used} ${used === 1 ? 'household' : 'households'}.`}
                 </Text>
                 {plan?.status === 'past_due' ? (
                   <Text className="text-warm-700 leading-6 mt-2">
@@ -189,14 +194,11 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
             ) : (
               <>
                 <Text className="text-lg font-semibold text-brown-800 mb-1">
-                  {used} of {free} free clients used
+                  {used === 0 ? 'No clients yet' : `You look after ${used} ${used === 1 ? 'household' : 'households'}`}
                 </Text>
                 <Text className="text-brown-700 leading-6">
-                  {atLimit
-                    ? 'You can keep every client you have. A subscription is only needed to take on another one.'
-                    : `You can take on ${free - used} more ${
-                        free - used === 1 ? 'client' : 'clients'
-                      } without paying anything.`}
+                  Families who invite you are always free, however many there are. Inviting your own
+                  clients is part of Pro.
                 </Text>
               </>
             )}
@@ -217,9 +219,9 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                 )}
               </Text>
               <Text className="text-brown-700 leading-6 mb-4">
-                You keep unlimited clients until then. After that you can still look after{' '}
-                {free} households for free. Changed your mind? Keep your plan and nothing
-                changes.
+                You keep Pro until then. After that, families who invited you stay connected for
+                free, and every client you already have stays too. Changed your mind? Keep your plan
+                and nothing changes.
               </Text>
               <Button
                 title={busy === 'portal' ? 'Opening…' : 'Keep my plan'}
@@ -252,7 +254,7 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                 Manage your subscription
               </Text>
               <Text className="text-brown-700 leading-6 mb-4">
-                Change plan, update your card, or cancel. Cancelling takes effect at the end
+                Update your card or cancel. Cancelling takes effect at the end
                 of the period you have already paid for. You are never cut off mid-month.
               </Text>
               <Button
@@ -265,39 +267,43 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
             <>
               <Card className="mb-4 bg-warm-50 border border-warm-300">
                 <Text className="text-lg font-semibold text-brown-800 mb-2">
-                  Unlimited clients
+                  Pro: run your sitting business
                 </Text>
                 <Text className="text-brown-700 leading-6 mb-4">
-                  Everything else stays exactly as it is. Every guide, routine and cheat
-                  sheet is already included, for free, for every sitter. The subscription
-                  buys one thing: as many client households as you can handle.
+                  Invite your own clients, as many as you can handle, each with their pets, routines
+                  and emergency contacts in one place and a checklist they can watch you tick off. No
+                  marketplace in the middle: you keep 100% of what you charge.
+                  {trialEligible
+                    ? ' Your first month is free: you enter a card now, cancel anytime in the month, and you are not charged until it ends.'
+                    : ''}
                 </Text>
                 <Button
-                  title={busy === 'monthly' ? 'Opening…' : MONTHLY_LABEL}
+                  title={busy === 'monthly' ? 'Opening…' : trialEligible ? `Start free month, then ${MONTHLY_LABEL}` : MONTHLY_LABEL}
                   onPress={() => openBilling('monthly')}
                   disabled={busy !== null}
                 />
                 <View className="h-3" />
                 <Button
-                  title={busy === 'yearly' ? 'Opening…' : `${YEARLY_LABEL}, save $48`}
+                  title={busy === 'yearly' ? 'Opening…' : trialEligible ? `Start free month, then ${YEARLY_LABEL} (save $29)` : `${YEARLY_LABEL}, save $29`}
                   onPress={() => openBilling('yearly')}
                   variant="secondary"
                   disabled={busy !== null}
                 />
                 <Text className="text-tan-500 text-sm mt-3">
-                  Cancel any time. Cancelling keeps you running until the end of the period
-                  you have paid for.
+                  Cancel anytime. Stripe emails you a reminder a week before a free month ends.
+                  Have a promo code? Enter it at checkout on the monthly plan.
                 </Text>
               </Card>
 
               <Card className="mb-4">
                 <Text className="text-base font-semibold text-brown-800 mb-2">
-                  Three clients stay free, for good
+                  Friends and family stay free, for good
                 </Text>
                 <Text className="text-brown-700 leading-6">
-                  Minding a neighbour&apos;s cat should not cost anything, and it never will.
-                  The plan is for sitters doing this as a business, and nobody is ever
-                  disconnected from a household they already look after.
+                  Minding a neighbor&apos;s cat should not cost anything, and it never will. When a
+                  family invites you themselves, you never pay and never hit a limit. Pro is for
+                  sitters running it as a business, and nobody is ever disconnected from a household
+                  they already look after.
                 </Text>
               </Card>
             </>
@@ -305,11 +311,11 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
 
           <Card className="mb-4">
             <Text className="text-base font-semibold text-brown-800 mb-2">
-              What would make this more useful?
+              Help shape Pawstructions
             </Text>
             <Text className="text-brown-700 leading-6 mb-4">
-              We are building the sitter side right now, so this is the moment your answer
-              actually changes it.
+              The sitter side is brand new, and it is being built around what sitters tell us.
+              What would make your work easier? A person reads every message.
             </Text>
             <Button
               title="Send feedback"

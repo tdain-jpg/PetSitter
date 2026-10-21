@@ -30,10 +30,9 @@ export function sitterLimitCounts(
 }
 
 /** The wording both accept handlers show. Kept here so they cannot drift. */
-export function sitterLimitMessage(error: unknown): string {
-  const counts = sitterLimitCounts(error);
-  const ceiling = counts
-    ? `You are caring for ${counts.active} households, which is the ${counts.limit} included for free.`
-    : 'You have reached the number of client households included for free.';
-  return `${ceiling}\n\nA subscription lifts the limit entirely. Nothing you already have is affected. Your current clients stay exactly as they are.`;
+export function sitterLimitMessage(_error?: unknown): string {
+  // Since 0045 there are no free sitter-brought clients: inviting your own
+  // client needs Pro, which starts with a free month. Owners who invite YOU
+  // are always free, and the clients you already have are never affected.
+  return 'Bringing in your own clients is part of Pro. Your first month is free: you enter a card, cancel anytime in the month, and are not charged until it ends. Then $9 a month or $79 a year.\n\nFamilies who invite you themselves are always free, and nothing you already have is affected.';
 }

@@ -135,7 +135,7 @@ const RESTORABLE_MAIN_ROUTES: Partial<Record<keyof MainStackParamList, ParamPars
     const guideId = query.get('guideId');
     return {
       params: {
-        ...(checkout === 'success' || checkout === 'cancelled' ? { checkout } : {}),
+        ...(checkout === 'success' || checkout === 'cancelled' || checkout === 'done' ? { checkout } : {}),
         ...(guideId ? { guideId } : {}),
       },
     };

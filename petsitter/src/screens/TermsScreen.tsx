@@ -4,7 +4,7 @@ import { TrustPage, TrustSection, TrustText, TrustBullet } from '../components/T
 import type { TermsScreenProps } from '../navigation/types';
 
 // Bump when the wording below changes.
-const LAST_UPDATED = '2026-08-16';
+const LAST_UPDATED = '2026-10-21';
 
 export function TermsScreen(_props: TermsScreenProps) {
   return (
@@ -35,7 +35,7 @@ export function TermsScreen(_props: TermsScreenProps) {
           </Text>
         </View>
         <Text className="text-brown-700 leading-6 mb-3">
-          Pawstructions is an organisational tool. It stores, formats and shares the care
+          Pawstructions is an organizational tool. It stores, formats and shares the care
           instructions you write. It does not give veterinary or medical advice, it is not a
           medical device, and it is not a monitoring service.
         </Text>
@@ -43,12 +43,12 @@ export function TermsScreen(_props: TermsScreenProps) {
             to, but an instruction reduces that behaviour, it cannot rule it out. What is
             promised here is only what the system actually guarantees. */}
         <Text className="text-brown-700 leading-6 mb-3">
-          Crown cheat sheets rewrite your own words into a one-page summary. We do not check
+          AI cheat sheets rewrite your own words into a one-page summary. We do not check
           your dosages and we do not diagnose anything: a sheet is built from what you put in
           the guide, and nothing in it has been verified against any medical source. The model
-          is instructed to summarise your instructions and add nothing of its own, but like any
+          is instructed to summarize your instructions and add nothing of its own, but like any
           AI it can make mistakes in the rewriting, and it can slip in a line you never wrote.
-          Read a sheet before you hand it over, and treat anything you do not recognise as
+          Read a sheet before you hand it over, and treat anything you do not recognize as
           something to check with your vet, not something to follow.
         </Text>
         <Text className="text-brown-700 leading-6">
@@ -85,7 +85,7 @@ export function TermsScreen(_props: TermsScreenProps) {
         </TrustBullet>
         <TrustBullet>
           Do not enter someone else’s personal information: a sitter’s phone number, a
-          neighbour’s address: without their agreement.
+          neighbor’s address: without their agreement.
         </TrustBullet>
         <TrustBullet>
           Do not use Pawstructions for anything unlawful, or to store material you have no right
@@ -100,16 +100,35 @@ export function TermsScreen(_props: TermsScreenProps) {
         </TrustBullet>
       </TrustSection>
 
-      <TrustSection heading="Crown">
+      <TrustSection heading="Plans and payment">
         <TrustText>
-          Crown is a single $5 (USD) payment covering one household, permanently. It is not a
-          subscription: it does not renew, there is nothing to cancel, and you will not be
-          charged again. It belongs to the household it was bought for, and it is bought by the
-          pet owner who runs that household.
+          Pawstructions is free for pet owners. The free tier includes the live sitter features
+          for 2 trips each calendar year.
         </TrustText>
         <TrustText>
-          Every guide you write gets one free AI cheat sheet before you buy anything, shown with
-          a PREVIEW watermark. A duplicate is a new guide, so it gets its own free sheet; to keep
+          Pawstructions Plus costs $3 a month or $24 a year (USD) and covers one household, so
+          everyone in it benefits. It renews until you cancel. You can cancel any time from the
+          billing page: Plus continues to the end of the period you have already paid for, then
+          the household returns to the free tier. Nothing is deleted.
+        </TrustText>
+        <TrustText>
+          Pro is for independent sitters who bring in their own clients. It starts with a 30-day
+          free trial: you enter a card when you start, and if you cancel during the trial you are
+          never charged. After that it costs $9 a month or $79 a year (USD) and renews until you
+          cancel. Canceling keeps Pro until the end of the period you have already paid for.
+          Sitters invited by a pet owner are always free.
+        </TrustText>
+        <TrustText>
+          Crown is no longer sold. If your household bought Crown before, you keep it, forever,
+          and it includes everything in Plus.
+        </TrustText>
+        <TrustText>
+          Promotion codes can be entered at checkout on the monthly plans. Payments are processed
+          by Stripe, and your card details never touch Pawstructions.
+        </TrustText>
+        <TrustText>
+          Every guide you write gets one free AI cheat sheet on the free tier, shown with a
+          PREVIEW watermark. A duplicate is a new guide, so it gets its own free sheet; to keep
           that from being abused, free sheets are rate-limited per account rather than per guide.
           The watermark marks the state of the feature, not the quality of the content: the
           instructions on a preview sheet are your real instructions. Refunds are covered by our
@@ -135,8 +154,8 @@ export function TermsScreen(_props: TermsScreenProps) {
         <TrustText>
           To the fullest extent the law allows, we are not liable for indirect, incidental or
           consequential losses arising from your use of Pawstructions, and our total liability to
-          you is limited to what you have actually paid us: which for most people is nothing,
-          and at most $5. Some places do not allow limits like these; where that is the case,
+          you is limited to what you have actually paid us, which for most people is nothing.
+          Some places do not allow limits like these; where that is the case,
           they do not apply to you.
         </TrustText>
       </TrustSection>

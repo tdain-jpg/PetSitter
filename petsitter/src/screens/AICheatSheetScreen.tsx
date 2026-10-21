@@ -305,7 +305,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
       // stated in words instead — and stated as a FEATURE state, never as a
       // doubt about the care details, which are the user's own.
       const filled = watermarked
-        ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own. Pawstructions Crown ($5, one-time) removes the PREVIEW watermark from the app and the PDF.`
+        ? `${body}\n\n---\nPreview version from Pawstructions. The details above are your own. Pawstructions Plus ($3 a month or $24 a year) removes the PREVIEW watermark from the app and the PDF.`
         : body;
 
       // Plain text, not markdown. A clipboard has no renderer, so pasting the
@@ -408,12 +408,12 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
           showCrownPaywall ? (
             <Card className="items-center py-8 bg-warm-50 border-warm-300">
               <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
-                👑 Pawstructions Crown
+                ✨ Pawstructions Plus
               </Text>
               <Text className="text-brown-600 text-center mb-6">
                 {canEdit
-                  ? "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them ($5 once for your whole household, not a subscription)."
-                  : "This guide has already had its free cheat sheet. Crown covers the cost of the AI that writes them, and it is the owner's to buy. Ask them if you'd like another."}
+                  ? "This guide has already had its free cheat sheet. Plus covers the cost of the AI that writes them: unlimited sheets for your whole household, $3 a month or $24 a year."
+                  : "This guide has already had its free cheat sheet. More need Plus, which is the owner's to choose. Ask them if you'd like another."}
               </Text>
               <View className="w-full gap-3">
                 {/* Crown belongs to a HOUSEHOLD, and create-checkout-session
@@ -422,7 +422,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
                     complete, for pets that are not theirs. */}
                 {canEdit ? (
                   <Button
-                    title="👑 Unlock Crown ($5)"
+                    title="✨ See Plus"
                     onPress={() => navigation.navigate('UnlockCrown', { guideId })}
                   />
                 ) : null}
@@ -460,8 +460,8 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
               {watermarked && canEdit ? (
                 <Text className="text-brown-600 text-center mb-6">
                   Free cheat sheets arrive with a PREVIEW watermark across them.
-                  Crown removes it and lets you rewrite the sheet whenever your
-                  details change. $5 once for your whole household.
+                  Plus removes it and lets you rewrite the sheet whenever your
+                  details change: $3 a month or $24 a year for your household.
                 </Text>
               ) : null}
 
@@ -515,17 +515,17 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
             {showCrownPaywall ? (
               <Card className="items-center py-8 mb-8 bg-warm-50 border-warm-300">
                 <Text className="text-xl font-semibold text-brown-800 mb-2 text-center">
-                  👑 Pawstructions Crown
+                  ✨ Pawstructions Plus
                 </Text>
                 <Text className="text-brown-600 text-center mb-6">
                   {canEdit
-                    ? 'Your free cheat sheet for this guide is above. Crown covers the cost of the AI, so you can rewrite it whenever the details change. $5 once for your whole household, not a subscription.'
-                    : "The free cheat sheet for this guide is above. Rewriting it needs Crown, which is the owner's to buy."}
+                    ? 'Your free cheat sheet for this guide is above. Plus covers the cost of the AI, so you can rewrite it whenever the details change: $3 a month or $24 a year for your household.'
+                    : "The free cheat sheet for this guide is above. Rewriting it needs Plus, which is the owner's to choose."}
                 </Text>
                 <View className="w-full">
                   {canEdit ? (
                     <Button
-                      title="👑 Unlock Crown ($5)"
+                      title="✨ See Plus"
                       onPress={() => navigation.navigate('UnlockCrown', { guideId })}
                     />
                   ) : null}

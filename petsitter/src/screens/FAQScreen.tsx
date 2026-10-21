@@ -22,7 +22,7 @@ function QA({ q, children }: { q: string; children: React.ReactNode }) {
 }
 
 // Bump when the wording below changes.
-const LAST_UPDATED = '2026-09-07';
+const LAST_UPDATED = '2026-10-21';
 
 /**
  * What the app actually does, in the questions people actually ask.
@@ -51,7 +51,7 @@ export function FAQScreen(_props: FAQScreenProps) {
         <QA q="What is it for?">
           Everything you know about looking after your
           pets lives in your head. Pawstructions gets it out of your head and into one guide you
-          can hand to whoever is looking after them next: a sitter, a neighbour, your mother.
+          can hand to whoever is looking after them next: a sitter, a neighbor, your mother.
         </QA>
         <QA q="Do I need to install anything?">
           No. It runs in any modern browser
@@ -67,28 +67,41 @@ export function FAQScreen(_props: FAQScreenProps) {
       </TrustSection>
 
       <TrustSection heading="What it costs">
+        <QA q="Is it free for pet owners?">
+          Yes. Unlimited pets, unlimited guides, share links (your sitter needs no account), PDF
+          export, Home details, and inviting the rest of your household so you all work from the
+          same information. All free, with no limit. Free households also get the live sitter
+          features for 2 trips each calendar year: a sitter with their own account, the Today
+          checklist, check-ins, photos, visit history, and asking a sitter to take a trip. Every
+          guide also gets one free AI cheat sheet, marked PREVIEW.
+        </QA>
+        <QA q="Pawstructions Plus: $3 a month or $24 a year, for pet owners.">
+          Plus covers your whole household, so everyone in it benefits. You get unlimited trips
+          with live sitter features, and unlimited AI cheat sheets (the one-page summary a sitter
+          keeps on the fridge) with no watermark, rewritten whenever you like. There is no free
+          trial, because the free tier is the trial. Cancel any time from the billing page: Plus
+          continues to the end of the period you have paid for, then the household returns to the
+          free tier. Nothing is deleted.
+        </QA>
+        <QA q="I bought Crown. What happens now?">
+          Crown is no longer sold, but you keep it, forever, and it includes everything in Plus.
+          There is nothing for you to do.
+        </QA>
+        <QA q="Do friends and family who sit for me pay anything?">
+          No. A sitter you invite is always free, with no limit, and is never asked to pay.
+        </QA>
+        <QA q="Pro: $9 a month or $79 a year, for independent sitters.">
+          Pro is for sitters who bring in their own clients. The first month is free: you enter a
+          card when you start, and if you cancel during the 30-day trial you are never charged.
+          Stripe emails you a reminder 7 days before the trial ends. Cancel any time, and you keep
+          Pro until the end of the period you have paid for.
+        </QA>
         <TrustText>
-          Almost everything is free, for everyone: unlimited pets, unlimited guides, daily
-          checklists, PDF export, share links, and inviting the rest of your household so you all
-          work from the same information.
+          Nobody is ever disconnected from a household they already look after. Existing client
+          connections are never cut off.
         </TrustText>
-        <QA q="Crown: $5 once, for pet owners.">
-          Unlocks AI-written cheat sheets
-          for your whole household: the one-page summary a sitter keeps on the fridge. It is a
-          single payment, not a subscription. It does not renew and there is nothing to cancel.
-          Every guide you write gets one free cheat sheet first, marked PREVIEW, so you can see
-          exactly what you would be buying.
-        </QA>
-        <QA q="Sitter subscription: $9 a month or $60 a year, for sitters.">
-          Every sitter can look after three client households free, permanently. The subscription
-          only lifts that limit. It buys no extra features: every guide, routine and cheat sheet
-          a sitter can see is already included for free. Cancel any time, and you keep running
-          until the end of the period you have paid for.
-        </QA>
         <TrustText>
-          Nobody is ever disconnected from a household they already look after. The limit is
-          checked when a sitter takes on a NEW client, never applied retroactively to clients
-          they already have.
+          Promotion codes can be entered at checkout on the monthly plans.
         </TrustText>
       </TrustSection>
 
@@ -111,7 +124,7 @@ export function FAQScreen(_props: FAQScreenProps) {
           you can take it back at any time.
         </TrustBullet>
         <TrustBullet>
-          A daily checklist organised by time of day, which shows you who ticked off what, and
+          A daily checklist organized by time of day, which shows you who ticked off what, and
           when.
         </TrustBullet>
         <TrustBullet>
@@ -137,7 +150,8 @@ export function FAQScreen(_props: FAQScreenProps) {
           guide, delete anything, or create share links. That is the owner&apos;s to control.
         </TrustBullet>
         <TrustBullet>
-          Three client households free, permanently. Beyond that, $9 a month or $60 a year.
+          Sitting for friends and family who invite you is always free. Independent sitters who
+          bring in their own clients use Pro: first month free, then $9 a month or $79 a year.
         </TrustBullet>
       </TrustSection>
 
@@ -161,8 +175,8 @@ export function FAQScreen(_props: FAQScreenProps) {
         </QA>
         <QA q="Is my data sold or tracked?">
           No. There is no advertising and no
-          analytics following you around. The product is paid for by people buying Crown and
-          sitter subscriptions, and that is the entire business model.
+          analytics following you around. The product is paid for by Plus and Pro subscriptions,
+          and that is the entire business model.
         </QA>
       </TrustSection>
 
@@ -171,13 +185,12 @@ export function FAQScreen(_props: FAQScreenProps) {
           Payments are handled by Stripe. Pawstructions never sees or stores your card details.
         </TrustText>
         <TrustText>
-          Crown is a one-off payment, so there is nothing to cancel. A sitter subscription is
-          managed through Stripe&apos;s own billing portal, reachable from Sitter plans inside
-          the app: change plan, update your card, or cancel there.
+          Plus and Pro are managed through Stripe&apos;s own billing portal, reachable from the
+          billing page inside the app: update your card, or cancel there. To switch between monthly and yearly, email us and we will do it for you.
         </TrustText>
         <TrustText>
-          If a subscription payment fails, nothing is switched off immediately. Your clients stay
-          reachable while the card is retried, and you are told what happened.
+          If a subscription payment fails, nothing is switched off immediately. Everything stays
+          working while the card is retried, and you are told what happened.
         </TrustText>
         <TrustText>Refunds are covered on the Refunds page.</TrustText>
       </TrustSection>

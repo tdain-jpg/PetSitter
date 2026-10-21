@@ -408,7 +408,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         const note =
           '<p class="preview-note"><strong>PREVIEW</strong>, the watermark marks a free Pawstructions cheat sheet. The care details below are the real ones from this guide.</p>';
         const footer =
-          '<p class="preview-footer">Pawstructions Crown ($5, one-time) removes this watermark.</p>';
+          '<p class="preview-footer">Pawstructions Plus ($3 a month or $24 a year) removes this watermark.</p>';
         cheatSheetSection = `<div class="cheat-sheet preview">${PDF_WATERMARK_WASH}<div class="cheat-sheet-body"><h2>🤖 AI Cheat Sheet</h2>${note}<div>${sheetBody}</div>${footer}</div></div>`;
       } else {
         cheatSheetSection = `<div class="cheat-sheet"><div class="cheat-sheet-body"><h2>🤖 AI Cheat Sheet</h2><div>${sheetBody}</div></div></div>`;
@@ -989,16 +989,16 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         {cheatSheetWatermarked && cheatSheetContent && sections.aiCheatSheet ? (
           <Card className="mb-4 bg-warm-50 border-warm-300">
             <Text className="text-brown-800 font-semibold mb-1">
-              👑 The cheat sheet will carry a PREVIEW watermark
+              ✨ The cheat sheet will carry a PREVIEW watermark
             </Text>
             <Text className="text-brown-600 text-sm mb-3">
               {canEdit
-                ? 'Everything in this PDF is your own information, and the rest of it exports clean. Crown removes the watermark from the cheat sheet ($5 once for your whole household.'
+                ? 'Everything in this PDF is your own information, and the rest of it exports clean. Plus removes the watermark from the cheat sheet ($3 a month or $24 a year for your household).'
                 : "The watermark sits over the cheat sheet only. Every other page exports clean, and nothing is missing from it. Removing it is the owner's to buy."}
             </Text>
             {canEdit ? (
               <Button
-                title="👑 Unlock Crown ($5)"
+                title="✨ See Plus"
                 variant="outline"
                 onPress={() => navigation.navigate('UnlockCrown', { guideId })}
               />
