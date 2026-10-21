@@ -1337,6 +1337,29 @@ export class SupabaseAdapter implements DataService {
     return data;
   }
 
+  /** A short AI-written bio for one pet (generate-pet-bio). Returns the text; does not save it. */
+  async generatePetBio(petId: string, tone: 'warm' | 'funny' | 'pet_voice'): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('generate-pet-bio', {
+      body: { pet_id: petId, tone },
+    });
+    if (error) {
+      let code: string | undefined;
+      if (error instanceof FunctionsHttpError) {
+        try {
+          code = (await error.context.json())?.error;
+        } catch {
+          // fall through
+        }
+      }
+      if (code === 'not_available') throw new Error('Pet bios are not available yet.');
+      if (code === 'ai_not_configured') throw new Error('Bios are not available right now.');
+      throw new Error("Couldn't write a bio just now. Please try again.");
+    }
+    const bio = (data as { bio?: string } | null)?.bio;
+    if (!bio) throw new Error("Couldn't write a bio just now. Please try again.");
+    return bio;
+  }
+
   /** Record where a brand-new account came from (0040). A no-op for older accounts. */
   async recordSignupSource(source: string | null): Promise<void> {
     const { error } = await supabase.rpc('record_signup_source', { p_source: source });

@@ -7,6 +7,7 @@ import { showAlert, showConfirm } from '../lib/dialogs';
 import { todayLocal } from '../lib/dates';
 import { displayablePhotoUrl } from '../lib/petPhotos';
 import { Button, SectionHeader, ScreenContainer, Icon, speciesIconName } from '../components';
+import { PetBioCard } from '../components/PetBioCard';
 import { useData } from '../contexts';
 import { useResolvedPet } from '../hooks';
 import { COLORS } from '../constants';
@@ -562,6 +563,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
               </View>
             </SectionHeader>
           )}
+
+          {/* Bio (0047): shareable, written with AI, tested on Clark and Lillee first. */}
+          <PetBioCard pet={pet} canEdit={canEdit} />
 
           {/* Personality */}
           {hasPersonality && personality && (

@@ -194,6 +194,9 @@ export interface Pet {
   medications: Medication[];
   behavioral_notes?: string;
   special_instructions?: string;
+  /** A short shareable bio, written with AI and edited by the owner (0047). */
+  bio?: string | null;
+  bio_updated_at?: string | null;
   status: PetStatus;
   // null explicitly clears the column on update; undefined keys are DROPPED
   // from the JSON body by supabase-js and leave the stored value untouched.
