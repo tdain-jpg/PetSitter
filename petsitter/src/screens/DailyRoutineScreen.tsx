@@ -22,6 +22,7 @@ import type { MainStackParamList } from '../navigation/types';
 import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks, formatTaskTime } from '../lib/routineTasks';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
 import { friendlyError } from '../lib/errors';
+import { dataService } from '../services';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'DailyRoutine'>;
 
@@ -152,7 +153,29 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
     return canEdit ? 'your sitter' : 'the owner';
   };
 
+  // A sitter ticks tasks only on a trip they were asked to take, or for a
+  // household with Plus (0048). Checked once so the screen can say so plainly
+  // instead of failing on the first tap.
+  const [canWork, setCanWork] = useState(true);
+  useEffect(() => {
+    if (canEdit || !guideId) return;
+    let cancelled = false;
+    void dataService.canWorkGuide(guideId).then((v) => {
+      if (!cancelled) setCanWork(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canEdit, guideId]);
+
   const handleToggleTask = async (task: RoutineTask) => {
+    if (!canEdit && !canWork) {
+      showAlert(
+        'Not your trip yet',
+        "The owner hasn't asked you to take this trip, so tasks can't be ticked off here. Ask them to choose you under \"Pet sitter for this trip\"."
+      );
+      return;
+    }
     // Ignore taps while a toggle for this task is already in flight
     if (pendingTaskIds.current.has(task.id)) return;
     pendingTaskIds.current.add(task.id);
@@ -465,6 +488,15 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
       <ScrollView className="flex-1 p-4">
         <ScreenContainer variant="content">
+        {!canEdit && !canWork ? (
+          <View className="bg-warm-50 border border-warm-300 rounded-xl p-4 mb-4">
+            <Text className="text-brown-800 font-semibold">Read only</Text>
+            <Text className="text-brown-700 leading-6 mt-1">
+              The owner hasn&apos;t asked you to take this trip, so you can read the routine but not
+              tick it off. Ask them to choose you under &quot;Pet sitter for this trip&quot;.
+            </Text>
+          </View>
+        ) : null}
         {TIME_BLOCKS.map((block) => {
           const blockTasks = allTasks.filter((t) => t.time_block === block.id);
           if (blockTasks.length === 0) return null;

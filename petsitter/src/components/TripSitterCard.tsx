@@ -176,7 +176,8 @@ export function TripSitterCard({ guide }: { guide: Guide }) {
       ) : (
         <>
           <Text className="text-tan-600 mb-3">
-            Ask one of your sitters to cover this trip. They'll get an email and can accept in the app.
+            Ask one of your sitters to cover this trip. They'll get an email, and it switches on their live
+            checklist and check-ins for the trip. Your share link works for anyone either way.
           </Text>
           {sitters.map((s) => (
             <Pressable

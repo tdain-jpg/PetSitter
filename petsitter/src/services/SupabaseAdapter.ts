@@ -1074,10 +1074,26 @@ export class SupabaseAdapter implements DataService {
     return (data ?? []) as SitterTrip[];
   }
 
+  /** May the signed-in sitter tick tasks on this guide? (0048: asked to take it, or Plus.) */
+  async canWorkGuide(guideId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('sitter_can_work_guide', { g: guideId });
+    if (error) return true; // the server still enforces it; never block on a failed read
+    return data === true;
+  }
+
   async getSitterToday(date: string): Promise<SitterTodayGroup[]> {
     const connections = await this.getMySitterConnections();
     const active = connections.filter((c) => c.status === 'active');
     if (active.length === 0) return [];
+
+    // Only trips this sitter may work (0048): asked to take them, or the
+    // household has Plus. Others are still readable from the client's page.
+    const { data: workableRows } = await supabase.rpc('my_workable_guide_ids');
+    const workable = new Set(
+      ((workableRows ?? []) as unknown[]).map((r) =>
+        typeof r === 'string' ? r : (r as Record<string, string>)?.my_workable_guide_ids
+      )
+    );
 
     const perHousehold = await Promise.all(
       active.map(async (connection) => {
@@ -1090,6 +1106,7 @@ export class SupabaseAdapter implements DataService {
         // the start date — the same reading the guide list uses when it calls a
         // trip current.
         const current = guides.filter((guide) => {
+          if (!workable.has(guide.id)) return false;
           if (!guide.start_date) return false;
           if (guide.start_date > date) return false;
           if (guide.end_date && guide.end_date < date) return false;

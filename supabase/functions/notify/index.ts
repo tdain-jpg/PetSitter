@@ -37,6 +37,10 @@ const APP_URL = 'https://pawstructions.com';
 const MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
 
+// Emails a person can switch off in Settings ("Email updates", 0049). Every
+// other kind (invitations, trip requests and replies, feedback) always sends.
+const OPTIONAL_KINDS = new Set(['share_opened', 'sitter_checkin', 'trip_incomplete']);
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -394,6 +398,19 @@ async function drainPass(
     }
 
     let failure: string | null = null;
+
+    // The Settings "Email updates" switch (0049). Optional kinds only; a
+    // turned-off update is marked handled, not failed, so it never retries.
+    if (OPTIONAL_KINDS.has(row.kind)) {
+      const { data: wanted } = await supabase.rpc('wants_optional_email', { p_email: row.recipient_email });
+      if (wanted === false) {
+        await supabase
+          .from('notifications_outbox')
+          .update({ sent_at: new Date().toISOString(), last_error: 'skipped: email updates turned off' })
+          .eq('id', row.id);
+        continue;
+      }
+    }
 
     const email = buildEmail(row as OutboxRow);
     if (!email) {

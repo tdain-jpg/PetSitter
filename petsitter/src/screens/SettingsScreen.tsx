@@ -415,8 +415,8 @@ export function SettingsScreen({ navigation }: Props) {
           />
 
           <SwitchRow
-            label="Notifications"
-            description="Receive reminders and updates"
+            label="Email updates"
+            description="When your sitter opens a guide or checks in, and trip reminders. Invitations and billing emails always arrive."
             value={settings?.notifications_enabled ?? true}
             onValueChange={(v) => handleToggleSetting('notifications_enabled', v)}
           />
