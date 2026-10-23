@@ -614,16 +614,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
               }
             >
               {pet.feeding_schedule.length === 0 ? (
-                <View className="items-start">
-                  <Text className="text-tan-600 mb-3">
-                    No feedings yet. Each one becomes a task on {pet.name}&apos;s daily routine.
-                  </Text>
-                  <Button
-                    title="+ Add feeding"
-                    onPress={() => setCareSheet({ kind: 'feeding', startWithNew: true })}
-                    variant="outline"
-                  />
-                </View>
+                <Text className="text-tan-600 mb-3">
+                  No feedings yet. Each one becomes a task on {pet.name}&apos;s daily routine.
+                </Text>
               ) : null}
               {pet.feeding_schedule.map((schedule, index) => (
                 <View
@@ -644,6 +637,17 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   )}
                 </View>
               ))}
+              {/* Always there for the owner, not only when empty: feedings and
+                  medications change over a pet's life (Tim, 2026-10-23). */}
+              {canEdit ? (
+                <View className="items-start mt-3">
+                  <Button
+                    title="+ Add feeding"
+                    onPress={() => setCareSheet({ kind: 'feeding', startWithNew: true })}
+                    variant="outline"
+                  />
+                </View>
+              ) : null}
             </SectionHeader>
           )}
 
@@ -659,16 +663,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
               }
             >
               {pet.medications.length === 0 ? (
-                <View className="items-start">
-                  <Text className="text-tan-600 mb-3">
-                    None added. Each dose becomes a task on {pet.name}&apos;s daily routine.
-                  </Text>
-                  <Button
-                    title="+ Add medication"
-                    onPress={() => setCareSheet({ kind: 'medications', startWithNew: true })}
-                    variant="outline"
-                  />
-                </View>
+                <Text className="text-tan-600 mb-3">
+                  None added. Each dose becomes a task on {pet.name}&apos;s daily routine.
+                </Text>
               ) : null}
               {pet.medications.map((med, index) => (
                 <View
@@ -697,6 +694,15 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   )}
                 </View>
               ))}
+              {canEdit ? (
+                <View className="items-start mt-3">
+                  <Button
+                    title="+ Add medication"
+                    onPress={() => setCareSheet({ kind: 'medications', startWithNew: true })}
+                    variant="outline"
+                  />
+                </View>
+              ) : null}
             </SectionHeader>
           )}
 

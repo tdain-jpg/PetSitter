@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Modal } from 'react-native';
 import { Button } from './Button';
 import { ScheduleEditor } from './ScheduleEditor';
@@ -56,6 +56,10 @@ export function PetCareSheet({ pet, kind, visible, startWithNew, onClose }: PetC
   const [feedings, setFeedings] = useState<FeedingSchedule[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [saving, setSaving] = useState(false);
+  // With existing entries the new blank one is at the bottom, below the fold,
+  // so the sheet scrolls to it once on open.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToNew = useRef(false);
 
   // A fresh copy each time it opens, so Cancel really discards. Keyed on the
   // pet's id, not the object: a background refresh hands over a new Pet object
@@ -66,6 +70,7 @@ export function PetCareSheet({ pet, kind, visible, startWithNew, onClose }: PetC
     const meds = pet.medications ?? [];
     setFeedings(startWithNew && kind === 'feeding' ? [...feeds, blankFeeding()] : feeds);
     setMedications(startWithNew && kind === 'medications' ? [...meds, blankMedication()] : meds);
+    scrollToNew.current = Boolean(startWithNew) && (kind === 'feeding' ? feeds : meds).length > 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, pet?.id, kind, startWithNew]);
 
@@ -95,7 +100,15 @@ export function PetCareSheet({ pet, kind, visible, startWithNew, onClose }: PetC
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/50">
         <View className="bg-cream-50 rounded-t-3xl p-6 max-h-[85%] w-full self-center" style={{ maxWidth: 520 }}>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => {
+              if (!scrollToNew.current) return;
+              scrollToNew.current = false;
+              scrollRef.current?.scrollToEnd({ animated: true });
+            }}
+          >
             <View className="flex-row justify-between items-center mb-2">
               <Text className="text-xl font-bold text-brown-800 flex-1">{title}</Text>
               <Pressable
