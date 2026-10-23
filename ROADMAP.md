@@ -216,6 +216,61 @@ pay; independent sitters pay as a business; friends and family never pay.
   paid accounts, monthly recurring revenue, usage, and test accounts kept out of every count.
 - **Email updates switch** (0049): turns off the optional emails only.
 
+### [ ] Rescue Profiles — PLANNED 2026-10-23, not started
+Tim's idea. Rescue groups and their foster volunteers build full Pawstructions profiles for
+adoptable pets (medical, medications, temperament, routine, photos). When a pet is adopted the
+whole profile transfers to the new owner, who arrives already set up. A growth channel, not a
+revenue line: every adoption is a new owner with a complete pet on day one.
+
+**Decided with Tim:**
+- **Name: "Rescue Profiles".** Never "Adopt-A-Pet", which is an existing adoption site's name
+  (Adopt-a-Pet.com).
+- **Rescues get full access, free, permanently.** No paid upgrades inside a rescue account. No
+  share of revenue goes to the rescue (the 20% donation idea was dropped 2026-10-23), which
+  also avoids the state charity-advertising rules a revenue share would have triggered.
+- **Adopters become ordinary owners** on the normal pricing model: free, 2 trips a year with
+  live sitter features, Plus if they want more. The rescue's free access does not follow the pet.
+- **Every account gets a "Browse adoptable pets" link**, to a public page.
+
+**How it fits what exists:**
+- **A rescue is a household with a rescue flag** (`households.kind = 'rescue'`). Volunteers and
+  fosters join through the household invites that already exist. The flag grants Plus for that
+  household the same way `crown_until` grants complimentary Plus today, so every Plus-gated
+  feature (unlimited trips, AI cheat sheets, no watermark) just works. A foster's own personal
+  household is not upgraded.
+- **Approval:** a rescue signs up, then waits for Tim. New **Rescues** tab on Admin: approve or
+  decline, with the organization's name, website and EIN for a nonprofit check. Until approved
+  it behaves like a normal free household and appears nowhere public.
+- **Separate experience, like sitters:** an approved rescue gets its own home screen (adoptable
+  pets, fosters, recent adoptions). Rescue features never appear in normal accounts.
+- **Adoptable pets** get a status (`adoptable` / `adopted`) and per-field "show publicly"
+  choices. Public by default: name, photos, age, breed, sex, size, temperament, good with kids
+  / dogs / cats. Never public: medical notes, medications, vet, microchip, foster's details.
+- **Transfer reuses "move pet to another household".** The rescue enters the adopter's email,
+  the adopter gets a branded email (notify), signs up or signs in, accepts, and the full profile
+  moves to their household, medical history included. Tagged at signup as
+  `signup_source = 'rescue'` plus the rescue's id, so Admin can count adoptions per rescue. The
+  rescue keeps a read-only "adopted" record (name, photo, date, adopter's first name) without the
+  live profile.
+- **Public browse page:** `pawstructions.com/adopt`, one page per approved rescue
+  (`/adopt/<rescue>`) and one per pet. Read-only, signed-out friendly, shows only the public
+  fields, links out to the rescue's own application process (Pawstructions does not run
+  adoptions). Also good for search traffic. The link sits in Settings and on Home for everyone.
+
+**Build order:**
+1. **Before any code:** talk to two or three rescues. Confirm they would use it, what fields
+   their adoption listings need, and how they handle applications today.
+2. Rescue households, the rescue flag (grants Plus), sign-up and Admin approval.
+3. Adoptable status, public-field choices, and the rescue home screen.
+4. Transfer to the adopter, with the rescue tag on the signup.
+5. Public `/adopt` pages and the "Browse adoptable pets" link on every account.
+
+Steps 2 to 4 are enough to pilot with one rescue; the public page can follow.
+
+**Open questions:** whether a rescue's fosters should be able to invite friends-and-family
+sitters (they can today through the normal flow, free); whether adopted pets should keep a
+"Adopted from <rescue>" line on their profile (nice touch, rescue's choice).
+
 ### [x] ~~Crown (Pro tier) + system-wide AI~~ — SUPERSEDED by the pricing model above
 Paid tier is named **Crown**; members are "Crown members". Annual fee, disclosed as covering
 the cost of the AI features.
