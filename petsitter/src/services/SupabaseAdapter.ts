@@ -1029,7 +1029,7 @@ export class SupabaseAdapter implements DataService {
         return Promise.all(
           current.map(async (guide) => {
             const guidePets = pets.filter((pet) => guide.pet_ids?.includes(pet.id));
-            const generated = buildGeneratedTasks(guide.id, guidePets);
+            const generated = buildGeneratedTasks(guide.id, guidePets, guide.daily_routine?.hidden_task_keys);
             const custom = (guide.daily_routine?.tasks ?? []).filter((t) => t.is_custom);
             const completions = await this.getTaskCompletions(guide.id, date);
             const done = new Set(completions.map((c) => c.task_id));

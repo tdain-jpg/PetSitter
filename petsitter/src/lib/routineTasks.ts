@@ -103,7 +103,11 @@ export function formatTaskTime(raw: string | undefined | null): string {
  * 'feeding-<petId>-...') would repeat across guides covering the same pet (or
  * duplicated guides), colliding in the checklist history.
  */
-export function buildGeneratedTasks(guideId: string, guidePets: Pet[]): RoutineTask[] {
+export function buildGeneratedTasks(
+  guideId: string,
+  guidePets: Pet[],
+  hiddenKeys: string[] = []
+): RoutineTask[] {
 
     const tasks: RoutineTask[] = [];
     let order = 0;
@@ -220,7 +224,19 @@ export function buildGeneratedTasks(guideId: string, guidePets: Pet[]): RoutineT
       order: order++,
     });
 
-    return tasks;
+    // General tasks the owner removed (DailyRoutine.hidden_task_keys). Feeding
+    // and medication are never hidden this way: they are changed on the pet,
+    // so a dose cannot quietly vanish from one guide while the pet still has it.
+    const hidden = new Set(hiddenKeys);
+    return hidden.size === 0
+      ? tasks
+      : tasks.filter((t) => !t.id.startsWith('gd-') || !hidden.has(generalTaskKey(guideId, t.id)));
+}
+
+/** 'gd-<guide>-walk-morning' -> 'walk-morning'; '' for any other task. */
+export function generalTaskKey(guideId: string, taskId: string): string {
+  const prefix = `gd-${guideId}-`;
+  return taskId.startsWith(prefix) ? taskId.slice(prefix.length) : '';
 }
 
 /** Generated + custom, in the order both screens display them. */

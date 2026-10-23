@@ -451,6 +451,12 @@ export interface DailyRoutine {
   id: string;
   guide_id: string;
   tasks: RoutineTask[];
+  /**
+   * General tasks the owner removed from this routine, by key ('walk-morning',
+   * 'walk-evening', 'litter-morning', 'water-morning'). Those tasks are
+   * generated, not stored, so removing one means remembering not to build it.
+   */
+  hidden_task_keys?: string[];
 }
 
 export interface RoutineTask {

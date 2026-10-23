@@ -8,6 +8,7 @@ import { todayLocal } from '../lib/dates';
 import { displayablePhotoUrl } from '../lib/petPhotos';
 import { Button, SectionHeader, ScreenContainer, Icon, speciesIconName } from '../components';
 import { PetBioCard } from '../components/PetBioCard';
+import { PetCareSheet, type PetCareKind } from '../components/PetCareSheet';
 import { useData } from '../contexts';
 import { useResolvedPet } from '../hooks';
 import { COLORS } from '../constants';
@@ -102,6 +103,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
   // Destination list expanded — only ever used when there's more than one
   // household to move to; a single destination moves straight away.
   const [choosingTarget, setChoosingTarget] = useState(false);
+  // Feeding and medications open in their own sheet, so an owner can add a
+  // medication without finding it inside Edit Pet (feedback, 2026-10-23).
+  const [careSheet, setCareSheet] = useState<{ kind: PetCareKind; startWithNew: boolean } | null>(null);
 
 
   const handleEdit = () => {
@@ -597,9 +601,30 @@ export function PetDetailScreen({ navigation, route }: Props) {
             </SectionHeader>
           )}
 
-          {/* Feeding Schedule */}
-          {pet.feeding_schedule.length > 0 && (
-            <SectionHeader title="Feeding Schedule" icon="🍽️">
+          {/* Feeding Schedule. Always shown to the owner, so there is a place
+              to add one; a sitter sees it only when it says something. */}
+          {(canEdit || pet.feeding_schedule.length > 0) && (
+            <SectionHeader
+              title="Feeding Schedule"
+              icon="🍽️"
+              rightAction={
+                canEdit && pet.feeding_schedule.length > 0
+                  ? { label: 'Edit', onPress: () => setCareSheet({ kind: 'feeding', startWithNew: false }) }
+                  : undefined
+              }
+            >
+              {pet.feeding_schedule.length === 0 ? (
+                <View className="items-start">
+                  <Text className="text-tan-600 mb-3">
+                    No feedings yet. Each one becomes a task on {pet.name}&apos;s daily routine.
+                  </Text>
+                  <Button
+                    title="+ Add feeding"
+                    onPress={() => setCareSheet({ kind: 'feeding', startWithNew: true })}
+                    variant="outline"
+                  />
+                </View>
+              ) : null}
               {pet.feeding_schedule.map((schedule, index) => (
                 <View
                   key={schedule.id}
@@ -622,9 +647,29 @@ export function PetDetailScreen({ navigation, route }: Props) {
             </SectionHeader>
           )}
 
-          {/* Medications */}
-          {pet.medications.length > 0 && (
-            <SectionHeader title="Medications" icon="💊">
+          {/* Medications. Same rule as feeding: always there for the owner. */}
+          {(canEdit || pet.medications.length > 0) && (
+            <SectionHeader
+              title="Medications"
+              icon="💊"
+              rightAction={
+                canEdit && pet.medications.length > 0
+                  ? { label: 'Edit', onPress: () => setCareSheet({ kind: 'medications', startWithNew: false }) }
+                  : undefined
+              }
+            >
+              {pet.medications.length === 0 ? (
+                <View className="items-start">
+                  <Text className="text-tan-600 mb-3">
+                    None added. Each dose becomes a task on {pet.name}&apos;s daily routine.
+                  </Text>
+                  <Button
+                    title="+ Add medication"
+                    onPress={() => setCareSheet({ kind: 'medications', startWithNew: true })}
+                    variant="outline"
+                  />
+                </View>
+              ) : null}
               {pet.medications.map((med, index) => (
                 <View
                   key={med.id}
@@ -807,6 +852,16 @@ export function PetDetailScreen({ navigation, route }: Props) {
           )}
         </ScreenContainer>
       </ScrollView>
+
+      {canEdit ? (
+        <PetCareSheet
+          pet={pet}
+          kind={careSheet?.kind ?? 'medications'}
+          startWithNew={careSheet?.startWithNew}
+          visible={careSheet !== null}
+          onClose={() => setCareSheet(null)}
+        />
+      ) : null}
     </View>
   );
 }

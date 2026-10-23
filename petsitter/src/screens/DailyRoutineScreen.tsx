@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, Select, ScreenContainer, SwitchRow, TimeField } from '../components';
+import { PetCareSheet, type PetCareKind } from '../components/PetCareSheet';
 import { useAuth, useData } from '../contexts';
 import { useGuideWithPets } from '../hooks';
 import { parseLocalDate, toLocalDateKey } from '../lib/dates';
@@ -19,7 +20,7 @@ import { showAlert } from '../lib/showAlert';
 import { showConfirm } from '../lib/dialogs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/types';
-import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks, formatTaskTime } from '../lib/routineTasks';
+import { TIME_BLOCKS, buildGeneratedTasks, sortRoutineTasks, formatTaskTime, generalTaskKey } from '../lib/routineTasks';
 import type { Guide, Pet, RoutineTask, TaskCompletion, TimeBlock, TaskCategory } from '../types';
 import { friendlyError } from '../lib/errors';
 import { dataService } from '../services';
@@ -121,10 +122,17 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
   // the identical list from the identical inputs. Two copies would drift, and a
   // drifted routine means a sitter is shown a different day than the owner
   // wrote.
+  const hiddenKeys = guide?.daily_routine?.hidden_task_keys ?? [];
   const generatedTasks = useMemo(
-    () => buildGeneratedTasks(guideId, guidePets),
-    [guidePets, guideId]
+    () => buildGeneratedTasks(guideId, guidePets, hiddenKeys),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [guidePets, guideId, hiddenKeys.join('|')]
   );
+
+  // Feeding and medication tasks are generated from the pet, so editing one
+  // opens that pet's feeding or medication sheet (feedback, 2026-10-23: "easily
+  // edit a routine and not just add a task").
+  const [careSheet, setCareSheet] = useState<{ pet: Pet; kind: PetCareKind } | null>(null);
 
   // Combine auto-generated and custom tasks
   const allTasks = useMemo(
@@ -364,6 +372,40 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
 
     const updatedTasks = customTasks.filter((t) => t.id !== taskId);
     await saveCustomTasks(updatedTasks);
+  };
+
+  /**
+   * Walks, litter and water are generated for every guide with a dog or a cat.
+   * Not everyone walks their dog twice a day, so these can be removed; the key
+   * is remembered on the guide so they are not built again.
+   */
+  const saveHiddenKeys = async (keys: string[]) => {
+    if (!guide) return;
+    const dailyRoutine = guide.daily_routine || { id: guideId, guide_id: guideId, tasks: customTasks };
+    try {
+      await updateGuide(guideId, { daily_routine: { ...dailyRoutine, hidden_task_keys: keys } });
+    } catch (err: any) {
+      showAlert('Error', friendlyError(err, "Couldn't update the routine. Please try again."));
+    }
+  };
+
+  const handleRemoveGeneralTask = async (task: RoutineTask) => {
+    const key = generalTaskKey(guideId, task.id);
+    if (!key) return;
+    const confirmed = await showConfirm({
+      title: 'Remove Task',
+      message: `Remove "${task.title}" from this routine? You can add it back at the bottom of the list.`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    await saveHiddenKeys([...hiddenKeys, key]);
+  };
+
+  const handleEditGeneratedTask = (task: RoutineTask) => {
+    const pet = guidePets.find((p) => p.id === task.pet_id);
+    if (!pet) return;
+    setCareSheet({ pet, kind: task.category === 'medication' ? 'medications' : 'feeding' });
   };
 
   // Move task up or down within its time block
@@ -630,12 +672,51 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                         </Pressable>
                       </View>
                     )}
+
+                    {/* Generated tasks, owner only. Feeding and medication are
+                        edited on the pet; walks, litter and water can be removed. */}
+                    {!task.is_custom && canEdit && (pet || generalTaskKey(guideId, task.id)) ? (
+                      <View className="flex-row justify-end gap-2 mt-1 px-2">
+                        {pet && (task.category === 'feeding' || task.category === 'medication') ? (
+                          <Pressable
+                            onPress={() => handleEditGeneratedTask(task)}
+                            style={{ minHeight: 44, justifyContent: 'center' }}
+                            className="bg-secondary-100 px-3 rounded"
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit ${pet.name}'s ${task.category === 'medication' ? 'medications' : 'feeding'}`}
+                          >
+                            <Text className="text-secondary-600 text-xs">Edit</Text>
+                          </Pressable>
+                        ) : null}
+                        {generalTaskKey(guideId, task.id) ? (
+                          <Pressable
+                            onPress={() => handleRemoveGeneralTask(task)}
+                            style={{ minHeight: 44, justifyContent: 'center' }}
+                            className="bg-accent-100 px-3 rounded"
+                            accessibilityRole="button"
+                            accessibilityLabel={`Remove ${task.title}`}
+                          >
+                            <Text className="text-accent-600 text-xs">Remove</Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
             </Card>
           );
         })}
+
+        {canEdit && hiddenKeys.length > 0 ? (
+          <View className="items-center mb-4">
+            <Button
+              title={`Add back ${hiddenKeys.length} removed ${hiddenKeys.length === 1 ? 'task' : 'tasks'}`}
+              onPress={() => saveHiddenKeys([])}
+              variant="outline"
+            />
+          </View>
+        ) : null}
 
         {allTasks.length === 0 && (
           <Card className="items-center py-8">
@@ -779,6 +860,15 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
           </View>
         </View>
       </Modal>
+
+      {canEdit ? (
+        <PetCareSheet
+          pet={careSheet?.pet ?? null}
+          kind={careSheet?.kind ?? 'feeding'}
+          visible={careSheet !== null}
+          onClose={() => setCareSheet(null)}
+        />
+      ) : null}
     </View>
   );
 }
