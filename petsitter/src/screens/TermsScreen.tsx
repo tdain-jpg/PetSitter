@@ -84,8 +84,8 @@ export function TermsScreen(_props: TermsScreenProps) {
           Use Pawstructions for pets in your care, and for households you belong to.
         </TrustBullet>
         <TrustBullet>
-          Do not enter someone else’s personal information: a sitter’s phone number, a
-          neighbor’s address: without their agreement.
+          Do not enter someone else’s personal information, such as a sitter’s phone number or a
+          neighbor’s address, without their agreement.
         </TrustBullet>
         <TrustBullet>
           Do not use Pawstructions for anything unlawful, or to store material you have no right
@@ -136,7 +136,7 @@ export function TermsScreen(_props: TermsScreenProps) {
         <TrustText>
           Pawstructions is provided as it is, without warranties of any kind. We work hard to
           keep it running, but we do not promise it will always be available, always error-free,
-          or that a guide will load at the exact moment a sitter needs it: networks and phones
+          or that a guide will load at the exact moment a sitter needs it, networks and phones
           being what they are.
         </TrustText>
         <TrustText>

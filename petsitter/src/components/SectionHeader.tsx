@@ -11,6 +11,8 @@ interface SectionHeaderProps {
   rightAction?: {
     label: string;
     onPress: () => void;
+    /** Spoken name when the visible label alone is ambiguous ("Edit"). */
+    accessibilityLabel?: string;
   };
 }
 
@@ -52,7 +54,7 @@ export function SectionHeader({
           <Pressable
             onPress={rightAction.onPress}
             accessibilityRole="button"
-            accessibilityLabel={rightAction.label}
+            accessibilityLabel={rightAction.accessibilityLabel ?? rightAction.label}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={{ minHeight: 44 }}
             className="bg-primary-50 px-3 rounded mr-4 justify-center"

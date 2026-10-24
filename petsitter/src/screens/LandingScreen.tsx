@@ -40,7 +40,7 @@ const features = [
     // Sits directly after Care Guides because a cheat sheet is generated from a guide,
     // and because this is the only paid feature — at the end of the list a prospect
     // scrolls past the one thing they would be asked to pay for.
-    icon: '👑',
+    icon: '🖨️',
     title: 'Printable Cheat Sheet',
     description: 'One page for the fridge or counter, written by AI from your guide, so your sitter has the essentials even with no internet. Every guide gets one free with a PREVIEW watermark; Plus removes it and lets you rewrite sheets any time.',
     color: COLORS.warm,
@@ -93,6 +93,7 @@ const features = [
 // your refund policy is not a footer anyone trusts.
 const FOOTER_LINKS = [
   { route: 'About', label: 'About Us' },
+  { route: 'FAQ', label: 'Q&A' },
   { route: 'Privacy', label: 'Privacy' },
   { route: 'Terms', label: 'Terms' },
   { route: 'Refund', label: 'Refunds' },

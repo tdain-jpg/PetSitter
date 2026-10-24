@@ -564,6 +564,7 @@ export function DailyRoutineScreen({ navigation, route }: Props) {
                       accessibilityRole="checkbox"
                       accessibilityLabel={task.title}
                       accessibilityState={{ checked: completed }}
+                      aria-checked={completed}
                       className={`flex-row items-start p-3 rounded-lg border ${
                         completed ? 'bg-primary-50 border-primary-200' : 'bg-cream-50 border-tan-200'
                       }`}

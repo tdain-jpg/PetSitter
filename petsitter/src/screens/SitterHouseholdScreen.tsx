@@ -95,7 +95,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
             </View>
           </ScreenContainer>
         </View>
-        <ScrollView className="flex-1">
+        <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
           <ScreenContainer variant="content">
             <Card className="bg-warm-50 border border-warm-300 p-4">
               <Text className="text-brown-800 mb-2">{loadError}</Text>
@@ -126,7 +126,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
           </View>
         </ScreenContainer>
       </View>
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         <ScreenContainer variant="content">
           {/* First card on the screen, above the pets, because the moment you
               need it is the moment something is wrong. QA's sitter journey:
@@ -184,7 +184,7 @@ export function SitterHouseholdScreen({ navigation, route }: Props) {
                     <Text className="font-medium text-brown-800">{guide.title}</Text>
                     {guide.start_date && guide.end_date && (
                       <Text className="text-sm text-tan-500 mt-1">
-                        {formatDate(guide.start_date)}, {formatDate(guide.end_date)}
+                        {formatDate(guide.start_date)} to {formatDate(guide.end_date)}
                       </Text>
                     )}
                   </Card>

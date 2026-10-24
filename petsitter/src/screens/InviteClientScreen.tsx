@@ -10,6 +10,7 @@ import { safeGoBack } from '../lib/goBack';
 import { isSitterClientLimitError, sitterLimitMessage } from '../lib/sitterLimit';
 import { COLORS } from '../constants';
 import type { InviteClientScreenProps } from '../navigation/types';
+import type { SitterPlan } from '../types';
 
 /**
  * A sitter asks an owner to connect.
@@ -27,7 +28,7 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
-  const [plan, setPlan] = useState<{ activeClients: number; freeLimit: number; subscribed: boolean } | null>(null);
+  const [plan, setPlan] = useState<SitterPlan | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,9 +63,9 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
     } catch (error: any) {
       if (isSitterClientLimitError(error)) {
         const seePlans = await showConfirm({
-          title: 'Start your free month',
-          message: sitterLimitMessage(error),
-          confirmLabel: 'Start free month',
+          title: trialEligible ? 'Start your free month' : 'Inviting clients is part of Pro',
+          message: sitterLimitMessage(error, trialEligible),
+          confirmLabel: trialEligible ? 'Start free month' : 'See Pro plans',
           cancelLabel: 'Not now',
         });
         if (seePlans) navigation.navigate('SitterPlans');
@@ -89,6 +90,10 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
   // Since 0045 every client a sitter brings in needs Pro, which starts with a
   // free month. Said before they type, not only after the server refuses.
   const needsPro = plan !== null && !plan.subscribed;
+  // Same test as Sitter Plans: only a sitter who has never subscribed gets the
+  // free month. Promising it here and then not offering it there read as a bait
+  // and switch (QA, 2026-10-24).
+  const trialEligible = plan !== null && plan.status === 'inactive';
 
   return (
     <View className="flex-1 bg-cream-200">
@@ -96,7 +101,11 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
 
       <View className="px-4 pt-12 pb-4 bg-cream-50 border-b border-tan-200">
         <ScreenContainer variant="content">
-          <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+          {/* In a row, like every other screen: on its own a Button stretches
+              to the full width of the column. */}
+          <View className="flex-row">
+            <Button title="← Back" onPress={() => safeGoBack(navigation)} variant="outline" />
+          </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Invite a client</Text>
             <Text className="text-tan-500">Ask an owner to connect with you</Text>
@@ -110,10 +119,14 @@ export function InviteClientScreen({ navigation }: InviteClientScreenProps) {
             <Card className="mb-4 bg-warm-50 border border-warm-300">
               <Text className="text-brown-800 font-semibold">Inviting your own clients is part of Pro</Text>
               <Text className="text-brown-700 leading-6 mt-1 mb-3">
-                Your first month is free: you enter a card, cancel anytime in the month, and are not
-                charged until it ends. Families who invite you themselves are always free.
+                {trialEligible
+                  ? 'Your first month is free: you enter a card, cancel anytime in the month, and are not charged until it ends. Families who invite you themselves are always free.'
+                  : 'Pro is $9 a month or $79 a year, and you can cancel anytime. Families who invite you themselves are always free.'}
               </Text>
-              <Button title="Start free month" onPress={() => navigation.navigate('SitterPlans')} />
+              <Button
+                title={trialEligible ? 'Start free month' : 'See Pro plans'}
+                onPress={() => navigation.navigate('SitterPlans')}
+              />
             </Card>
           ) : null}
           <Card className="mb-4">

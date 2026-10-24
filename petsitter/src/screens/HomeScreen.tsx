@@ -736,11 +736,15 @@ export function HomeScreen({ navigation }: Props) {
                 numberOfLines={1}
                 ellipsizeMode="tail"
                 style={{
+                  // At 11px italic the tagline is ~10px wider than the 142px
+                  // wordmark, so capping it at the wordmark's width always
+                  // clipped it ("Kingd…"). The cap is the tagline's own width:
+                  // it still stops a long greeting from running into it.
                   fontSize: 11,
                   color: COLORS.primary,
                   fontStyle: 'italic',
                   marginTop: 4,
-                  maxWidth: 142,
+                  maxWidth: 170,
                 }}
               >
                 Where Pets Rule the Kingdom!

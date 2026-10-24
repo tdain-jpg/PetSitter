@@ -50,7 +50,7 @@ export function GuideCard({ guide, pets, onPress }: GuideCardProps) {
           {guide.emergency_contacts.length > 0 && (
             <View className="bg-primary-50 px-2 py-0.5 rounded-full">
               <Text className="text-primary-600 text-xs">
-                {guide.emergency_contacts.length} contacts
+                {guide.emergency_contacts.length === 1 ? '1 contact' : `${guide.emergency_contacts.length} contacts`}
               </Text>
             </View>
           )}

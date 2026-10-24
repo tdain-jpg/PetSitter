@@ -29,10 +29,23 @@ export function sitterLimitCounts(
   return { active: Number(match[1]), limit: Number(match[2]) };
 }
 
-/** The wording both accept handlers show. Kept here so they cannot drift. */
-export function sitterLimitMessage(_error?: unknown): string {
+/**
+ * The wording every limit dialog shows. Kept here so they cannot drift.
+ *
+ * `trialEligible` is whether this sitter can still get the free month (they
+ * have never subscribed). Promising it to someone who has already used it,
+ * then not offering it on Sitter Plans, read as a bait and switch (QA,
+ * 2026-10-24). When the caller does not know, the wording makes no promise.
+ */
+export function sitterLimitMessage(_error?: unknown, trialEligible?: boolean): string {
   // Since 0045 there are no free sitter-brought clients: inviting your own
-  // client needs Pro, which starts with a free month. Owners who invite YOU
-  // are always free, and the clients you already have are never affected.
-  return 'Bringing in your own clients is part of Pro. Your first month is free: you enter a card, cancel anytime in the month, and are not charged until it ends. Then $9 a month or $79 a year.\n\nFamilies who invite you themselves are always free, and nothing you already have is affected.';
+  // client needs Pro. Owners who invite YOU are always free, and the clients
+  // you already have are never affected.
+  const offer =
+    trialEligible === true
+      ? 'Your first month is free: you enter a card, cancel anytime in the month, and are not charged until it ends. Then $9 a month or $79 a year.'
+      : trialEligible === false
+        ? 'Pro is $9 a month or $79 a year, and you can cancel anytime.'
+        : 'Pro is $9 a month or $79 a year, and a sitter who has never had Pro gets the first month free.';
+  return `Bringing in your own clients is part of Pro. ${offer}\n\nFamilies who invite you themselves are always free, and nothing you already have is affected.`;
 }

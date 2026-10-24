@@ -25,7 +25,7 @@ const EXPLANATION = `Codes, passwords, and the spare-key location are protected 
 
 • Hidden by default for sitters: the shared view masks each sensitive value until the reader taps to reveal it.
 
-• Never sent to AI: when Crown AI writes a cheat sheet, it receives placeholders instead of your real values. The finished sheet is completed on your device, so no code, password, or key location ever reaches the AI provider.`;
+• Never sent to AI: when AI writes a cheat sheet, it receives placeholders instead of your real values. The finished sheet is completed on your device, so no code, password, or key location ever reaches the AI provider.`;
 
 export type SecurityNoteContext = 'entry' | 'ai' | 'shared';
 

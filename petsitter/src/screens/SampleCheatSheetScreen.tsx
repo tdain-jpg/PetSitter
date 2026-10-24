@@ -106,7 +106,7 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">👀 Sample Cheat Sheet</Text>
-            <Text className="text-tan-500">What Crown writes for your sitter</Text>
+            <Text className="text-tan-500">What Pawstructions writes for your sitter</Text>
           </View>
         </ScreenContainer>
       </View>
@@ -123,7 +123,7 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
             </Text>
             <Text className="text-brown-600 text-sm">
               A made-up household, so you can see the shape of a real sheet.
-              Crown writes yours from your own guide.
+              Yours is written from your own guide.
             </Text>
           </Card>
 
@@ -139,15 +139,15 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
           {hasCrown === false && (
             <Card className="mb-8">
               <Text className="text-brown-800 font-semibold mb-1">
-                👑 Pawstructions Crown
+                ✨ Pawstructions Plus
               </Text>
               <Text className="text-brown-600 text-sm mb-3">
-                $5 once for your whole household: not a subscription. Crown
-                writes a sheet like this from your own guide, with no PREVIEW
-                watermark on screen or in the PDF.
+                Every guide gets one free sheet marked PREVIEW. Plus ($3 a month or
+                $24 a year for your whole household) removes the watermark on screen
+                and in the PDF, and lets you rewrite sheets whenever you like.
               </Text>
               <Button
-                title="👑 Unlock Crown. $5"
+                title="✨ See Plus"
                 onPress={() => navigation.navigate('UnlockCrown')}
               />
             </Card>
@@ -155,10 +155,10 @@ export function SampleCheatSheetScreen({ navigation }: Props) {
           {hasCrown === true && (
             <Card className="mb-8">
               <Text className="text-brown-800 font-semibold mb-1">
-                👑 Crown is active
+                ✨ Plus is active
               </Text>
               <Text className="text-brown-600 text-sm">
-                Your household already has Crown. Open any guide and generate its
+                Your household already has Plus. Open any guide and generate its
                 cheat sheet: yours comes out with no PREVIEW watermark.
               </Text>
             </Card>

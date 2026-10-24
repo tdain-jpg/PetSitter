@@ -131,7 +131,9 @@ export function PetBioCard({ pet, canEdit }: { pet: Pet; canEdit: boolean }) {
                 key={t.key}
                 onPress={() => setTone(t.key)}
                 accessibilityRole="button"
+                accessibilityLabel={`${t.label} tone`}
                 accessibilityState={{ selected: tone === t.key }}
+                aria-selected={tone === t.key}
                 style={{ minHeight: 40, justifyContent: 'center' }}
                 className={pill(tone === t.key)}
               >

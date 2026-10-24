@@ -31,6 +31,7 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Settings'>;
 // otherwise have to sign out to read their own refund policy.
 const POLICY_LINKS = [
   { route: 'About', label: 'About Us', description: 'Who builds Pawstructions, and why' },
+  { route: 'FAQ', label: 'Questions & Answers', description: 'What it costs, and how sharing works' },
   { route: 'Privacy', label: 'Privacy Policy', description: 'What we store, and what never reaches the AI' },
   { route: 'Terms', label: 'Terms of Service', description: 'What we promise, and what we ask of you' },
   { route: 'Refund', label: 'Refund Policy', description: '14 days, no questions asked' },
@@ -269,7 +270,7 @@ export function SettingsScreen({ navigation }: Props) {
             <>
               <Text className="text-lg font-semibold text-brown-800 mb-1">✨ Pawstructions Plus</Text>
               <Text className="text-brown-600 text-sm mb-3">
-                Plus is for a household&apos;s own pets, so it is chosen by the owners you sit for:
+                Plus is for a household&apos;s own pets, so it is chosen by the owners you sit for,
                 not by you. Their guides are already yours to read, free.
               </Text>
             </>
@@ -364,7 +365,11 @@ export function SettingsScreen({ navigation }: Props) {
 
           <SwitchRow
             label="Email updates"
-            description="When your sitter opens a guide or checks in, and trip reminders. Invitations and billing emails always arrive."
+            description={
+              isSitterWithNoPets
+                ? 'Occasional notes from Pawstructions. Invitations, trip requests and billing emails always arrive.'
+                : 'When your sitter opens a guide or checks in, and trip reminders. Invitations and billing emails always arrive.'
+            }
             value={settings?.notifications_enabled ?? true}
             onValueChange={(v) => handleToggleSetting('notifications_enabled', v)}
           />

@@ -286,7 +286,7 @@ export function CheatSheetView({
           accessibilityLabel="Pawstructions"
         />
         <Text className="text-tan-400 text-xs mt-2" style={{ letterSpacing: 2 }}>
-          👑 CROWN AI CHEAT SHEET
+          AI CHEAT SHEET
         </Text>
         {generatedAt && (
           <Text className="text-tan-400 text-xs mt-1">
@@ -326,7 +326,7 @@ export function CheatSheetView({
               saying "your whole household". */}
           <Text className="text-brown-600 text-sm">
             {isOwner
-              ? 'This is your own sheet, written from your guide. Crown clears the watermark here and in the PDF, and lets you rewrite the sheet whenever your details change.'
+              ? 'This is your own sheet, written from your guide. Plus clears the watermark here and in the PDF, and lets you rewrite the sheet whenever your details change.'
               : "The content underneath is real and complete. Nothing has been left out. The watermark is the owner's to clear."}
           </Text>
           {onUnlockPress ? (
@@ -336,7 +336,7 @@ export function CheatSheetView({
                   the last thing read before the decision. Matches
                   AICheatSheetScreen's Crown CTA. */}
               <Button
-                title="👑 Unlock Crown ($5)"
+                title="✨ See Plus"
                 onPress={onUnlockPress}
                 variant="outline"
               />

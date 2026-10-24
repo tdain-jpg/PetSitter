@@ -691,7 +691,7 @@ export function GuideFormScreen({ navigation, route }: Props) {
 
               <Input
                 label="Guide Title *"
-                placeholder="e.g., Weekend Trip - January 2025"
+                placeholder="e.g., Weekend away in March"
                 value={formData.title}
                 onChangeText={(v) => updateField('title', v)}
                 error={errors.title}

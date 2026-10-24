@@ -968,7 +968,8 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
                   <View className="flex-1">
                     <Text className="font-medium text-brown-800">{pet.name}</Text>
                     <Text className="text-tan-500 text-sm">
-                      {pet.feeding_schedule.length} feedings, {pet.medications.length} medications
+                      {pet.feeding_schedule.length === 1 ? '1 feeding' : `${pet.feeding_schedule.length} feedings`},{' '}
+                      {pet.medications.length === 1 ? '1 medication' : `${pet.medications.length} medications`}
                     </Text>
                   </View>
                 </Pressable>
@@ -1030,9 +1031,9 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
           <Text className="text-sm font-medium text-tan-500 mb-2">EXPORT SUMMARY</Text>
           <Text className="text-tan-600">
             {[
-              sections.emergencyContacts && guide.emergency_contacts.length > 0 && `${guide.emergency_contacts.length} contacts`,
+              sections.emergencyContacts && guide.emergency_contacts.length > 0 && (guide.emergency_contacts.length === 1 ? '1 contact' : `${guide.emergency_contacts.length} contacts`),
               sections.homeInfo && 'Home info',
-              sections.pets && selectedPetIds.length > 0 && `${selectedPetIds.length} pets`,
+              sections.pets && selectedPetIds.length > 0 && (selectedPetIds.length === 1 ? '1 pet' : `${selectedPetIds.length} pets`),
               sections.travelItinerary && guide.travel_itinerary && 'Travel itinerary',
               sections.aiCheatSheet && cheatSheetContent && 'AI cheat sheet',
               sections.additionalNotes && guide.additional_notes && 'Notes',

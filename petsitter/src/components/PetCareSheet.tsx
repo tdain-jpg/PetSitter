@@ -80,10 +80,13 @@ export function PetCareSheet({ pet, kind, visible, startWithNew, onClose }: PetC
     setSaving(true);
     try {
       // An untouched blank row is dropped rather than saved: it would become
-      // "Give Biscuit medication: :" on the sitter's checklist.
+      // "Give Biscuit medication: :" on the sitter's checklist. A feeding is
+      // judged on food, amount and notes only, because a new row arrives with
+      // its time already filled in (08:00), so the time says nothing about
+      // whether anyone used it (QA, 2026-10-24).
       const updates =
         kind === 'feeding'
-          ? { feeding_schedule: feedings.filter((f) => f.time?.trim() || f.food_type.trim() || f.amount.trim()) }
+          ? { feeding_schedule: feedings.filter((f) => f.food_type.trim() || f.amount.trim() || f.notes?.trim()) }
           : { medications: medications.filter((m) => m.name.trim()) };
       await updatePet(pet.id, updates);
       onClose();

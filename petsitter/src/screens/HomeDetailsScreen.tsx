@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { safeGoBack } from '../lib/goBack';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Card, Input, ScreenContainer, ScreenHeader, SecurityNote } from '../components';
@@ -137,6 +138,38 @@ export function HomeDetailsScreen({ navigation }: Props) {
     };
   }, [primaryHouseholdId]);
 
+  /**
+   * Leaving with unsaved typing asks first (QA, 2026-10-24: a Trash Day typed
+   * and then Back was silently lost). What was last loaded or saved is kept as
+   * a snapshot; anything different from it counts as unsaved.
+   */
+  const snapshot = JSON.stringify({ owners, contacts, homeInfo });
+  const snapshotRef = useRef(snapshot);
+  snapshotRef.current = snapshot;
+  const savedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loading && savedRef.current === null) savedRef.current = snapshot;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (e) => {
+        if (savedRef.current === null || snapshotRef.current === savedRef.current) return;
+        e.preventDefault();
+        void showConfirm({
+          title: 'Discard changes?',
+          message: "You have changes to your home details that haven't been saved.",
+          confirmLabel: 'Discard',
+          destructive: true,
+        }).then((discard) => {
+          if (!discard) return;
+          savedRef.current = snapshotRef.current;
+          navigation.dispatch(e.data.action);
+        });
+      }),
+    [navigation]
+  );
+
   const householdPets = useMemo(
     () => pets.filter((p) => p.household_id === primaryHouseholdId),
     [pets, primaryHouseholdId]
@@ -175,8 +208,11 @@ export function HomeDetailsScreen({ navigation }: Props) {
         emergency_contacts: cleanContacts,
         home_info: cleanInfo,
       });
+      savedRef.current = snapshotRef.current;
       await showAlert('Saved', 'New guides will start with these details.');
-      navigation.goBack();
+      // safeGoBack: after a hard reload there is no screen behind this one, and
+      // goBack() did nothing at all (QA, 2026-10-24).
+      safeGoBack(navigation);
     } catch (error) {
       showAlert("Couldn't save", friendlyError(error, 'Please try again.'));
     } finally {
@@ -211,7 +247,7 @@ export function HomeDetailsScreen({ navigation }: Props) {
                   <View key={i} className={i > 0 ? 'border-t border-tan-200 pt-3 mt-1' : ''}>
                     <Input
                       label="Name"
-                      placeholder="e.g., Tim Dain"
+                      placeholder="e.g., Alex Rivera"
                       value={o.name}
                       onChangeText={(v) => setOwner(i, { name: v })}
                       autoCapitalize="words"

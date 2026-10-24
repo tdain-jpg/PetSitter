@@ -159,12 +159,16 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
           </View>
           <View className="mt-4">
             <Text className="text-2xl font-bold text-brown-800">Sitter plans</Text>
-            <Text className="text-tan-500">Families who invite you are always free. Pro starts with a free month.</Text>
+            <Text className="text-tan-500">
+              {trialEligible
+                ? 'Families who invite you are always free. Pro starts with a free month.'
+                : 'Families who invite you are always free.'}
+            </Text>
           </View>
         </ScreenContainer>
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
         <ScreenContainer variant="content">
           {/* Where they stand today, before any pricing. A sitter with one
               client does not need to be sold anything, and telling them that
@@ -290,7 +294,9 @@ export function SitterPlansScreen({ navigation, route }: SitterPlansScreenProps)
                   disabled={busy !== null}
                 />
                 <Text className="text-tan-500 text-sm mt-3">
-                  Cancel anytime. Stripe emails you a reminder a week before a free month ends.
+                  {trialEligible
+                    ? 'Cancel anytime. Stripe emails you a reminder a week before your free month ends. '
+                    : 'Cancel anytime. '}
                   Have a promo code? Enter it at checkout on the monthly plan.
                 </Text>
               </Card>

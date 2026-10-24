@@ -328,7 +328,7 @@ export function SitterHomeScreen({ navigation }: Props) {
       ? pendingInvites.length === 1
         ? 'One invitation waiting'
         : `${pendingInvites.length} invitations waiting`
-      : 'No clients yet'
+      : 'Waiting for your first client'
     : clientCount === 1
       ? '1 household'
       : `${clientCount} households`;
@@ -358,7 +358,10 @@ export function SitterHomeScreen({ navigation }: Props) {
                 <Text className="text-2xl font-bold text-brown-800">My Clients</Text>
                 <Text className="text-tan-500">{subtitle}</Text>
               </View>
-              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+              {/* maxWidth and flexShrink are what make the wrap happen: without
+                  them this row sizes to its content and runs off a 375px phone
+                  instead of wrapping (QA, 2026-10-24). */}
+              <View className="flex-row flex-wrap" style={{ gap: 8, maxWidth: '100%', flexShrink: 1 }}>
                 <Button
                   title="✉️ Invite a client"
                   onPress={() => navigation.navigate('InviteClient')}
@@ -379,7 +382,7 @@ export function SitterHomeScreen({ navigation }: Props) {
           </View>
         </ScreenContainer>
       </View>
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 16 }}>
         <ScreenContainer variant="content" className="py-4">
           {/* sitter-welcome (contract C4). The sitter surface only ever offers
               that one journey — the founder checklist and the joiner tour are

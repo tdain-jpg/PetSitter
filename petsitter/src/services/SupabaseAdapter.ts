@@ -96,9 +96,14 @@ export class SupabaseAdapter implements DataService {
   async getPets(userId: string): Promise<Pet[]> {
     const householdIds = await this.memberHouseholdIds();
     const query = supabase.from('pets').select('*');
+    // A pet the user created only counts while it has no household. Once it
+    // belongs to one, membership decides: someone who LEFT a household (or a
+    // sitter who was once wrongly a member) kept seeing the pets they had
+    // created there, with Restore and Delete, in their own lists (QA,
+    // 2026-10-24).
     const scoped = householdIds.length
-      ? query.or(`user_id.eq.${userId},household_id.in.(${householdIds.join(',')})`)
-      : query.eq('user_id', userId);
+      ? query.or(`household_id.in.(${householdIds.join(',')}),and(user_id.eq.${userId},household_id.is.null)`)
+      : query.eq('user_id', userId).is('household_id', null);
     const { data, error } = await scoped.order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Pet[];
@@ -739,6 +744,9 @@ export class SupabaseAdapter implements DataService {
       .from('pets')
       .select('*')
       .eq('household_id', householdId)
+      // Live pets only: a client's memorialised pet was listed with the live
+      // ones on the sitter's view and fed Today's tasks (QA, 2026-10-24).
+      .eq('status', 'active')
       .order('created_at', { ascending: true });
     if (error) throw new Error(error.message);
     return (data ?? []) as Pet[];

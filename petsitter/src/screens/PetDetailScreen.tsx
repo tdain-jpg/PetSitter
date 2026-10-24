@@ -609,7 +609,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
               icon="🍽️"
               rightAction={
                 canEdit && pet.feeding_schedule.length > 0
-                  ? { label: 'Edit', onPress: () => setCareSheet({ kind: 'feeding', startWithNew: false }) }
+                  ? { label: 'Edit', accessibilityLabel: `Edit ${pet.name}'s feeding`, onPress: () => setCareSheet({ kind: 'feeding', startWithNew: false }) }
                   : undefined
               }
             >
@@ -632,9 +632,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
                     <Text className="text-tan-500">{schedule.amount}</Text>
                   </View>
                   <Text className="text-tan-600">{schedule.food_type}</Text>
-                  {schedule.notes && (
+                  {schedule.notes ? (
                     <Text className="text-tan-400 text-sm mt-1">{schedule.notes}</Text>
-                  )}
+                  ) : null}
                 </View>
               ))}
               {/* Always there for the owner, not only when empty: feedings and
@@ -658,7 +658,7 @@ export function PetDetailScreen({ navigation, route }: Props) {
               icon="💊"
               rightAction={
                 canEdit && pet.medications.length > 0
-                  ? { label: 'Edit', onPress: () => setCareSheet({ kind: 'medications', startWithNew: false }) }
+                  ? { label: 'Edit', accessibilityLabel: `Edit ${pet.name}'s medications`, onPress: () => setCareSheet({ kind: 'medications', startWithNew: false }) }
                   : undefined
               }
             >
@@ -689,9 +689,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
                   {med.with_food && (
                     <Text className="text-tan-400 text-sm">Give with food</Text>
                   )}
-                  {med.notes && (
+                  {med.notes ? (
                     <Text className="text-tan-400 text-sm mt-1">{med.notes}</Text>
-                  )}
+                  ) : null}
                 </View>
               ))}
               {canEdit ? (
@@ -749,12 +749,14 @@ export function PetDetailScreen({ navigation, route }: Props) {
           {pet.insurance && (
             <SectionHeader title="Insurance" icon="🛡️">
               <View className="gap-2">
-                {pet.insurance.provider && (
+                {/* Ternaries, not &&: an empty string here renders as a bare
+                    text node inside a View (console error on every load). */}
+                {pet.insurance.provider ? (
                   <InfoRow label="Provider" value={pet.insurance.provider} />
-                )}
-                {pet.insurance.policy_number && (
+                ) : null}
+                {pet.insurance.policy_number ? (
                   <InfoRow label="Policy #" value={pet.insurance.policy_number} />
-                )}
+                ) : null}
                 {pet.insurance.claims_phone && (
                   <PhoneRow
                     label="Claims"
@@ -791,9 +793,9 @@ export function PetDetailScreen({ navigation, route }: Props) {
                       }`}
                     >
                       <Text className="text-brown-800 font-medium">{symptom.name}</Text>
-                      {symptom.notes && (
+                      {symptom.notes ? (
                         <Text className="text-tan-500 text-sm mt-1">{symptom.notes}</Text>
-                      )}
+                      ) : null}
                     </View>
                   ))}
                 </>

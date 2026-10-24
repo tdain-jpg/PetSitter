@@ -72,8 +72,8 @@ export function AboutScreen(_props: AboutScreenProps) {
       <TrustSection heading="What Pawstructions is">
         <TrustText>
           Pawstructions is a web app for pet owners, at pawstructions.com. You enter your pets’
-          details: feeding, medication, vet, routines, the small habits nobody thinks to write
-          down: along with the practical facts about your home, and Pawstructions turns them
+          details (feeding, medication, vet, routines, the small habits nobody thinks to write
+          down) along with the practical facts about your home, and Pawstructions turns them
           into a care guide you can share.
         </TrustText>
         <TrustText>
@@ -87,24 +87,20 @@ export function AboutScreen(_props: AboutScreenProps) {
         <TrustText>
           Almost all of it is free: unlimited pets, unlimited guides, sharing, PDF export,
           checklists, and inviting the rest of your household so everyone works from the same
-          information. There are two paid things, one for owners and one for sitters.
+          information. Free households also get the live sitter features (a sitter with their own
+          account, the Today checklist, check-ins and photos) for 2 trips each calendar year. There
+          are two paid plans, one for owners and one for independent sitters.
         </TrustText>
         <TrustText>
-          Crown is a single $5 (USD) payment for one household, and it
-          unlocks AI-written cheat sheets: the one-page summary a sitter can keep on the fridge.
-          It is not a subscription. It does not renew, there is nothing to cancel, and buying it
-          once covers that household permanently. Every guide you write gets one free cheat sheet
-          before you decide, shown with a PREVIEW watermark. A duplicated guide is a new guide, so
-          it gets its own free sheet. That watermark marks the state of the feature, not the
-          quality of the content: the care details on a preview sheet are your own, and a sitter
-          can follow them exactly as written.
+          Plus is $3 (USD) a month or $24 a year for a whole household. It removes the 2-trip limit
+          and gives you unlimited AI cheat sheets (the one-page summary a sitter keeps on the
+          fridge) with no watermark. There is no free trial, because the free tier is the trial.
+          Every guide gets one free cheat sheet, marked PREVIEW, so you can see it first.
         </TrustText>
         <TrustText>
-          The second is for sitters, not owners. Anyone sitting for up to three households uses
-          Pawstructions free, permanently; beyond that it is $9 a month or $60 a year. It unlocks
-          no features. Every guide, routine and cheat sheet a sitter can see is already included
-          for free. It lifts the limit on how many clients they can take on. If you are a pet
-          owner, this will never apply to you.
+          Pro is for independent sitters who bring in their own clients. The first month is free,
+          then it is $9 a month or $79 a year. Friends and family who sit because an owner invited
+          them are always free. If you are a pet owner, Pro will never apply to you.
         </TrustText>
       </TrustSection>
 
@@ -112,11 +108,11 @@ export function AboutScreen(_props: AboutScreenProps) {
         <TrustText>
           Pawstructions is an independent product built and run by a small family team. There is
           no advertising, no analytics scripts following you around, and nobody buying your pets’
-          data: the software is paid for by people choosing to buy Crown and by sitters
-          subscribing, and that is the whole business model.
+          data. The software is paid for by Plus and Pro subscriptions, and that is the whole
+          business model.
         </TrustText>
         <TrustText>
-          For anything at all: a question, a bug, a refund, deleting your account: email
+          For anything at all, whether a question, a bug, a refund or deleting your account, email
           support@pawstructions.com and a person will read it.
         </TrustText>
       </TrustSection>
@@ -136,8 +132,8 @@ export function AboutScreen(_props: AboutScreenProps) {
           of them.
         </TrustBullet>
         <TrustBullet>
-          Your door codes and wifi password are yours. They are never sent to an AI provider -
-          see our privacy policy for exactly how that works.
+          Your door codes and wifi password are yours. They are never sent to an AI provider.
+          Our privacy policy explains exactly how that works.
         </TrustBullet>
         <TrustBullet>
           Your data should be easy to take with you. Settings has a one-tap export of everything.

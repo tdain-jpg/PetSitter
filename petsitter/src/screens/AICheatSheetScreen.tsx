@@ -388,7 +388,7 @@ export function AICheatSheetScreen({ navigation, route }: Props) {
             ) : null}
           </View>
           <View className="mt-4">
-            <Text className="text-2xl font-bold text-brown-800">🤖 AI Cheat Sheet</Text>
+            <Text className="text-2xl font-bold text-brown-800">🖨️ Printable Cheat Sheet</Text>
             <Text className="text-tan-500">{guide.title}</Text>
           </View>
         </ScreenContainer>
