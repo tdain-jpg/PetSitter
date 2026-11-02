@@ -97,6 +97,79 @@ const PRINT_SCRIPT = `
 </script>`;
 
 /**
+ * The phone version of the print script, for a document opened in its own tab.
+ *
+ * A bar at the top carries a real Print button, because phone browsers are the
+ * ones most likely to ignore a print() nobody tapped for, and a button the user
+ * taps always works. The bar is hidden from the printed page.
+ */
+const TAB_PRINT_BAR = `
+<div class="print-bar">
+  <button type="button" onclick="window.print()">Print or save as PDF</button>
+  <p>On a phone, choose Print, then use Share or Save to keep it as a PDF.</p>
+</div>
+<style>
+  .print-bar { text-align: center; padding: 12px 16px 16px; border-bottom: 1px solid #e6dcc6; margin-bottom: 16px; }
+  .print-bar button { font: 600 17px -apple-system, system-ui, sans-serif; background: #1E3A5F; color: #fff;
+    border: 0; border-radius: 10px; padding: 12px 20px; min-height: 44px; }
+  .print-bar p { font: 14px -apple-system, system-ui, sans-serif; color: #6b5d4a; margin: 8px 0 0; }
+  @media print { .print-bar { display: none !important; } }
+</style>`;
+
+const TAB_PRINT_SCRIPT = `
+<script>
+  (function () {
+    var go = function () { setTimeout(function () { try { window.print(); } catch (e) {} }, 400); };
+    if (document.readyState === 'complete') { go(); }
+    else { window.addEventListener('load', go); }
+  })();
+</script>`;
+
+/**
+ * Phones and tablets, and the installed app.
+ *
+ * Phone browsers ignore window.print() from inside an iframe, and the hidden
+ * frame below still reports "ready", so on a phone Export did nothing at all
+ * and showed no error (Tim, 2026-11-02, on his phone). Its fallback, opening a
+ * tab after a 4-second wait, is no longer inside the tap and is blocked as a
+ * popup.
+ */
+function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+  return coarse || (navigator.maxTouchPoints ?? 0) > 1;
+}
+
+/**
+ * Open the exported guide in its own tab, inside the user's tap, and let it
+ * print itself (with a button as backup). Must be called synchronously from the
+ * tap handler: any await before window.open turns it into a blocked popup.
+ *
+ * The tab is same-origin (a Blob made here), which the iframe path exists to
+ * avoid. Acceptable here because every value in the document passes through
+ * esc() in generateHTML, the only script in it is ours, and opener is cut so
+ * the page cannot reach back into the app's window.
+ */
+function openExportedGuideInTab(html: string) {
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  const tab = window.open(url, '_blank');
+  if (tab) {
+    try {
+      tab.opener = null;
+    } catch {
+      // Some browsers make opener read-only; the page has no code that uses it.
+    }
+    setTimeout(() => URL.revokeObjectURL(url), BLOB_HANDOFF_REVOKE_MS);
+  } else {
+    URL.revokeObjectURL(url);
+    showAlert(
+      'Popup Blocked',
+      'Your browser blocked the printable page. Allow popups for pawstructions.com, then tap Export again.'
+    );
+  }
+}
+
+/**
  * Print the exported guide on web without ever handing it a same-origin window.
  *
  * The HTML goes into a Blob, and the Blob URL is loaded in a hidden iframe whose
@@ -343,7 +416,10 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
   const selectAllPets = () => setSelectedPetIds(guidePets.map((p) => p.id));
   const deselectAllPets = () => setSelectedPetIds([]);
 
-  const generateHTML = ({ autoPrint = false }: { autoPrint?: boolean } = {}): string => {
+  const generateHTML = ({
+    autoPrint = false,
+    printMode = 'frame',
+  }: { autoPrint?: boolean; printMode?: 'frame' | 'tab' } = {}): string => {
     if (!guide) return '';
 
     // Every user/AI-supplied value MUST pass through esc(). On web this HTML is
@@ -693,6 +769,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
         </style>
       </head>
       <body>
+        ${autoPrint && printMode === 'tab' ? TAB_PRINT_BAR : ''}
         <div class="header">
           <h1>🐾 ${esc(guide.title)}</h1>
           ${guide.start_date || guide.end_date ? `
@@ -760,7 +837,7 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
             Scan, or visit pawstructions.com
           </div>
         </div>
-        ${autoPrint ? PRINT_SCRIPT : ''}
+        ${autoPrint ? (printMode === 'tab' ? TAB_PRINT_SCRIPT : PRINT_SCRIPT) : ''}
       </body>
       </html>
     `;
@@ -774,8 +851,13 @@ export function PDFPreviewScreen({ navigation, route }: Props) {
 
     try {
       if (Platform.OS === 'web') {
-        // For web, print from a sandboxed iframe (never a same-origin window)
-        printExportedGuideOnWeb(generateHTML({ autoPrint: true }));
+        // Phones get their own tab (see isTouchDevice); computers print from a
+        // sandboxed iframe, never a same-origin window.
+        if (isTouchDevice()) {
+          openExportedGuideInTab(generateHTML({ autoPrint: true, printMode: 'tab' }));
+        } else {
+          printExportedGuideOnWeb(generateHTML({ autoPrint: true }));
+        }
       } else {
         // For native, generate PDF
         const { uri } = await Print.printToFileAsync({ html: generateHTML() });
